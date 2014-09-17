@@ -1,4 +1,10 @@
-powershell-compare-shareacls
-============================
+Powershell
+==========
 
-PowerShell script(s) for comparing all current share ACLs with all share ACLs recorded in a set of baseline files.
+General purpose Powershell scripts and tools
+
+Compare-ShareACLs
+-----------------
+This script will get all the ACLs for all shares on this computer and compare them with a baseline set of share ACLs. It will also get and store the file/folder ACL's for all files/folders in each share.
+
+
