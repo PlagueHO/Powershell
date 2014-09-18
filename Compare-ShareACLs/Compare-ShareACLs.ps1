@@ -266,6 +266,9 @@ If ($RebuildBaseline) {
     Write-Host "Baseline Share ACL information for '$ComputerName' is being created in '$BaselinePath' folder"
     Write-Host ""
 
+    # Create the HTML report file
+    [string]$html = Create-HTMLReportHeader -Title "Share ACL Baseline Creation '$ComputerName' $(Get-Date)"
+
     # Remove existing baseline files first
     Remove-Item -Path "$BaselinePath\*.bsl"
 
@@ -277,6 +280,7 @@ If ($RebuildBaseline) {
     If ($current_shares.Length -eq 0) {
         Write-Host "No accessible shares were found on '$ComputerName'" -ForegroundColor Red
         Write-Host ""
+        $html += "<h2>No accessible shares were found on '$ComputerName'</h2>"
     } Else {
         Foreach ($current_share in $current_shares) {  
 
@@ -284,6 +288,7 @@ If ($RebuildBaseline) {
             Write-Host $('=' * 100)  
             Write-Host $current_share -ForegroundColor Green  
             Write-Host $('-' * $current_share.Length) -ForegroundColor Green  
+            $html += "<h2>$current_share</h2>"
 
             # Get the Current SHARE ACL information
             [array]$current_share_acls = Get-ShareACLs -ComputerName $ComputerName -ShareName $current_share
@@ -292,8 +297,10 @@ If ($RebuildBaseline) {
             Export-Clixml -Path "$BaselinePath\Share_$current_share.bsl" -InputObject $current_share_acls
         
             # Output the SHARE ACL information to the screen
-            $current_share_acls
-       
+            Foreach ($current_share_acl in $current_share_acls) {
+                $current_share_acl
+            }
+
             # Get the Current File/Folder ACLs to an Array
             [array]$current_file_acls = Get-ShareFileACLS -ComputerName $ComputerName -ShareName $current_share
 
@@ -311,8 +318,13 @@ If ($RebuildBaseline) {
         } # Foreach
     } # If
 
+    $html += Create-HTMLReportFooter
+
     # Write the Host output Footer
     Write-Host "Baseline Share ACL information for '$ComputerName' created successfully in '$BaselinePath' folder"
+
+    # Save thge report html file
+    Set-Content -Path "$BaselinePath\Baseline.htm" -Value $html
 } Else {
     # Compare existing shares with Baseline shares
 
@@ -597,7 +609,9 @@ If ($RebuildBaseline) {
             } # If
         } # Foreach
     } # If
+
     $html += Create-HTMLReportFooter
+
     # Save thge report html file
     Set-Content -Path $ReportFile -Value $html
 
