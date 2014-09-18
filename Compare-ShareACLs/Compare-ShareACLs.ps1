@@ -10,6 +10,9 @@
            2. SHARE_*.BSL - this is the share ACLs for the share specified by * on the computer.
            3. FILE_*.BSL - this is the full list of defined (not inherited) file/folder ACLs for the * share on this computer.
      
+           .PARAMETER ComputerName
+           This is the computer name of the machine to compare the share ACL information from.
+
            .PARAMETER BaselinePath 
            Specifies the path to the folder containing the baseline data. If none is provided it will default to the Baseline folder under the current folder.
 
@@ -20,6 +23,9 @@
            The path to the report file to be created. If no report file is specified it will be created in the current folder with the name Report.htm.
            The Report file will not be created if Baseline data is not found.
  
+           .PARAMETER ExcludeShares
+           This is a list of share names to exclude from the 
+
            .OUTPUTS 
            None
  
@@ -36,17 +42,29 @@
   
 [cmdletbinding()] 
  
-param([string[]]$BaselinePath='.',[switch]$RebuildBaseline,[string[]]$ReportFile='.')  
+param(
+    [string]$ComputerName='.',
+    [string]$BaselinePath='.',
+    [switch]$RebuildBaseline,
+    [string]$ReportFile='.',
+    [string[]]$ExcludeShares)  
 
 # SUPPORT FUNCTIONS
 function Get-AllShares {
     Param(
-        [String]$ComputerName
+        [String]$ComputerName,
+        [String[]]$ExcludeShares
     ) # param
-    $Shares = Get-WMIObject -Class win32_share -ComputerName $ComputerName |
+    [Array]$temp_shares = Get-WMIObject -Class win32_share -ComputerName $ComputerName |
         Where-Object { $_.Name -notlike "*$" } |
-        select -ExpandProperty Name  
-    return $Shares
+        select -ExpandProperty Name
+    [Array]$shares = $null
+    Foreach ($share in $temp_shares) {
+        If ($share -notin $ExcludeShares) {
+           $shares += $share 
+        } # If
+    } # Foreach
+    return $shares
 } # Function Get-AllShares
 
 function Get-ShareACLs {
@@ -167,7 +185,9 @@ function Get-ShareFileACLs {
         $file_acls += $acl_object
     } # Foreach
     # Generate any non-inferited file/folder ACLs
-    $node_file_acls = Get-ChildItem -Path "\\$ComputerName\$ShareName\" -Recurse | get-acl | Select-Object -Property @{ l='PurePath';e={$_.Path.Substring($_.Path.IndexOf("::\\")+2)} },Owner,Group,Access,SDDL
+    $node_file_acls = Get-ChildItem -Path "\\$ComputerName\$ShareName\" -Recurse |
+         Get-ACL |
+         Select-Object -Property @{ l='PurePath';e={$_.Path.Substring($_.Path.IndexOf("::\\")+2)} },Owner,Group,Access,SDDL
     Foreach ($node_file_acl in $node_file_acls) {
         Foreach ($access in $node_file_acl.Access) {
             If (-not $access.IsInherited) {
@@ -184,7 +204,39 @@ function Get-ShareFileACLs {
     return $file_acls
 } # Function Get-ShareFileACLs
 
+Function Create-HTMLReportHeader {
+    Param (
+        [String]$Title
+    ) # Param
+    [String]$html = ''
+    $html = "<!doctype html><html><head><title>$Title</title>"
+    $html += '<style type="text/css">'
+    $html += 'h1, h2, h3, h4, h5, h6, p, a, ul, li, ol, td, label, input, span, div {font-weight:normal !important; font-family:Tahoma, Arial, Helvetica, sans-serif;}'
+    $html += '.sharebad {color: red; font-weight: bold;}'
+    $html += '.shareadded {color: green; font-weight: bold;}'
+    $html += '.shareremoved {color: red; font-weight: bold;}'
+    $html += '.permissionremoved {color: red; font-weight: bold;}'
+    $html += '.permissionchanged {color: orange; font-weight: bold;}'
+    $html += '.permissionadded { color: green; font-weight: bold;}'
+    $html += '.nochange { color: gray; font-style: italic;}'
+    $html += '.typelabel { color: cyan;}'
+    $html += '</style>'
+    $html += '</head>'
+    $html += '<body>'
+    $html += "<h1>$Title</h1>"
+    return $html
+} # Function Create-HTMLReportHeader
+
+Function Create-HTMLReportFooter {
+    [String]$html = ''
+    $html = '</body></html>'
+    return $html
+} # Function Create-HTMLReportFooter
+
 # MAIN CODE START
+If ($ComputerName -eq '.') {
+    $ComputerName = $(Get-WmiObject Win32_Computersystem).name
+}
 
 # Get the BaselinePath
 If ($BaselinePath -eq '.') {
@@ -207,191 +259,245 @@ Else {
 If ($ReportFile -eq '.') {
     $ReportFile = (Get-Location).ToString() + '\Report.htm'
 }
-$ComputerName = $(Get-WmiObject Win32_Computersystem).name
-
 If ($RebuildBaseline) { 
     # Build new baseline files
 
     # Write the Host output Header
-    Write-Host "Baseline Share ACL information is being created in '$BaselinePath' folder"
+    Write-Host "Baseline Share ACL information for '$ComputerName' is being created in '$BaselinePath' folder"
     Write-Host ""
 
     # Remove existing baseline files first
     Remove-Item -Path "$BaselinePath\*.bsl"
 
     # Get the list of non hidden/non system shares
-    $current_shares = Get-AllShares -ComputerName $ComputerName
+    $current_shares = Get-AllShares -ComputerName $ComputerName -ExcludeShares $ExcludeShares
 
     # Export the list of shares to _shares.bsl
     Export-Clixml -Path "$BaselinePath\_shares.bsl" -InputObject $current_shares
-    foreach ($current_share in $current_shares) {  
+    If ($current_shares.Length -eq 0) {
+        Write-Host "No accessible shares were found on '$ComputerName'" -ForegroundColor Red
+        Write-Host ""
+    } Else {
+        Foreach ($current_share in $current_shares) {  
 
-        # Write the Host output Share Header
-        Write-Host $('=' * 100)  
-        Write-Host $current_share -ForegroundColor Green  
-        Write-Host $('-' * $current_share.Length) -ForegroundColor Green  
+            # Write the Host output Share Header
+            Write-Host $('=' * 100)  
+            Write-Host $current_share -ForegroundColor Green  
+            Write-Host $('-' * $current_share.Length) -ForegroundColor Green  
 
-        # Get the Current SHARE ACL information
-        [array]$current_share_acls = Get-ShareACLs -ComputerName $ComputerName -ShareName $current_share
+            # Get the Current SHARE ACL information
+            [array]$current_share_acls = Get-ShareACLs -ComputerName $ComputerName -ShareName $current_share
 
-        # Write the Current SHARE ACL information
-        Export-Clixml -Path "$BaselinePath\Share_$current_share.bsl" -InputObject $current_share_acls
+            # Write the Current SHARE ACL information
+            Export-Clixml -Path "$BaselinePath\Share_$current_share.bsl" -InputObject $current_share_acls
         
-        # Output the SHARE ACL information to the screen
-        $current_share_acls
+            # Output the SHARE ACL information to the screen
+            $current_share_acls
        
-        # Get the Current File/Folder ACLs to an Array
-        [array]$current_file_acls = Get-ShareFileACLS -ComputerName $ComputerName -ShareName $current_share
+            # Get the Current File/Folder ACLs to an Array
+            [array]$current_file_acls = Get-ShareFileACLS -ComputerName $ComputerName -ShareName $current_share
 
-        # Write the Current File/Folder ACL information
-        Export-Clixml -Path "$BaselinePath\File_$current_share.bsl" -InputObject $current_file_acls
+            # Write the Current File/Folder ACL information
+            Export-Clixml -Path "$BaselinePath\File_$current_share.bsl" -InputObject $current_file_acls
 
-        # Output the File/Folder ACL information to the screen
-        Foreach ($current_file_acl in $current_file_acls) {
-            Convert-FileSystemACLToString($current_file_acl) | Write-Host
-        }
+            # Output the File/Folder ACL information to the screen
+            Foreach ($current_file_acl in $current_file_acls) {
+                Convert-FileSystemACLToString($current_file_acl) | Write-Host
+            }
 
-        # Write the Host output Share footer
-        Write-Host $('=' * 100)  
-        Write-Host ''
-    } # Foreach
+            # Write the Host output Share footer
+            Write-Host $('=' * 100)  
+            Write-Host ''
+        } # Foreach
+    } # If
 
     # Write the Host output Footer
-    Write-Host "Baseline Share ACL information created successfully in '$BaselinePath' folder"
+    Write-Host "Baseline Share ACL information for '$ComputerName' created successfully in '$BaselinePath' folder"
 } Else {
     # Compare existing shares with Baseline shares
 
     # Write the Host output Header
-    Write-Host "Current Share ACL information is being compared with Baseline Share ACL information in '$BaselinePath' folder"
+    Write-Host "Current Share ACL information for '$ComputerName' is being compared with Baseline Share ACL information in '$BaselinePath' folder"
     Write-Host ""
 
     # Create the HTML report file
-    [string]$html = ""
-    $html = "<!doctype html><html><head><title>Share ACL Comparison for computer $ComputerName</title>"
-    $html += '<style type="text/css">'
-    $html += 'h1, h2, h3, h4, h5, h6, p, a, ul, li, ol, td, label, input, span, div {font-weight:normal !important; font-family:Tahoma, Arial, Helvetica, sans-serif;}'
-    $html += '.sharebad {color: red; font-weight: bold;}'
-    $html += '.shareadded {color: green; font-weight: bold;}'
-    $html += '.shareremoved {color: red; font-weight: bold;}'
-    $html += '.permissionremoved {color: red; font-weight: bold;}'
-    $html += '.permissionchanged {color: orange; font-weight: bold;}'
-    $html += '.permissionadded { color: green; font-weight: bold;}'
-    $html += '.nochange { color: gray; font-style: italic;}'
-    $html += '.typelabel { color: cyan;}'
-    $html += '</style>'
-    $html += '</head>'
-    $html += '<body>'
-    $html += "<h1>Share ACL Comparison<br>Computer: $ComputerName<br>Date: $(Get-Date)</h1>"
-
+    [string]$html = Create-HTMLReportHeader -Title "Share ACL Comparison '$ComputerName' $(Get-Date)"
+    
     # Get the list of non hidden/non system shares
-    [array]$current_shares = Get-AllShares -ComputerName $ComputerName
+    [array]$current_shares = Get-AllShares -ComputerName $ComputerName -ExcludeShares $ExcludeShares
     
     # Get the Baseline shares
     [array]$baseline_shares = Import-Clixml -Path "$BaselinePath\_shares.bsl"
     
-    # Go through each current share and compare the ACLs
-    Foreach ($current_share in $current_shares) {
-        # Does the current_share exist in the list of Baseline Shares?
-        If ($baseline_shares.Contains($current_share)) {
-            # Current share exists in Baseline
-            Write-Host $('=' * 100)
-            Write-Host $current_share
-            Write-Host $('-' * $current_share.Length)                                
-            $html += "<h2>$current_share</h2>"
+    If ($current_shares.Length -eq 0) {
+        Write-Host "No accessible shares were found on '$ComputerName'" -ForegroundColor Red
+        Write-Host ""
+        $html += "<h2>No accessible shares were found on '$ComputerName'</h2>"
+    } Else {
+        # Go through each current share and compare the ACLs
+        Foreach ($current_share in $current_shares) {
+            # Does the current_share exist in the list of Baseline Shares?
+            If ($baseline_shares.Contains($current_share)) {
+                # Current share exists in Baseline
+                Write-Host $('=' * 100)
+                Write-Host $current_share
+                Write-Host $('-' * $current_share.Length)                                
+                $html += "<h2>$current_share</h2>"
             
-            # Read the baseline share ALCs for this share
-            [array]$baseline_share_acls = Import-Clixml -Path "$BaselinePath\Share_$current_share.bsl"
+                # Read the baseline share ALCs for this share
+                [array]$baseline_share_acls = Import-Clixml -Path "$BaselinePath\Share_$current_share.bsl"
             
-            # generate the current share ACLs for this share
-            [array]$current_share_acls = Get-ShareACLs -ComputerName $ComputerName -ShareName $current_share
+                # generate the current share ACLs for this share
+                [array]$current_share_acls = Get-ShareACLs -ComputerName $ComputerName -ShareName $current_share
 
-            [boolean]$changes = $false
+                [boolean]$changes = $false
             
-            # Now compare the current share ACLs wth the baseline share ACLs
-            Foreach ($current_share_acl in $current_share_acls) {
-                [string]$c_accesscontroltype = $current_share_acl.AccessControlType
-                [string]$c_filesystemrights = Convert-FileSystemAccessToString($current_share_acl.FileSystemRights)
-                [string]$c_identityreference = $current_share_acl.IdentityReference.ToString()
-                [boolean]$acl_found = $false
-                Foreach ($baseline_share_acl in $baseline_share_acls) {
-                    [string]$b_accesscontroltype = $baseline_share_acl.AccessControlType
-                    [string]$b_filesystemrights = Convert-FileSystemAccessToString($baseline_share_acl.FileSystemRights)
-                    [string]$b_identityreference = $baseline_share_acl.IdentityReference.ToString()
-                    If ($c_identityreference -eq $b_identityreference) {
-                        $acl_found = $true
-                        break
-                    } # If
-                } # Foreach
-                If ($acl_found) {
-                    # The IdentityReference (user) exists in both the Baseline and the Current ACLs
-                    # Check it's the same though
-                    If ($c_filesystemrights -ne $b_filesystemrights) {
-                        Write-Host "SHARE: " -ForegroundColor Cyan -NoNewline
-                        Write-Host "'$c_identityreference' ACL rights changed from $b_filesystemrights to $c_filesystemrights" -ForegroundColor Yellow
-                        $html += "<span class='typelabel'>SHARE: </span><span class='permissionchanged'>'$c_identityreference' ACL rights changed from $b_filesystemrights to $c_filesystemrights</span><br>"
-                        $changes = $true
-                    } Elseif ($c_accesscontroltype -ne $b_accesscontroltype) {
-                        Write-Host "SHARE: " -ForegroundColor Cyan -NoNewline
-                        Write-Host "'$c_identityreference' ACL access control type changed from $b_accesscontroltype to $c_accesscontroltype" -ForegroundColor Yellow
-                        $html += "<span class='typelabel'>SHARE: </span><span class='permissionchanged'>'$c_identityreference' ACL access control type changed from $b_accesscontroltype to $c_accesscontroltype</span><br>"
-                        $changes = $true
-                    } # If
-                } Else {
-                    # The ACL wasn't found so it must be newly added
-                    Write-Host "SHARE: " -ForegroundColor Cyan -NoNewline
-                    Write-Host "'$c_identityreference' ACL added ($c_filesystemrights $c_accesscontroltype)" -ForegroundColor Green
-                    $html += "<span class='typelabel'>SHARE: </span><span class='permissionadded'>'$c_identityreference' ACL added ($c_filesystemrights -> $c_accesscontroltype)</span><br>"
-                    $changes = $true
-                } # If
-            } # Foreach
-            
-            # Now compare the baseline share ACLs wth the current share ACLs
-            # We only need to check if a ACL has been removed from the baseline
-            Foreach ($baseline_share_acl in $baseline_share_acls) {
-                [string]$b_accesscontroltype = $baseline_share_acl.AccessControlType
-                [string]$b_filesystemrights = Convert-FileSystemAccessToString($baseline_share_acl.FileSystemRights)
-                [string]$b_identityreference = $baseline_share_acl.IdentityReference.ToString()
-                [boolean]$acl_found = $false
+                # Now compare the current share ACLs wth the baseline share ACLs
                 Foreach ($current_share_acl in $current_share_acls) {
                     [string]$c_accesscontroltype = $current_share_acl.AccessControlType
                     [string]$c_filesystemrights = Convert-FileSystemAccessToString($current_share_acl.FileSystemRights)
                     [string]$c_identityreference = $current_share_acl.IdentityReference.ToString()
-                    If ($c_identityreference -eq $b_identityreference) {
-                        $acl_found = $true
-                        break
+                    [boolean]$acl_found = $false
+                    Foreach ($baseline_share_acl in $baseline_share_acls) {
+                        [string]$b_accesscontroltype = $baseline_share_acl.AccessControlType
+                        [string]$b_filesystemrights = Convert-FileSystemAccessToString($baseline_share_acl.FileSystemRights)
+                        [string]$b_identityreference = $baseline_share_acl.IdentityReference.ToString()
+                        If ($c_identityreference -eq $b_identityreference) {
+                            $acl_found = $true
+                            break
+                        } # If
+                    } # Foreach
+                    If ($acl_found) {
+                        # The IdentityReference (user) exists in both the Baseline and the Current ACLs
+                        # Check it's the same though
+                        If ($c_filesystemrights -ne $b_filesystemrights) {
+                            Write-Host "SHARE: " -ForegroundColor Cyan -NoNewline
+                            Write-Host "'$c_identityreference' ACL rights changed from $b_filesystemrights to $c_filesystemrights" -ForegroundColor Yellow
+                            $html += "<span class='typelabel'>SHARE: </span><span class='permissionchanged'>'$c_identityreference' ACL rights changed from $b_filesystemrights to $c_filesystemrights</span><br>"
+                            $changes = $true
+                        } Elseif ($c_accesscontroltype -ne $b_accesscontroltype) {
+                            Write-Host "SHARE: " -ForegroundColor Cyan -NoNewline
+                            Write-Host "'$c_identityreference' ACL access control type changed from $b_accesscontroltype to $c_accesscontroltype" -ForegroundColor Yellow
+                            $html += "<span class='typelabel'>SHARE: </span><span class='permissionchanged'>'$c_identityreference' ACL access control type changed from $b_accesscontroltype to $c_accesscontroltype</span><br>"
+                            $changes = $true
+                        } # If
+                    } Else {
+                        # The ACL wasn't found so it must be newly added
+                        Write-Host "SHARE: " -ForegroundColor Cyan -NoNewline
+                        Write-Host "'$c_identityreference' ACL added ($c_filesystemrights $c_accesscontroltype)" -ForegroundColor Green
+                        $html += "<span class='typelabel'>SHARE: </span><span class='permissionadded'>'$c_identityreference' ACL added ($c_filesystemrights -> $c_accesscontroltype)</span><br>"
+                        $changes = $true
                     } # If
                 } # Foreach
-                If (-not $acl_found) {
-                    # The IdentityReference (user) exists in the Baseline but not in the Current
-                    Write-Host "SHARE: " -ForegroundColor Cyan -NoNewline
-                    Write-Host "'$b_identityreference' ACL removed ($b_filesystemrights $b_accesscontroltype)" -ForegroundColor Red
-                    $html += "<span class='typelabel'>SHARE: </span><span class='permissionremoved'>'$b_identityreference' permission removed</span><br>"
-                    $changes = $true
-                } # If
-            } # Foreach
-
-            # Now we've got to do the comparison with the Baseline File/Folder ACL and the Current File/Folder ACL
-            [array]$baseline_file_acls = Import-Clixml -Path "$BaselinePath\File_$current_share.bsl"
-
-            # Get the Current File/Folder ACLs to an Array
-            [array]$current_file_acls = Get-ShareFileACLs -ComputerName $ComputerName -ShareName $current_share
             
-            # Set the last processed path to a path string that can never occur
-            [string]$last_path = '.'
+                # Now compare the baseline share ACLs wth the current share ACLs
+                # We only need to check if a ACL has been removed from the baseline
+                Foreach ($baseline_share_acl in $baseline_share_acls) {
+                    [string]$b_accesscontroltype = $baseline_share_acl.AccessControlType
+                    [string]$b_filesystemrights = Convert-FileSystemAccessToString($baseline_share_acl.FileSystemRights)
+                    [string]$b_identityreference = $baseline_share_acl.IdentityReference.ToString()
+                    [boolean]$acl_found = $false
+                    Foreach ($current_share_acl in $current_share_acls) {
+                        [string]$c_accesscontroltype = $current_share_acl.AccessControlType
+                        [string]$c_filesystemrights = Convert-FileSystemAccessToString($current_share_acl.FileSystemRights)
+                        [string]$c_identityreference = $current_share_acl.IdentityReference.ToString()
+                        If ($c_identityreference -eq $b_identityreference) {
+                            $acl_found = $true
+                            break
+                        } # If
+                    } # Foreach
+                    If (-not $acl_found) {
+                        # The IdentityReference (user) exists in the Baseline but not in the Current
+                        Write-Host "SHARE: " -ForegroundColor Cyan -NoNewline
+                        Write-Host "'$b_identityreference' ACL removed ($b_filesystemrights $b_accesscontroltype)" -ForegroundColor Red
+                        $html += "<span class='typelabel'>SHARE: </span><span class='permissionremoved'>'$b_identityreference' permission removed</span><br>"
+                        $changes = $true
+                    } # If
+                } # Foreach
 
-            # Perform the baseline to current file/folder ACL comparison
-            Foreach ($current_file_acl in $current_file_acls) {
-                # Put all the Current File ACL props into variables for easy access.
-                [string]$c_path = $current_file_acl.Path
-                [string]$c_owner = $current_file_acl.Owner
-                [string]$c_group = $current_file_acl.Group
-                [string]$c_SDDL = $current_file_acl.SDDL
-                $c_access = $current_file_acl.Access
-                [string]$c_accesscontroltype = $c_access.AccessControlType
-                [string]$c_filesystemrights = Convert-FileSystemAccessToString -FileSystemAccess $c_access.FileSystemRights
-                [string]$c_identityreference = $c_access.IdentityReference.ToString()
-                [string]$c_appliesto=Convert-FileSystemAppliesToString -InheritanceFlags $c_access.InheritanceFlags -PropagationFlags $c_access.PropagationFlags
-                [boolean]$acl_found = $false
+                # Now we've got to do the comparison with the Baseline File/Folder ACL and the Current File/Folder ACL
+                [array]$baseline_file_acls = Import-Clixml -Path "$BaselinePath\File_$current_share.bsl"
+
+                # Get the Current File/Folder ACLs to an Array
+                [array]$current_file_acls = Get-ShareFileACLs -ComputerName $ComputerName -ShareName $current_share
+            
+                # Set the last processed path to a path string that can never occur
+                [string]$last_path = '.'
+
+                # Perform the baseline to current file/folder ACL comparison
+                Foreach ($current_file_acl in $current_file_acls) {
+                    # Put all the Current File ACL props into variables for easy access.
+                    [string]$c_path = $current_file_acl.Path
+                    [string]$c_owner = $current_file_acl.Owner
+                    [string]$c_group = $current_file_acl.Group
+                    [string]$c_SDDL = $current_file_acl.SDDL
+                    $c_access = $current_file_acl.Access
+                    [string]$c_accesscontroltype = $c_access.AccessControlType
+                    [string]$c_filesystemrights = Convert-FileSystemAccessToString -FileSystemAccess $c_access.FileSystemRights
+                    [string]$c_identityreference = $c_access.IdentityReference.ToString()
+                    [string]$c_appliesto=Convert-FileSystemAppliesToString -InheritanceFlags $c_access.InheritanceFlags -PropagationFlags $c_access.PropagationFlags
+                    [boolean]$acl_found = $false
+                    Foreach ($baseline_file_acl in $baseline_file_acls) {
+                        [string]$b_path = $baseline_file_acl.Path
+                        [string]$b_owner = $baseline_file_acl.Owner
+                        [string]$b_group = $baseline_file_acl.Group
+                        [string]$b_SDDL = $baseline_file_acl.SDDL
+                        $b_access = $baseline_file_acl.Access
+                        [string]$b_accesscontroltype = $b_access.AccessControlType
+                        [string]$b_filesystemrights = Convert-FileSystemAccessToString -FileSystemAccess $b_access.FileSystemRights
+                        [string]$b_identityreference = $b_access.IdentityReference.ToString()
+                        [string]$b_appliesto=Convert-FileSystemAppliesToString -InheritanceFlags $b_access.InheritanceFlags -PropagationFlags $b_access.PropagationFlags
+                        If ($c_path -eq $b_path) {
+                            # Perform an owner/group check on each file/folder only once
+                            # If we've already checked this path, don't bother checking the owner/group again.
+                            If ($last_path -ne $c_path) {
+                                If ($c_owner -ne $b_owner) {
+                                    Write-Host "$c_path : " -ForegroundColor Cyan -NoNewline
+                                    Write-Host "Owner changed from $b_owner to $c_owner" -ForegroundColor Yellow
+                                    $html += "<span class='typelabel'>c_path  : </span><span class='permissionchanged'>Owner changed from $b_owner to $c_owner</span><br>"
+                                    $changes = $true
+                                }
+                                If ($c_group -ne $b_group) {
+                                    Write-Host "$c_path : " -ForegroundColor Cyan -NoNewline
+                                    Write-Host "Group changed from $b_group to $c_group" -ForegroundColor Yellow
+                                    $html += "<span class='typelabel'>c_path  : </span><span class='permissionchanged'>Group changed from $b_group to $c_group</span><br>"
+                                    $changes = $true
+                                } # If
+                                $last_path = $c_path
+                            } # If
+                            # Check that the Identity Reference (user) is the same one
+                            # And that the Applies To is the same
+                            If (($c_identityreference -eq $b_identityreference) -and ($c_appliesto -eq $b_appliesto)){
+                                $acl_found = $true
+                                break
+                            }
+                        } # If
+                    } # Foreach
+                    If ($acl_found) {
+                        # The IdentityReference (user) and path exists in both the Baseline and the Current ACLs
+                        # Check it's the same though
+                        If ($c_filesystemrights -ne $b_filesystemrights) {
+                            Write-Host "$c_path : " -ForegroundColor Cyan -NoNewline
+                            Write-Host "'$c_identityreference' ACL rights changed from $b_filesystemrights to $c_filesystemrights" -ForegroundColor Yellow
+                            $html += "<span class='typelabel'>$c_path  : </span><span class='permissionchanged'>'$c_identityreference' ACL rights changed from $b_filesystemrights to $c_filesystemrights</span><br>"
+                            $changes = $true
+                        } Elseif ($c_accesscontroltype -ne $b_accesscontroltype) {
+                            Write-Host "$c_path : " -ForegroundColor Cyan -NoNewline
+                            Write-Host "'$c_identityreference' ACL access control type changed from $b_accesscontroltype to $c_accesscontroltype" -ForegroundColor Yellow
+                            $html += "<span class='typelabel'>$c_path : </span><span class='permissionchanged'>'$c_identityreference' ACL access control type changed from $b_accesscontroltype to $c_accesscontroltype</span><br>"
+                            $changes = $true
+                        } # If
+                    } Else {
+                        # The ACL wasn't found so it must be newly added
+                        Write-Host "$c_path : " -ForegroundColor Cyan -NoNewline
+                        Write-Host "'$c_identityreference' ACL added ($c_filesystemrights -> $c_accesscontroltype -> $c_appliesto)" -ForegroundColor Green
+                        $html += "<span class='typelabel'>$c_path : </span><span class='permissionadded'>'$c_identityreference' ACL added ($c_filesystemrights -> $c_accesscontroltype -> $c_appliesto)</span><br>"
+                        $changes = $true
+                    } # If
+                } # Foreach
+
+                # Now compare the baseline file ACLs wth the current file ACLs
+                # We only need to check if a ACL has been removed from the baseline
                 Foreach ($baseline_file_acl in $baseline_file_acls) {
                     [string]$b_path = $baseline_file_acl.Path
                     [string]$b_owner = $baseline_file_acl.Owner
@@ -402,68 +508,62 @@ If ($RebuildBaseline) {
                     [string]$b_filesystemrights = Convert-FileSystemAccessToString -FileSystemAccess $b_access.FileSystemRights
                     [string]$b_identityreference = $b_access.IdentityReference.ToString()
                     [string]$b_appliesto=Convert-FileSystemAppliesToString -InheritanceFlags $b_access.InheritanceFlags -PropagationFlags $b_access.PropagationFlags
-                    If ($c_path -eq $b_path) {
-                        # Perform an owner/group check on each file/folder only once
-                        # If we've already checked this path, don't bother checking the owner/group again.
-                        If ($last_path -ne $c_path) {
-                            If ($c_owner -ne $b_owner) {
-                                Write-Host "$c_path : " -ForegroundColor Cyan -NoNewline
-                                Write-Host "Owner changed from $b_owner to $c_owner" -ForegroundColor Yellow
-                                $html += "<span class='typelabel'>c_path  : </span><span class='permissionchanged'>Owner changed from $b_owner to $c_owner</span><br>"
-                                $changes = $true
-                            }
-                            If ($c_group -ne $b_group) {
-                                Write-Host "$c_path : " -ForegroundColor Cyan -NoNewline
-                                Write-Host "Group changed from $b_group to $c_group" -ForegroundColor Yellow
-                                $html += "<span class='typelabel'>c_path  : </span><span class='permissionchanged'>Group changed from $b_group to $c_group</span><br>"
-                                $changes = $true
-                            } # If
-                            $last_path = $c_path
-                        } # If
-                        # Check that the Identity Reference (user) is the same one
-                        # And that the Applies To is the same
-                        If (($c_identityreference -eq $b_identityreference) -and ($c_appliesto -eq $b_appliesto)){
+                    [boolean]$acl_found = $false
+                    Foreach ($current_file_acl in $current_file_acls) {
+                        [string]$c_path = $current_file_acl.Path
+                        [string]$c_owner = $current_file_acl.Owner
+                        [string]$c_group = $current_file_acl.Group
+                        [string]$c_SDDL = $current_file_acl.SDDL
+                        $c_access = $current_file_acl.Access
+                        [string]$c_accesscontroltype = $c_access.AccessControlType
+                        [string]$c_filesystemrights = Convert-FileSystemAccessToString -FileSystemAccess $c_access.FileSystemRights
+                        [string]$c_identityreference = $c_access.IdentityReference.ToString()
+                        [string]$c_appliesto=Convert-FileSystemAppliesToString -InheritanceFlags $c_access.InheritanceFlags -PropagationFlags $c_access.PropagationFlags
+                        If (($c_path -eq $b_path) -and ($c_identityreference -eq $b_identityreference) -and ($c_appliesto -eq $b_appliesto)) {
                             $acl_found = $true
                             break
-                        }
+                        } # If
+                    } # Foreach
+                    If (-not $acl_found) {
+                        # The IdentityReference (user) and path exists in the Baseline but not in the Current
+                        Write-Host "$b_path : " -ForegroundColor Cyan -NoNewline
+                        Write-Host "'$b_identityreference' ACL removed ($b_filesystemrights -> $b_accesscontroltype -> $b_appliesto)" -ForegroundColor Red
+                        $html += "<span class='typelabel'>$b_path : </span><span class='permissionremoved'>'$b_identityreference' ACL removed ($b_filesystemrights -> $b_accesscontroltype -> $b_appliesto)</span><br>"
+                        $changes = $true
                     } # If
                 } # Foreach
-                If ($acl_found) {
-                    # The IdentityReference (user) and path exists in both the Baseline and the Current ACLs
-                    # Check it's the same though
-                    If ($c_filesystemrights -ne $b_filesystemrights) {
-                        Write-Host "$c_path : " -ForegroundColor Cyan -NoNewline
-                        Write-Host "'$c_identityreference' ACL rights changed from $b_filesystemrights to $c_filesystemrights" -ForegroundColor Yellow
-                        $html += "<span class='typelabel'>$c_path  : </span><span class='permissionchanged'>'$c_identityreference' ACL rights changed from $b_filesystemrights to $c_filesystemrights</span><br>"
-                        $changes = $true
-                    } Elseif ($c_accesscontroltype -ne $b_accesscontroltype) {
-                        Write-Host "$c_path : " -ForegroundColor Cyan -NoNewline
-                        Write-Host "'$c_identityreference' ACL access control type changed from $b_accesscontroltype to $c_accesscontroltype" -ForegroundColor Yellow
-                        $html += "<span class='typelabel'>$c_path : </span><span class='permissionchanged'>'$c_identityreference' ACL access control type changed from $b_accesscontroltype to $c_accesscontroltype</span><br>"
-                        $changes = $true
-                    } # If
-                } Else {
-                    # The ACL wasn't found so it must be newly added
-                    Write-Host "$c_path : " -ForegroundColor Cyan -NoNewline
-                    Write-Host "'$c_identityreference' ACL added ($c_filesystemrights -> $c_accesscontroltype -> $c_appliesto)" -ForegroundColor Green
-                    $html += "<span class='typelabel'>$c_path : </span><span class='permissionadded'>'$c_identityreference' ACL added ($c_filesystemrights -> $c_accesscontroltype -> $c_appliesto)</span><br>"
-                    $changes = $true
-                } # If
-            } # Foreach
 
-            # Now compare the baseline file ACLs wth the current file ACLs
-            # We only need to check if a ACL has been removed from the baseline
-            Foreach ($baseline_file_acl in $baseline_file_acls) {
-                [string]$b_path = $baseline_file_acl.Path
-                [string]$b_owner = $baseline_file_acl.Owner
-                [string]$b_group = $baseline_file_acl.Group
-                [string]$b_SDDL = $baseline_file_acl.SDDL
-                $b_access = $baseline_file_acl.Access
-                [string]$b_accesscontroltype = $b_access.AccessControlType
-                [string]$b_filesystemrights = Convert-FileSystemAccessToString -FileSystemAccess $b_access.FileSystemRights
-                [string]$b_identityreference = $b_access.IdentityReference.ToString()
-                [string]$b_appliesto=Convert-FileSystemAppliesToString -InheritanceFlags $b_access.InheritanceFlags -PropagationFlags $b_access.PropagationFlags
-                [boolean]$acl_found = $false
+                # If no changes have been made to any of the Share or File/Folder ACLs then say so
+                If (-not $changes) {
+                    Write-Host "SHARE/FILE/FOLDER : " -ForegroundColor Cyan -NoNewline
+                    Write-Host "No changes to share, file or folder ACLs"
+                    $html += "<span class='typelabel'>SHARE/FILE/FOLDER : </span><span class='nochanged'>No changes to share, file or folder ACLs</span><br>"
+                } # If
+            } Else {
+                # Current Share does not exist in Baseline (Share added)
+                Write-Host $('=' * 100)  
+                Write-Host "$current_share - Share has been added" -ForegroundColor Green
+                Write-Host $('-' * $current_share.Length)
+                $html += "<h2>$current_share - <span class='shareadded'>Share has been added</span></h2>"
+                $html += "<p class='permissionadded'>"
+
+                # Get the Current SHARE ACL information
+                [array]$current_share_acls = Get-ShareACLs -ComputerName $ComputerName -ShareName $current_share
+
+                # Output the current share ACLs into the report
+                Foreach ($current_share_acl in $current_share_acls) {
+                    [string]$c_accesscontroltype = $current_share_acl.AccessControlType
+                    [string]$c_filesystemrights = Convert-FileSystemAccessToString($current_share_acl.FileSystemRights)
+                    [string]$c_identityreference = $current_share_acl.IdentityReference.ToString()
+                    Write-Host "SHARE : " -ForegroundColor Cyan -NoNewline
+                    Write-Host "'$c_identityreference' ACL added ($c_filesystemrights $c_accesscontroltype)" -ForegroundColor Green
+                    $html += "<span class='typelabel'>SHARE : </span><span class='permissionadded'>'$c_identityreference' ACL added ($c_filesystemrights -> $c_accesscontroltype)</span><br>"
+                }
+
+                # Get the Current File/Folder ACLs to an Array
+                [array]$current_file_acls = Get-ShareFileACLs -ComputerName $ComputerName -ShareName $current_share
+
+                # Output the current share ACLs into the report
                 Foreach ($current_file_acl in $current_file_acls) {
                     [string]$c_path = $current_file_acl.Path
                     [string]$c_owner = $current_file_acl.Owner
@@ -471,91 +571,36 @@ If ($RebuildBaseline) {
                     [string]$c_SDDL = $current_file_acl.SDDL
                     $c_access = $current_file_acl.Access
                     [string]$c_accesscontroltype = $c_access.AccessControlType
-                    [string]$c_filesystemrights = Convert-FileSystemAccessToString -FileSystemAccess $c_access.FileSystemRights
+                    [string]$c_filesystemrights = Convert-FileSystemAccessToString($c_access.FileSystemRights)
                     [string]$c_identityreference = $c_access.IdentityReference.ToString()
-                    [string]$c_appliesto=Convert-FileSystemAppliesToString -InheritanceFlags $c_access.InheritanceFlags -PropagationFlags $c_access.PropagationFlags
-                    If (($c_path -eq $b_path) -and ($c_identityreference -eq $b_identityreference) -and ($c_appliesto -eq $b_appliesto)) {
-                        $acl_found = $true
-                        break
-                    } # If
-                } # Foreach
-                If (-not $acl_found) {
-                    # The IdentityReference (user) and path exists in the Baseline but not in the Current
-                    Write-Host "$b_path : " -ForegroundColor Cyan -NoNewline
-                    Write-Host "'$b_identityreference' ACL removed ($b_filesystemrights -> $b_accesscontroltype -> $b_appliesto)" -ForegroundColor Red
-                    $html += "<span class='typelabel'>$b_path : </span><span class='permissionremoved'>'$b_identityreference' ACL removed ($b_filesystemrights -> $b_accesscontroltype -> $b_appliesto)</span><br>"
-                    $changes = $true
-                } # If
-            } # Foreach
+                    Write-Host "$c_path : " -ForegroundColor Cyan -NoNewline
+                    Write-Host "'$c_identityreference' ACL added ($c_filesystemrights $c_identityreference Owner: $c_owner Group: $c_group)" -ForegroundColor Green
+                    $html += "<span class='typelabel'>$c_path : </span><span class='permissionadded'>'$c_identityreference' ACL added ($c_filesystemrights $c_identityreference Owner: $c_owner Group: $c_group)</span><br>"
+                }
 
-            # If no changes have been made to any of the Share or File/Folder ACLs then say so
-            If (-not $changes) {
-                Write-Host "SHARE/FILE/FOLDER : " -ForegroundColor Cyan -NoNewline
-                Write-Host "No changes to share, file or folder ACLs"
-                $html += "<span class='typelabel'>SHARE/FILE/FOLDER : </span><span class='nochanged'>No changes to share, file or folder ACLs</span><br>"
-            } # If
-        } Else {
-            # Current Share does not exist in Baseline (Share added)
-            Write-Host $('=' * 100)  
-            Write-Host "$current_share - Share has been added" -ForegroundColor Green
-            Write-Host $('-' * $current_share.Length)
-            $html += "<h2>$current_share - <span class='shareadded'>Share has been added</span></h2>"
-            $html += "<p class='permissionadded'>"
-
-            # Get the Current SHARE ACL information
-            [array]$current_share_acls = Get-ShareACLs -ComputerName $ComputerName -ShareName $current_share
-
-            # Output the current share ACLs into the report
-            Foreach ($current_share_acl in $current_share_acls) {
-                [string]$c_accesscontroltype = $current_share_acl.AccessControlType
-                [string]$c_filesystemrights = Convert-FileSystemAccessToString($current_share_acl.FileSystemRights)
-                [string]$c_identityreference = $current_share_acl.IdentityReference.ToString()
-                Write-Host "SHARE : " -ForegroundColor Cyan -NoNewline
-                Write-Host "'$c_identityreference' ACL added ($c_filesystemrights $c_accesscontroltype)" -ForegroundColor Green
-                $html += "<span class='typelabel'>SHARE : </span><span class='permissionadded'>'$c_identityreference' ACL added ($c_filesystemrights -> $c_accesscontroltype)</span><br>"
+                $html += "</p>"
             }
-
-            # Get the Current File/Folder ACLs to an Array
-            [array]$current_file_acls = Get-ShareFileACLs -ComputerName $ComputerName -ShareName $current_share
-
-            # Output the current share ACLs into the report
-            Foreach ($current_file_acl in $current_file_acls) {
-                [string]$c_path = $current_file_acl.Path
-                [string]$c_owner = $current_file_acl.Owner
-                [string]$c_group = $current_file_acl.Group
-                [string]$c_SDDL = $current_file_acl.SDDL
-                $c_access = $current_file_acl.Access
-                [string]$c_accesscontroltype = $c_access.AccessControlType
-                [string]$c_filesystemrights = Convert-FileSystemAccessToString($c_access.FileSystemRights)
-                [string]$c_identityreference = $c_access.IdentityReference.ToString()
-                Write-Host "$c_path : " -ForegroundColor Cyan -NoNewline
-                Write-Host "'$c_identityreference' ACL added ($c_filesystemrights $c_identityreference Owner: $c_owner Group: $c_group)" -ForegroundColor Green
-                $html += "<span class='typelabel'>$c_path : </span><span class='permissionadded'>'$c_identityreference' ACL added ($c_filesystemrights $c_identityreference Owner: $c_owner Group: $c_group)</span><br>"
-            }
-
-            $html += "</p>"
-        }
-        Write-Host $('=' * 100)  
-        Write-Host ''
-    }
-
-    # Check for any removed shares
-    Foreach ($baseline_share in $baseline_shares) {
-        If (-not ($current_shares.Contains($baseline_share))) {
-            # Baseline Share does not exist in Current Shares (Share removed)
-            Write-Host $('=' * 100)  
-            Write-Host "$baseline_share - Share has been removed" -ForegroundColor Red
-            Write-Host $('-' * $baseline_share.Length)
-            $html += "<h2>$baseline_share - <span class='shareremoved'>Share has been removed</span></h2>"
             Write-Host $('=' * 100)  
             Write-Host ''
-        } # If
-    } # Foreach
+        }
 
-    $html += "</body></html>"
+        # Check for any removed shares
+        Foreach ($baseline_share in $baseline_shares) {
+            If (-not ($current_shares.Contains($baseline_share))) {
+                # Baseline Share does not exist in Current Shares (Share removed)
+                Write-Host $('=' * 100)  
+                Write-Host "$baseline_share - Share has been removed" -ForegroundColor Red
+                Write-Host $('-' * $baseline_share.Length)
+                $html += "<h2>$baseline_share - <span class='shareremoved'>Share has been removed</span></h2>"
+                Write-Host $('=' * 100)  
+                Write-Host ''
+            } # If
+        } # Foreach
+    } # If
+    $html += Create-HTMLReportFooter
     # Save thge report html file
     Set-Content -Path $ReportFile -Value $html
 
-    Write-Host "Share ACL Comparison report has been created in '$ReportFile'"
+    Write-Host "Share ACL Comparison report for '$ComputerName' has been created in '$ReportFile'"
     Write-Host ""
 } 
