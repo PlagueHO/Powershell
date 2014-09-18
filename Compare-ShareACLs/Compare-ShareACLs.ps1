@@ -32,7 +32,7 @@
  
 # Written by Dan Scott-Raynsford 2014-09-01 
 # Last updated 2014-09-18
-# Ver. 3.0
+# Ver. 3.1
   
 [cmdletbinding()] 
  
@@ -43,7 +43,8 @@ function Get-AllShares {
     Param(
         [String]$ComputerName
     ) # param
-    $Shares = Get-WMIObject -Class win32_share -ComputerName $ComputerName | Where-Object { $_.Name -notlike "*$" } |
+    $Shares = Get-WMIObject -Class win32_share -ComputerName $ComputerName |
+        Where-Object { $_.Name -notlike "*$" } |
         select -ExpandProperty Name  
     return $Shares
 } # Function Get-AllShares
@@ -63,13 +64,12 @@ function Get-ShareACLs {
             If ($ace.Trustee.Domain -ne $Null) {$UserName = "$($ace.Trustee.Domain)\$UserName"}    
             If ($ace.Trustee.Name -eq $Null) {$UserName = $ace.Trustee.SIDString }      
             [Array]$share_acls += New-Object Security.AccessControl.FileSystemAccessRule($UserName, $ace.AccessMask, $ace.AceType)  
-            } # Foreach           
-        } # end try  
-    catch { 
+       } # Foreach           
+    } catch { 
         Write-Host "Unable to obtain share ACLs for $ShareName" -ForegroundColor Red
     } # Try
     return $share_acls
-} # Get-ShareACLs
+} # function Get-ShareACLs
 
 function Create-FileACLObject {
     Param (
@@ -79,6 +79,8 @@ function Create-FileACLObject {
         [String]$SDDL,
         $Access
     ) # Param
+    # Need to correct the $Access objects to ensure the FileSystemRights values correctly converted to string
+    # When the "Generic Rights" bits are set: http://msdn.microsoft.com/en-us/library/aa374896%28v=vs.85%29.aspx
     $acl_object = New-Object Object
     $acl_object | Add-Member Path $Path
     $acl_object | Add-Member Owner $Owner
@@ -86,7 +88,64 @@ function Create-FileACLObject {
     $acl_object | Add-Member SDDL $SDDL
     $acl_object | Add-Member Access $Access
     return $acl_object
-}
+} # function Create-FileACLObject
+
+function Convert-FileSystemAccessToString {
+    Param(
+        [String]$FileSystemAccess
+    ) # Param
+    If ($FileSystemAccess.StartsWith('-')) {
+    # This contains Generic High Bits
+        Return "Special Generic Rights $FileSystemAccess"
+    } Else {
+        Return $FileSystemAccess
+    }
+} # function Convert-FileSystemAccessToString
+
+function Convert-FileSystemAppliesToString {
+    Param(
+        [String]$InheritanceFlags,
+        [String]$PropagationFlags
+    ) # Param
+    If ($PropagationFlags -eq 'None') {
+        Switch ($InheritanceFlags) {
+            'None' { return 'This folder only'; break }
+            'ContainerInherit, ObjectInherit' { return 'This folder, subfolders and files'; break }
+            'ContainerInherit' { return 'This folder and subfolders'; break }
+            'ObjectInherit' { return 'This folder and files'; break }
+        } # Switch
+    } else {
+        Switch ($InheritanceFlags) {
+            'ContainerInherit, ObjectInherit' { return 'Subfolders and files only'; break }
+            'ContainerInherit' { return 'Subfolders only'; break }
+            'ObjectInherit' { return 'Files only'; break }
+        } # Switch
+    } # If
+    return "Unknown"
+} # function Convert-FileSystemAppliesToString
+
+function Convert-ACEToString {
+    Param(
+        [Object]$ACE
+    ) # Param
+    [string]$rights=Convert-FileSystemAccessToString -FileSystemAccess $ace.FileSystemRights
+    [string]$controltype=$ace.AccessControlType
+    [string]$IdentityReference=$ace.IdentityReference
+    [string]$IsInherited=$ace.IsInherited
+    [string]$AppliesTo=Convert-FileSystemAppliesToString -InheritanceFlags $ace.InheritanceFlags -PropagationFlags $ace.PropagationFlags
+    Return "FileSystemRights  : $rights`nAccessControlType : $controltype`nIdentityReference : $IdentityReference`nIsInherited       : $IsInherited`nAppliesTo         : $AppliesTo`n"
+} # function Convert-FileSystemACLToString
+
+function Convert-FileSystemACLToString {
+    Param(
+        [Object]$ACL
+    ) # Param
+    [string]$path=$acl.path
+    [string]$owner=$acl.owner
+    [string]$group=$acl.group
+    [string]$acestring=Convert-ACEToString($acl.access)
+    Return "Path              : $path`nOwner             : $owner`nGroup             : $group`n$acestring"
+} # function Convert-FileSystemACLToString
 
 function Get-ShareFileACLs {
     Param(
@@ -188,7 +247,9 @@ If ($RebuildBaseline) {
         Export-Clixml -Path "$BaselinePath\File_$current_share.bsl" -InputObject $current_file_acls
 
         # Output the File/Folder ACL information to the screen
-        $current_file_acls
+        Foreach ($current_file_acl in $current_file_acls) {
+            Convert-FileSystemACLToString($current_file_acl) | Write-Host
+        }
 
         # Write the Host output Share footer
         Write-Host $('=' * 100)  
@@ -249,12 +310,12 @@ If ($RebuildBaseline) {
             # Now compare the current share ACLs wth the baseline share ACLs
             Foreach ($current_share_acl in $current_share_acls) {
                 [string]$c_accesscontroltype = $current_share_acl.AccessControlType
-                [string]$c_filesystemrights = $current_share_acl.FileSystemRights
+                [string]$c_filesystemrights = Convert-FileSystemAccessToString($current_share_acl.FileSystemRights)
                 [string]$c_identityreference = $current_share_acl.IdentityReference.ToString()
                 [boolean]$acl_found = $false
                 Foreach ($baseline_share_acl in $baseline_share_acls) {
                     [string]$b_accesscontroltype = $baseline_share_acl.AccessControlType
-                    [string]$b_filesystemrights = $baseline_share_acl.FileSystemRights
+                    [string]$b_filesystemrights = Convert-FileSystemAccessToString($baseline_share_acl.FileSystemRights)
                     [string]$b_identityreference = $baseline_share_acl.IdentityReference.ToString()
                     If ($c_identityreference -eq $b_identityreference) {
                         $acl_found = $true
@@ -288,12 +349,12 @@ If ($RebuildBaseline) {
             # We only need to check if a ACL has been removed from the baseline
             Foreach ($baseline_share_acl in $baseline_share_acls) {
                 [string]$b_accesscontroltype = $baseline_share_acl.AccessControlType
-                [string]$b_filesystemrights = $baseline_share_acl.FileSystemRights
+                [string]$b_filesystemrights = Convert-FileSystemAccessToString($baseline_share_acl.FileSystemRights)
                 [string]$b_identityreference = $baseline_share_acl.IdentityReference.ToString()
                 [boolean]$acl_found = $false
                 Foreach ($current_share_acl in $current_share_acls) {
                     [string]$c_accesscontroltype = $current_share_acl.AccessControlType
-                    [string]$c_filesystemrights = $current_share_acl.FileSystemRights
+                    [string]$c_filesystemrights = Convert-FileSystemAccessToString($current_share_acl.FileSystemRights)
                     [string]$c_identityreference = $current_share_acl.IdentityReference.ToString()
                     If ($c_identityreference -eq $b_identityreference) {
                         $acl_found = $true
@@ -327,8 +388,9 @@ If ($RebuildBaseline) {
                 [string]$c_SDDL = $current_file_acl.SDDL
                 $c_access = $current_file_acl.Access
                 [string]$c_accesscontroltype = $c_access.AccessControlType
-                [string]$c_filesystemrights = $c_access.FileSystemRights
+                [string]$c_filesystemrights = Convert-FileSystemAccessToString -FileSystemAccess $c_access.FileSystemRights
                 [string]$c_identityreference = $c_access.IdentityReference.ToString()
+                [string]$c_appliesto=Convert-FileSystemAppliesToString -InheritanceFlags $c_access.InheritanceFlags -PropagationFlags $c_access.PropagationFlags
                 [boolean]$acl_found = $false
                 Foreach ($baseline_file_acl in $baseline_file_acls) {
                     [string]$b_path = $baseline_file_acl.Path
@@ -337,8 +399,9 @@ If ($RebuildBaseline) {
                     [string]$b_SDDL = $baseline_file_acl.SDDL
                     $b_access = $baseline_file_acl.Access
                     [string]$b_accesscontroltype = $b_access.AccessControlType
-                    [string]$b_filesystemrights = $b_access.FileSystemRights
+                    [string]$b_filesystemrights = Convert-FileSystemAccessToString -FileSystemAccess $b_access.FileSystemRights
                     [string]$b_identityreference = $b_access.IdentityReference.ToString()
+                    [string]$b_appliesto=Convert-FileSystemAppliesToString -InheritanceFlags $b_access.InheritanceFlags -PropagationFlags $b_access.PropagationFlags
                     If ($c_path -eq $b_path) {
                         # Perform an owner/group check on each file/folder only once
                         # If we've already checked this path, don't bother checking the owner/group again.
@@ -358,7 +421,8 @@ If ($RebuildBaseline) {
                             $last_path = $c_path
                         } # If
                         # Check that the Identity Reference (user) is the same one
-                        If ($c_identityreference -eq $b_identityreference) {
+                        # And that the Applies To is the same
+                        If (($c_identityreference -eq $b_identityreference) -and ($c_appliesto -eq $b_appliesto)){
                             $acl_found = $true
                             break
                         }
@@ -381,8 +445,8 @@ If ($RebuildBaseline) {
                 } Else {
                     # The ACL wasn't found so it must be newly added
                     Write-Host "$c_path : " -ForegroundColor Cyan -NoNewline
-                    Write-Host "'$c_identityreference' ACL added ($c_filesystemrights $c_accesscontroltype)" -ForegroundColor Green
-                    $html += "<span class='typelabel'>$c_path : </span><span class='permissionadded'>'$c_identityreference' ACL added ($c_filesystemrights -> $c_accesscontroltype)</span><br>"
+                    Write-Host "'$c_identityreference' ACL added ($c_filesystemrights -> $c_accesscontroltype -> $c_appliesto)" -ForegroundColor Green
+                    $html += "<span class='typelabel'>$c_path : </span><span class='permissionadded'>'$c_identityreference' ACL added ($c_filesystemrights -> $c_accesscontroltype -> $c_appliesto)</span><br>"
                     $changes = $true
                 } # If
             } # Foreach
@@ -396,8 +460,9 @@ If ($RebuildBaseline) {
                 [string]$b_SDDL = $baseline_file_acl.SDDL
                 $b_access = $baseline_file_acl.Access
                 [string]$b_accesscontroltype = $b_access.AccessControlType
-                [string]$b_filesystemrights = $b_access.FileSystemRights
+                [string]$b_filesystemrights = Convert-FileSystemAccessToString -FileSystemAccess $b_access.FileSystemRights
                 [string]$b_identityreference = $b_access.IdentityReference.ToString()
+                [string]$b_appliesto=Convert-FileSystemAppliesToString -InheritanceFlags $b_access.InheritanceFlags -PropagationFlags $b_access.PropagationFlags
                 [boolean]$acl_found = $false
                 Foreach ($current_file_acl in $current_file_acls) {
                     [string]$c_path = $current_file_acl.Path
@@ -406,9 +471,10 @@ If ($RebuildBaseline) {
                     [string]$c_SDDL = $current_file_acl.SDDL
                     $c_access = $current_file_acl.Access
                     [string]$c_accesscontroltype = $c_access.AccessControlType
-                    [string]$c_filesystemrights = $c_access.FileSystemRights
+                    [string]$c_filesystemrights = Convert-FileSystemAccessToString -FileSystemAccess $c_access.FileSystemRights
                     [string]$c_identityreference = $c_access.IdentityReference.ToString()
-                    If (($c_path -eq $b_path) -and ($c_identityreference -eq $b_identityreference)) {
+                    [string]$c_appliesto=Convert-FileSystemAppliesToString -InheritanceFlags $c_access.InheritanceFlags -PropagationFlags $c_access.PropagationFlags
+                    If (($c_path -eq $b_path) -and ($c_identityreference -eq $b_identityreference) -and ($c_appliesto -eq $b_appliesto)) {
                         $acl_found = $true
                         break
                     } # If
@@ -416,8 +482,8 @@ If ($RebuildBaseline) {
                 If (-not $acl_found) {
                     # The IdentityReference (user) and path exists in the Baseline but not in the Current
                     Write-Host "$b_path : " -ForegroundColor Cyan -NoNewline
-                    Write-Host "'$b_identityreference' ACL removed ($b_filesystemrights -> $b_accesscontroltype)" -ForegroundColor Red
-                    $html += "<span class='typelabel'>$b_path : </span><span class='permissionremoved'>'$b_identityreference' permission removed</span><br>"
+                    Write-Host "'$b_identityreference' ACL removed ($b_filesystemrights -> $b_accesscontroltype -> $b_appliesto)" -ForegroundColor Red
+                    $html += "<span class='typelabel'>$b_path : </span><span class='permissionremoved'>'$b_identityreference' ACL removed ($b_filesystemrights -> $b_accesscontroltype -> $b_appliesto)</span><br>"
                     $changes = $true
                 } # If
             } # Foreach
@@ -442,7 +508,7 @@ If ($RebuildBaseline) {
             # Output the current share ACLs into the report
             Foreach ($current_share_acl in $current_share_acls) {
                 [string]$c_accesscontroltype = $current_share_acl.AccessControlType
-                [string]$c_filesystemrights = $current_share_acl.FileSystemRights
+                [string]$c_filesystemrights = Convert-FileSystemAccessToString($current_share_acl.FileSystemRights)
                 [string]$c_identityreference = $current_share_acl.IdentityReference.ToString()
                 Write-Host "SHARE : " -ForegroundColor Cyan -NoNewline
                 Write-Host "'$c_identityreference' ACL added ($c_filesystemrights $c_accesscontroltype)" -ForegroundColor Green
@@ -460,7 +526,7 @@ If ($RebuildBaseline) {
                 [string]$c_SDDL = $current_file_acl.SDDL
                 $c_access = $current_file_acl.Access
                 [string]$c_accesscontroltype = $c_access.AccessControlType
-                [string]$c_filesystemrights = $c_access.FileSystemRights
+                [string]$c_filesystemrights = Convert-FileSystemAccessToString($c_access.FileSystemRights)
                 [string]$c_identityreference = $c_access.IdentityReference.ToString()
                 Write-Host "$c_path : " -ForegroundColor Cyan -NoNewline
                 Write-Host "'$c_identityreference' ACL added ($c_filesystemrights $c_identityreference Owner: $c_owner Group: $c_group)" -ForegroundColor Green
