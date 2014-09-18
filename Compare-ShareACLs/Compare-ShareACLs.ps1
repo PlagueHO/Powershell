@@ -99,12 +99,14 @@ function Create-FileACLObject {
     ) # Param
     # Need to correct the $Access objects to ensure the FileSystemRights values correctly converted to string
     # When the "Generic Rights" bits are set: http://msdn.microsoft.com/en-us/library/aa374896%28v=vs.85%29.aspx
-    $acl_object = New-Object Object
-    $acl_object | Add-Member Path $Path
-    $acl_object | Add-Member Owner $Owner
-    $acl_object | Add-Member Group $Group
-    $acl_object | Add-Member SDDL $SDDL
-    $acl_object | Add-Member Access $Access
+    $props = @{
+        'Path'=$Path;
+        'Owner'=$Owner;
+        'Group'=$Group;
+        'SDDL'=$SDDL;
+        'Access'=$Access
+    }
+    $acl_object = New-Object -Type PSObject -Property $props
     return $acl_object
 } # function Create-FileACLObject
 
