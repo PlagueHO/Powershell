@@ -1,53 +1,56 @@
-<# 
-           .SYNOPSIS  
-           This script will get all the ACLs for all shares on this computer and compare them with a baseline set of share ACLs. It will also get and store the file/folder ACL's for all files/folders in each share.
+<#
+.SYNOPSIS
+This script will get all the ACLs for all shares on this computer and compare them with a baseline set of share ACLs. It will also get and store the file/folder ACL's for all files/folders in each share.
 
-           .DESCRIPTION 
-           If this script is run it will look for specified baseline ACL. If none are found it will create them from the shares active on this machine.
-           If the baseline data is found the script will output a report showing the changes to the share and file/folder ACLs.
-           The script makes three different types of Baseline files (.BSL) in the baseline folder:
-           1. _SHARES.BSL - this is the list of shares available on the computer at the time of the baseline info being created.
-           2. SHARE_*.BSL - this is the share ACLs for the share specified by * on the computer.
-           3. FILE_*.BSL - this is the full list of defined (not inherited) file/folder ACLs for the * share on this computer.
+.DESCRIPTION 
+If this script is run it will look for specified baseline ACL. If none are found it will create them from the shares active on this machine.
+If the baseline data is found the script will output a report showing the changes to the share and file/folder ACLs.
+The script makes three different types of Baseline files (.BSL) in the baseline folder:
+1. _SHARES.BSL - this is the list of shares available on the computer at the time of the baseline info being created.
+2. SHARE_*.BSL - this is the share ACLs for the share specified by * on the computer.
+3. FILE_*.BSL - this is the full list of defined (not inherited) file/folder ACLs for the * share on this computer.
      
-           .PARAMETER ComputerName
-           This is the computer name of the machine to compare the share ACL information from.
+.PARAMETER ComputerName
+This is the computer name of the machine to compare the share ACL information from.
 
-           .PARAMETER BaselinePath 
-           Specifies the path to the folder containing the baseline data. If none is provided it will default to the Baseline folder under the current folder.
+.PARAMETER BaselinePath 
+Specifies the path to the folder containing the baseline data. If none is provided it will default to the Baseline folder under the current folder.
 
-           .PARAMETER RebuildBaseline
-           Switch that triggers the baseline data to be rebuilt from the shares on this machine.
+.PARAMETER RebuildBaseline
+Switch that triggers the baseline data to be rebuilt from the shares on this machine.
  
-           .PARAMETER ReportFile
-           The path to the report file to be created. If no report file is specified it will be created in the current folder with the name Report.htm.
-           The Report file will not be created if Baseline data is not found.
+.PARAMETER ReportFile
+The path to the report file to be created. If no report file is specified it will be created in the current folder with the name Report.htm.
+The Report file will not be created if Baseline data is not found.
  
-           .PARAMETER ExcludeShares
-           This is a list of share names to exclude from the 
+.PARAMETER ExcludeShares
+This is a list of share names to exclude from the 
 
-           .OUTPUTS 
-           None
- 
-           .EXAMPLE 
-           C:\PS> .\Compare-ShareACLs 
- 
-	       .URI
-	       http://
-#> 
- 
-# Written by Dan Scott-Raynsford 2014-09-01 
-# Last updated 2014-09-18
-# Ver. 3.1
-  
-[cmdletbinding()] 
- 
-param(
+.EXAMPLE 
+ Compare-ShareACLs -ComputerName DC -RebuildBaseline
+ Causes the Baseline share, file and folder ACL information to be rebuilt for the DC machine.
+
+.EXAMPLE 
+ Compare-ShareACLs -ComputerName DC -BaselinePath c:\baseline\DC\
+ Performs a Share, File and Folder ACL comparison with the current ACL info from all shares on the DC machine against the Baseline ACL
+ info stored in the c:\baseline\DC\ folder. If baseline data does not exist in this folder it will be created as if the -RebuildBaseline
+ swtich was set.
+
+.EXAMPLE
+ Compare-ShareACLs -ComputerName DC -ExcludeShares SYSVOL,NETLOGON
+ Performs a Share, File and Folder ACL comparison with the current ACL info from all shares except SYSVOL and NETLOGON on the DC machine against the Baseline ACL
+ info stored in the c:\baseline\DC\ folder. If baseline data does not exist in this folder it will be created as if the -RebuildBaseline
+ swtich was set.
+#>
+
+[cmdletbinding()]
+param (
     [string]$ComputerName='.',
     [string]$BaselinePath='.',
     [switch]$RebuildBaseline,
     [string]$ReportFile='.',
-    [string[]]$ExcludeShares)  
+    [string[]]$ExcludeShares
+) # Param
 
 # SUPPORT FUNCTIONS
 function Get-AllShares {
