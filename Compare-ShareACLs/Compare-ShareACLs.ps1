@@ -55,6 +55,7 @@ param (
 # SUPPORT FUNCTIONS
 function Get-AllShares {
     Param(
+        [Parameter(Mandatory=$true)]
         [String]$ComputerName,
         [String[]]$ExcludeShares
     ) # param
@@ -72,6 +73,7 @@ function Get-AllShares {
 
 function Get-ShareACLs {
     Param(
+        [Parameter(Mandatory=$true)]
         [String]$ComputerName,
         [String]$ShareName
     ) # param
@@ -94,11 +96,16 @@ function Get-ShareACLs {
 
 function Create-FileACLObject {
     Param (
+        [Parameter(Mandatory=$true)]
         [String]$Path,
+        [Parameter(Mandatory=$true)]
         [String]$Owner,
+        [Parameter(Mandatory=$true)]
         [String]$Group,
+        [Parameter(Mandatory=$true)]
         [String]$SDDL,
-        $Access
+        [Parameter(Mandatory=$true)]
+        [Object]$Access
     ) # Param
     # Need to correct the $Access objects to ensure the FileSystemRights values correctly converted to string
     # When the "Generic Rights" bits are set: http://msdn.microsoft.com/en-us/library/aa374896%28v=vs.85%29.aspx
@@ -115,6 +122,7 @@ function Create-FileACLObject {
 
 function Convert-FileSystemAccessToString {
     Param(
+        [Parameter(Mandatory=$true)]
         [String]$FileSystemAccess
     ) # Param
     If ($FileSystemAccess.StartsWith('-')) {
@@ -127,7 +135,9 @@ function Convert-FileSystemAccessToString {
 
 function Convert-FileSystemAppliesToString {
     Param(
+        [Parameter(Mandatory=$true)]
         [String]$InheritanceFlags,
+        [Parameter(Mandatory=$true)]
         [String]$PropagationFlags
     ) # Param
     If ($PropagationFlags -eq 'None') {
@@ -149,6 +159,7 @@ function Convert-FileSystemAppliesToString {
 
 function Convert-ACEToString {
     Param(
+        [Parameter(Mandatory=$true)]
         [Object]$ACE
     ) # Param
     [string]$rights=Convert-FileSystemAccessToString -FileSystemAccess $ace.FileSystemRights
@@ -161,6 +172,7 @@ function Convert-ACEToString {
 
 function Convert-FileSystemACLToString {
     Param(
+        [Parameter(Mandatory=$true)]
         [Object]$ACL
     ) # Param
     [string]$path=$acl.path
@@ -172,7 +184,9 @@ function Convert-FileSystemACLToString {
 
 function Get-ShareFileACLs {
     Param(
+        [Parameter(Mandatory=$true)]
         [String]$ComputerName,
+        [Parameter(Mandatory=$true)]
         [String]$ShareName
     ) # param
     # Create an empty array to store all the non inherited file/folder ACLs.
@@ -211,6 +225,7 @@ function Get-ShareFileACLs {
 
 Function Create-HTMLReportHeader {
     Param (
+        [Parameter(Mandatory=$true)]
         [String]$Title
     ) # Param
     [String]$html = ''
