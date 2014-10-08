@@ -23,8 +23,11 @@ Switch that triggers the baseline data to be rebuilt from the shares on this mac
 The path to the report file to be created. If no report file is specified it will be created in the current folder with the name Report.htm.
 The Report file will not be created if Baseline data is not found.
  
+.PARAMETER IncludeShares
+This is a list of share names to include from the available shares on the computer. Can not be used when ExcludeShares is specified.
+
 .PARAMETER ExcludeShares
-This is a list of share names to exclude from the 
+This is a list of share names to exclude from the available shares on the computer. Can not be used when IncludeShares is specified.
 
 .EXAMPLE 
  Compare-ShareACLs -ComputerName DC -RebuildBaseline
@@ -37,10 +40,16 @@ This is a list of share names to exclude from the
  swtich was set.
 
 .EXAMPLE
+ Compare-ShareACLs -ComputerName DC -IncludeShares SHARE1,SHARE2
+ Performs a Share, File and Folder ACL comparison with the current ACL info from only shares SHARE1 and SHARE2 on the DC machine against the Baseline ACL
+ info stored in the c:\baseline\DC\ folder. If baseline data does not exist in this folder it will be created as if the -RebuildBaseline
+ swtich was set. Do not use the -ExcludeShares parameter when the -IncludeShares parameter is set.
+
+.EXAMPLE
  Compare-ShareACLs -ComputerName DC -ExcludeShares SYSVOL,NETLOGON
  Performs a Share, File and Folder ACL comparison with the current ACL info from all shares except SYSVOL and NETLOGON on the DC machine against the Baseline ACL
  info stored in the c:\baseline\DC\ folder. If baseline data does not exist in this folder it will be created as if the -RebuildBaseline
- swtich was set.
+ swtich was set. Do not use the -IncludeShares parameter when the -ExcludeShares parameter is set.
 #>
 
 [cmdletbinding()]
@@ -49,7 +58,17 @@ param (
     [string]$BaselinePath='.',
     [switch]$RebuildBaseline,
     [string]$ReportFile='.',
+
+    [Parameter(
+        ParameterSetName='Include'
+        )]
+    [string[]]$IncludeShares,
+
+    [Parameter(
+        ParameterSetName='Exclude'
+        )]
     [string[]]$ExcludeShares
+
 ) # Param
 
 # SUPPORT FUNCTIONS
@@ -57,6 +76,9 @@ function Get-AllShares {
     Param(
         [Parameter(Mandatory=$true)]
         [String]$ComputerName,
+
+        [String[]]$IncludeShares,
+
         [String[]]$ExcludeShares
     ) # param
     [Array]$temp_shares = Get-WMIObject -Class win32_share -ComputerName $ComputerName |
@@ -64,8 +86,14 @@ function Get-AllShares {
         select -ExpandProperty Name
     [Array]$shares = $null
     Foreach ($share in $temp_shares) {
-        If ($share -notin $ExcludeShares) {
+        If (($IncludeShares.Count -gt 0) -and ($share -in $IncludeShares)) {
+            Write-Verbose "$share Included"
+            $shares += $share
+        } elseif (($ExcludeShares.Count -gt 0) -and ($share -notin $ExcludeShares)) {
+            Write-Verbose "$share Not Excluded"
            $shares += $share 
+        } else {
+            Write-Verbose "$share Excluded"
         } # If
     } # Foreach
     return $shares
@@ -293,7 +321,7 @@ If ($RebuildBaseline) {
     Remove-Item -Path "$BaselinePath\*.bsl"
 
     # Get the list of non hidden/non system shares
-    $current_shares = Get-AllShares -ComputerName $ComputerName -ExcludeShares $ExcludeShares
+    $current_shares = Get-AllShares -ComputerName $ComputerName -IncludeShares $IncludeShares -ExcludeShares $ExcludeShares
 
     # Export the list of shares to _shares.bsl
     Export-Clixml -Path "$BaselinePath\_shares.bsl" -InputObject $current_shares
@@ -356,7 +384,7 @@ If ($RebuildBaseline) {
     [string]$html = Create-HTMLReportHeader -Title "Share ACL Comparison '$ComputerName' $(Get-Date)"
     
     # Get the list of non hidden/non system shares
-    [array]$current_shares = Get-AllShares -ComputerName $ComputerName -ExcludeShares $ExcludeShares
+    [array]$current_shares = Get-AllShares -ComputerName $ComputerName -IncludeShares $IncludeShares -ExcludeShares $ExcludeShares 
     
     # Get the Baseline shares
     [array]$baseline_shares = Import-Clixml -Path "$BaselinePath\_shares.bsl"
