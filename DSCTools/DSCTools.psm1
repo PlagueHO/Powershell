@@ -110,9 +110,11 @@ This must contain a list of computers that will have the LCM repull triggered on
             Write-Verbose "Examining $Path for Resource Folders"
             If ((Test-Path -Path $Path -PathType Container) -eq $true) {
                 Write-Verbose "Folder $Path Found"        
+                # This path in the source path array is a folder
                 $Resources = Get-ChildItem -Path $Path -Attributes Directory
                 Foreach ($Resource in $Resources) {
                     Write-Verbose "Folder $Resource Found"
+                    # A folder was found inside the source path - does it contain a resource?
                     $ResourcePath = Join-Path -Path $Path -ChildPath $Resource
                     $Manifest = Join-Path -Path $ResourcePath -ChildPath "$Resource.psd1"
                     $DSCResourcesFolder = Join-Path -Path $ResourcePath -ChildPath DSCResources
@@ -137,7 +139,7 @@ This must contain a list of computers that will have the LCM repull triggered on
                 Write-Verbose "File $Path Is Ignored"
             }# If
         } # Foreach ($Path in $SourcePath)
-    }
+    } # Process
     End {}
 } # Function Publish-DSCPullResources
 
