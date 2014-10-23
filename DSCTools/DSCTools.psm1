@@ -42,6 +42,80 @@ This must contain a list of computers that will have the LCM repull triggered on
     End {}
 } # Function Invoke-DSCPull
 
+Function Publish-DSCPullResources {
+<#
+.SYNOPSIS
+Publishes DSC Resources to a DSC pull server.
+
+.DESCRIPTION 
+This function takes a path where all the source DSC resources are contained in subfolders.
+
+These resources will then be zipped up and renamed based on the manifest version found in the resource.
+
+A checksum file will also be created for each resource zip.
+
+The resource zip and checksum will then be moved into the folder provided in the PullServerPath paramater.
+
+This function requires the PSCX module to be available and installed on this computer.
+
+PSCX Module can be downloaded from http://pscx.codeplex.com/
+     
+.PARAMETER SourcePath
+This is the path containing the folders containing all the DSC resources.
+
+.PARAMETER PullServerPath
+This must contain a list of computers that will have the LCM repull triggered on.
+
+.EXAMPLE 
+ Prepare-DSCPullResources -SourcePath 'c:\program files\windowspowershell\modules\a*' -PullServerPath '\\DSCPullServer\c$\program files\windowspowershell\DSCService\Modules'
+ This will cause all resources found in the c:\program files\windowspowershell\modules\ folder starting with the letter A to be zipped up and copied into the \\DSCPullServer\c$\program files\windowspowershell\DSCService\Modules folder.
+ A checksum file will also be created.
+
+ .LINK
+ http://pscx.codeplex.com/
+#>
+    [CmdletBinding()]
+    Param (
+        [String]$SourcePath='c:\program files\windowspowershell\modules\',
+
+        [Parameter(
+            Mandatory=$true
+            )]
+        [String[]]$PullServerPath
+    ) # Param
+
+    If ( (Get-Module -ListAvailable PSCX | Measure-Object).Count -eq 0) {
+        Throw "PSCX Module is not available. Please download it from http://pscx.codeplex.com/"
+    }
+    Import-Module PSCX
+
+    If (Test-Path $SourcePath) {
+        Throw "$SourcePath could not be found."
+    }
+
+    If (Test-Path $PullServerPath) {
+        Throw "$PullServerPath could not be found."
+    }
+
+    $Resouces = Get-ChildItem -Path $SourcePath -Attributes !Directory
+    Foreach ($Resource in $Resouces) {
+        $Path = Join-Path -Path $SourcePath -ChildPath $Resource
+        $Manifest = Join-Path -Path $Path -ChildPath "$Resource.psd1"
+        $DSCResourcesFolder = Join-Path -Path $Path -ChildPath DSCResources
+        If ((Test-Path -Path $Manifest -PathType Leaf) -and (Test-Path -Path $DSCResourcesFolder -PathType Container)) {
+            # This folder appears to contain a valid DSC Resource
+            # Get the version number out of the manifest file
+            $ManifestContent = Invoke-Expression -Command (Get-Content -Path .\xSqlPs.psd1 -Raw)
+            $ModuleVersion = $ManifestContent.ModuleVersion
+            # Generate the Zip file name (including the destination to the pull server folder)
+            $ZipFileName = Join-Path -Path $PullServerPath -ChildPath "$Resource_$ModuleVersion.zip"
+            # Zip up the resource straight into the pull server resources path
+            # Generate the checksum for the zip file
+            New-DSCCheckSum -ConfigurationPath $ZipFileName -OutPath $PullServerPath
+        } # If
+    }
+} # Function Publish-DSCPullResources
+
 Function Start-DSCPullMode {
 <#
 .SYNOPSIS
