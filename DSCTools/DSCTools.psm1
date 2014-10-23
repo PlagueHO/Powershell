@@ -67,59 +67,78 @@ This is the path containing the folders containing all the DSC resources.
 This must contain a list of computers that will have the LCM repull triggered on.
 
 .EXAMPLE 
- Prepare-DSCPullResources -SourcePath 'c:\program files\windowspowershell\modules\a*' -PullServerPath '\\DSCPullServer\c$\program files\windowspowershell\DSCService\Modules'
+ Publish-DSCPullResources -SourcePath 'c:\program files\windowspowershell\modules\a*' -PullServerPath '\\DSCPullServer\c$\program files\windowspowershell\DSCService\Modules'
  This will cause all resources found in the c:\program files\windowspowershell\modules\ folder starting with the letter A to be zipped up and copied into the \\DSCPullServer\c$\program files\windowspowershell\DSCService\Modules folder.
- A checksum file will also be created.
+ A checksum file will also be created for each zipped resource.
+
+.EXAMPLE 
+ 'c:\program files\windowspowershell\modules\','c:\powershell\modules\' | Publish-DSCPullResources -PullServerPath '\\DSCPullServer\c$\program files\windowspowershell\DSCService\Modules'
+ This will cause all resources found in either the c:\program files\windowspowershell\modules\ folder or c:\powershell\modules\ folder to be zipped up and copied into the \\DSCPullServer\c$\program files\windowspowershell\DSCService\Modules folder.
+ A checksum file will also be created for each zipped resource.
 
  .LINK
  http://pscx.codeplex.com/
 #>
     [CmdletBinding()]
     Param (
-        [String]$SourcePath='c:\program files\windowspowershell\modules\',
+        [Parameter(
+            Mandatory=$true,
+            ValueFromPipeline=$true
+            )]
+        [Alias('FullName')]
+        [String[]]$SourcePath,
 
         [Parameter(
             Mandatory=$true
             )]
-        [String[]]$PullServerPath
+        [String]$PullServerPath
     ) # Param
 
-    If ( (Get-Module -ListAvailable PSCX | Measure-Object).Count -eq 0) {
-        Throw "PSCX Module is not available. Please download it from http://pscx.codeplex.com/"
-    }
-    Import-Module PSCX
+    Begin {
+        If ( (Get-Module -ListAvailable PSCX | Measure-Object).Count -eq 0) {
+            Throw "PSCX Module is not available. Please download it from http://pscx.codeplex.com/"
+        }
+        Import-Module PSCX
 
-    If ((Test-Path -Path $SourcePath -PathType Container) -eq $false) {
-        Throw "$SourcePath could not be found."
-    }
-
-    If ((Test-Path -Path $PullServerPath -PathType Container) -eq $false) {
-        Throw "$PullServerPath could not be found."
+        If ((Test-Path -Path $PullServerPath -PathType Container) -eq $false) {
+            Throw "$PullServerPath could not be found."
+        }
     }
 
-    $Resources = Get-ChildItem -Path $SourcePath -Attributes Directory
-    Foreach ($Resource in $Resources) {
-        Write-Verbose "Folder $Resource Found"
-        $Path = Join-Path -Path $SourcePath -ChildPath $Resource
-        $Manifest = Join-Path -Path $Path -ChildPath "$Resource.psd1"
-        $DSCResourcesFolder = Join-Path -Path $Path -ChildPath DSCResources
-        If ((Test-Path -Path $Manifest -PathType Leaf) -and (Test-Path -Path $DSCResourcesFolder -PathType Container)) {
-            Write-Verbose "Resource $Resource in $Path Found"
-            # This folder appears to contain a valid DSC Resource
-            # Get the version number out of the manifest file
-            $ManifestContent = Invoke-Expression -Command (Get-Content -Path $Manifest -Raw)
-            $ModuleVersion = $ManifestContent.ModuleVersion
-            Write-Verbose "Resource $Resource is version $ModuleVersion"
-            # Generate the Zip file name (including the destination to the pull server folder)
-            $ZipFileName = Join-Path -Path $PullServerPath -ChildPath "$($Resource)_$($ModuleVersion).zip"
-            Write-Verbose "Zipping $Path to $ZipFileName" 
-            # Zip up the resource straight into the pull server resources path
-            Get-ChildItem -Path $Path -Recurse | Write-Zip -IncludeEmptyDirectories -OutputPath $ZipFileName -EntryPathRoot $Path
-            # Generate the checksum for the zip file
-            New-DSCCheckSum -ConfigurationPath $ZipFileName -Force | Out-Null
-            Write-Verbose "Checksum for $ZipFileName created"
-        } # If
+    Process {
+        Foreach ($Path in $SourcePath) {
+            Write-Verbose "Examining $Path for Resource Folders"
+            If ((Test-Path -Path $Path -PathType Container) -eq $true) {
+                Write-Verbose "Folder $Path Found"        
+                $Resources = Get-ChildItem -Path $Path -Attributes Directory
+                Foreach ($Resource in $Resources) {
+                    Write-Verbose "Folder $Resource Found"
+                    $ResourcePath = Join-Path -Path $Path -ChildPath $Resource
+                    $Manifest = Join-Path -Path $ResourcePath -ChildPath "$Resource.psd1"
+                    $DSCResourcesFolder = Join-Path -Path $ResourcePath -ChildPath DSCResources
+                    If ((Test-Path -Path $Manifest -PathType Leaf) -and (Test-Path -Path $DSCResourcesFolder -PathType Container)) {
+                        Write-Verbose "Resource $Resource in $ResourcePath Found"
+                        # This folder appears to contain a valid DSC Resource
+                        # Get the version number out of the manifest file
+                        $ManifestContent = Invoke-Expression -Command (Get-Content -Path $Manifest -Raw)
+                        $ModuleVersion = $ManifestContent.ModuleVersion
+                        Write-Verbose "Resource $Resource is version $ModuleVersion"
+                        # Generate the Zip file name (including the destination to the pull server folder)
+                        $ZipFileName = Join-Path -Path $PullServerPath -ChildPath "$($Resource)_$($ModuleVersion).zip"
+                        Write-Verbose "Zipping $ResourcePath to $ZipFileName" 
+                        # Zip up the resource straight into the pull server resources path
+                        Get-ChildItem -Path $ResourcePath -Recurse | Write-Zip -IncludeEmptyDirectories -OutputPath $ZipFileName -EntryPathRoot $ResourcePath -Level 9
+                        # Generate the checksum for the zip file
+                        New-DSCCheckSum -ConfigurationPath $ZipFileName -Force | Out-Null
+                        Write-Verbose "Checksum for $ZipFileName created"
+                    } # If
+                } # Foreach ($Resource in $Resources)
+            } Else {
+                Write-Verbose "File $Path Is Ignored"
+            }# If
+        } # Foreach ($Path in $SourcePath)
     }
+    End {}
 } # Function Publish-DSCPullResources
 
 Function Start-DSCPullMode {
