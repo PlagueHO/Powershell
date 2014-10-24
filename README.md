@@ -15,9 +15,9 @@ This script will get all the ACLs for all shares on this computer and compare th
 If this script is run it will look for specified baseline ACL. If none are found it will create them from the shares active on this machine.
 If the baseline data is found the script will output a report showing the changes to the share and file/folder ACLs.
 The script makes three different types of Baseline files (.BSL) in the baseline folder:
-1. _SHARES.BSL - this is the list of shares available on the computer at the time of the baseline info being created.
-2. SHARE_*.BSL - this is the share ACLs for the share specified by * on the computer.
-3. FILE_*.BSL - this is the full list of defined (not inherited) file/folder ACLs for the * share on this computer.
+ 1. _SHARES.BSL - this is the list of shares available on the computer at the time of the baseline info being created.
+ 2. SHARE_*.BSL - this is the share ACLs for the share specified by * on the computer.
+ 3. FILE_*.BSL - this is the full list of defined (not inherited) file/folder ACLs for the * share on this computer.
 
 ### Minimum requirements
 
