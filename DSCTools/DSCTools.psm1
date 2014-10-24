@@ -1,12 +1,17 @@
-﻿Function Invoke-DSCPull {
+﻿#Requires -Version 4.0
+
+Function Invoke-DSCPull {
 <#
 .SYNOPSIS
-Forces an LCM to repull DSC configuration data from the pull server.
+Forces the LCM on destination computer(s) to repull DSC configuration data from a pull server.
 
 .DESCRIPTION 
 This function will cause the Local Configuration Manager on the computers listed in the ComputerName parameter to repull the DSC configuration MOF file from the pull server.
 
 The computers listed must already have the LCM correctly configured for pull mode.
+
+The command is executed via a call to Invoke-Command on the destination computer's LCM which will be called via WinRM.
+Therefore WinRM must be enabled on the destination computer's LCM and the appropriate firewall ports opened.
      
 .PARAMETER ComputerName
 This must contain a list of computers that will have the LCM repull triggered on.
@@ -29,15 +34,15 @@ This must contain a list of computers that will have the LCM repull triggered on
     Process {
         Foreach ($Computer In $ComputerName) {
             # For some reason using the Invoke-CimMethod cmdlet with the -ComputerName parameter doesn't work
-            # So the Invoke-Command 
+            # So the Invoke-Command is used instead to execute the command on the destination computer.
             Invoke-Command -ComputerName $Computer { `
                 Invoke-CimMethod `
                     -Namespace 'root/Microsoft/Windows/DesiredStateConfiguration' `
                     -ClassName 'MSFT_DSCLocalConfigurationManager' `
                     -MethodName 'PerformRequiredConfigurationChecks' `
                     -Arguments @{ Flags = [uint32]1 }
-                }
-        }
+                } # Invoke-Command
+        } # Foreach ($Computer In $ComputerName)
     } # Process
     End {}
 } # Function Invoke-DSCPull
