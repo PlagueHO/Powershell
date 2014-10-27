@@ -334,3 +334,5 @@ Configuration ConfigureLCMPullMode {
 		} # LocalConfigurationManager
 	} # Node $NodeName
 } # Configuration ConfigureLCMPullMode
+
+Export-ModuleMember -Function Invoke-DSCPull,Publish-DSCPullResources,Start-DSCPullMode

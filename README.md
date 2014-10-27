@@ -79,4 +79,45 @@ swtich was set. Do not use the -IncludeShares parameter when the -ExcludeShares 
 ## DSCTools
 This module provides miscellaneous helper functions for setting up and using Powershell DSC.
 
+### Overview
+This module contains functions to try and make setting up and using Desired State Configuration easier.
+
+#### Functiopn Invoke-DSCPull
+Forces the LCM on destination computer(s) to repull DSC configuration data from a pull server.
+
+#### Function Publish-DSCPullResources
+Publishes DSC Resources to a DSC pull server.
+
+#### Function Start-DSCPullMode
+Configures a Node for Pull Mode.
+
+### Minimum requirements
+
+- PowerShell 4.0
+
+### License and Copyright
+
+Copyright 2014 Daniel Scott-Raynsford
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+### Installing DSCTools
+1. Create a folder called DSCTools in the documents\windowspowershell\modules folder of your profile. E.g.
+   C:\Users\Daniel\Documents\WindowsPowerShell\Modueles\DSCTools\
+2. Copy the DSCTools.psm1 and DSCTools.psd1 files into the folder created above.
+3. In PowerShell execute:
+```powershell
+   Import-Module DSCTools
+```
+
 
