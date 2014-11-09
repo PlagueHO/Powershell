@@ -1,0 +1,45 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<Configuration>
+    <ViewDefinitions>
+        <View>
+            <Name>System Info</Name>
+            <ViewSelectedBy>
+                <TypeName>ACLReportTools.Permission</TypeName>
+            </ViewSelectedBy>
+            <TableControl>
+
+                <TableHeaders>
+                    <TableColumnHeader>
+                        <Label>Computer</Label>
+			<Width>32</Width>
+                    </TableColumnHeader>
+                    <TableColumnHeader>
+                        <Label>Type</Label>
+                        <Width>10</Width>
+                    </TableColumnHeader>
+                    <TableColumnHeader>
+                        <Label>Path</Label>
+                    </TableColumnHeader>
+                </TableHeaders>
+
+                <TableRowEntries>
+                    <TableRowEntry>
+                        <TableColumnItems>
+                            <TableColumnItem>
+                                <PropertyName>ComputerName</PropertyName>
+                            </TableColumnItem>
+                            <TableColumnItem>
+                                <PropertyName>Type</PropertyName>
+                            </TableColumnItem>
+                            <TableColumnItem>
+                                <PropertyName>Path</PropertyName>
+                            </TableColumnItem>
+                        </TableColumnItems>
+                    </TableRowEntry>
+                </TableRowEntries>
+
+            </TableControl>
+        </View>
+
+    </ViewDefinitions>
+</Configuration>

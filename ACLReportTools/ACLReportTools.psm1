@@ -469,9 +469,6 @@ This function creates an ACLReportTools.Share object from the class definition i
         [String]$ShareName
     ) # Param
 
-    # Make sure the classes are available.
-    Initialize-Module
-
     $share_object = New-Object -TypeName 'ACLReportTools.Share'
     $share_object.ComputerName = $ComputerName
     $share_object.Name = $ShareName
@@ -510,9 +507,6 @@ This function creates an ACLReportTools.Permission object from the class definit
         [ValidateNotNull()]
         [Security.AccessControl.AccessRule]$Access
     ) # Param
-
-    # Make sure the classes are available.
-    Initialize-Module
 
     # Need to correct the $Access objects to ensure the FileSystemRights values correctly converted to string
     # When the "Generic Rights" bits are set: http://msdn.microsoft.com/en-us/library/aa374896%28v=vs.85%29.aspx
@@ -613,4 +607,8 @@ function Convert-FileSystemACLToString {
     Return "Path              : $path`nOwner             : $owner`nGroup             : $group`n$acestring"
 } # function Convert-FileSystemACLToString
 
+# Ensure all the custom classes are loaded in available
+Initialize-Module
+
+# Export the Module Cmdlets
 Export-ModuleMember -Function Get-Shares,Get-ShareACLs,Get-PathFileACLs,Get-ShareFileACLs
