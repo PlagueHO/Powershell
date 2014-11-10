@@ -400,10 +400,10 @@ Setting this switch will cause the non inherited file/folder ACLs to be pulled r
 } # Function Get-PathFileACLs
 
 
-function Save-ACLs {
+function Export-ACLs {
 <#
 .SYNOPSIS
-Saves the ACLs that are in the pipeline as a file.
+Export the ACLs that are in the pipeline as a file.
 
 .DESCRIPTION 
 This Cmdlet will save what ever ACLs (ACLReportTools.Permissions) to a file.
@@ -412,18 +412,18 @@ This Cmdlet will save what ever ACLs (ACLReportTools.Permissions) to a file.
 This is the path to the ACL output file. This parameter is required.
 
 .PARAMETER InputObject
-Specifies the Permissions objects to export to th file. Enter a variable that contains the objects or type a command or expression that gets the objects. You can also pipe ACLReportTools.Permissions objects to Save-ACLs.
+Specifies the Permissions objects to export to th file. Enter a variable that contains the objects or type a command or expression that gets the objects. You can also pipe ACLReportTools.Permissions objects to Export-ACLs.
 
 .PARAMETER Force
 Causes the file to be overwritten if it exists.
 
 .EXAMPLE 
- Save-ACLs -Path C:\ACLReports\server01.acl -InputObject $Acls
+ Export-ACLs -Path C:\ACLReports\server01.acl -InputObject $Acls
 
  Saves the ACLs in the $Acls variable to the file C:\ACLReports\server01.acl.  If the file exists it will be overwritten if the Force switch is set.
 
 .EXAMPLE 
- Save-ACLs -Path C:\ACLReports\server01.acl -InputObject (Get-Shares -ComputerName SERVER01 | Get-ShareFileACLs -Recurse)
+ Export-ACLs -Path C:\ACLReports\server01.acl -InputObject (Get-Shares -ComputerName SERVER01 | Get-ShareFileACLs -Recurse)
 
  Saves the file ACLs for all shares on the compuer SERVER01 to the file C:\ACLReports\server01.acl. If the file exists it will be overwritten if the Force switch is set.
 #>    
@@ -456,10 +456,48 @@ Causes the file to be overwritten if it exists.
         } # Foreach
     } # Process
     End {
-        $Output | Export-Clixml -Path $Path -Force
+        Try {
+            $Output | Export-Clixml -Path $Path -Force
+        } Catch {
+            Write-Error "Unable to export the ACL file $Path."
+        }
     } # End
-} # Function Save-ACLs
+} # Function Export-ACLs
 
+function Import-ACLs {
+<#
+.SYNOPSIS
+Import the ACLs that are in a file back into the pipeline.
+
+.DESCRIPTION 
+This Cmdlet will load all the ACLs (ACLReportTools.Permissions) records from a specified file.
+     
+.PARAMETER Path
+This is the path to the ACL output file. This parameter is required.
+
+.EXAMPLE 
+ Import-ACLs -Path C:\ACLReports\server01.acl
+
+ Loads the ACLs in the file C:\ACLReports\server01.acl.
+#>    
+    [CmdLetBinding()]
+    Param(
+        [Parameter(Mandatory=$true)]
+        [ValidateNotNullOrEmpty()]
+        [String]$Path
+    ) # param
+
+    If ((Test-Path -Path $Path -PathType Leaf) -eq $false) {
+        Write-Error "The file $Path does not exist."
+        return
+    }
+
+    Try {
+        Import-Clixml -Path $Path
+    } catch { 
+        Write-Error "Unable to import the ACL file $Path."
+    } # Try
+} # Function Import-ACLs
 
 
 
@@ -671,4 +709,4 @@ function Convert-FileSystemACLToString {
 Initialize-Module
 
 # Export the Module Cmdlets
-Export-ModuleMember -Function Get-Shares,Get-ShareACLs,Get-PathFileACLs,Get-ShareFileACLs,Save-ACLs
+Export-ModuleMember -Function Get-Shares,Get-ShareACLs,Get-PathFileACLs,Get-ShareFileACLs,Import-ACLs,Export-ACLs
