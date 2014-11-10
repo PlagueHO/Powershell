@@ -400,6 +400,66 @@ Setting this switch will cause the non inherited file/folder ACLs to be pulled r
 } # Function Get-PathFileACLs
 
 
+function Save-ACLs {
+<#
+.SYNOPSIS
+Saves the ACLs that are in the pipeline as a file.
+
+.DESCRIPTION 
+This Cmdlet will save what ever ACLs (ACLReportTools.Permissions) to a file.
+     
+.PARAMETER Path
+This is the path to the ACL output file. This parameter is required.
+
+.PARAMETER InputObject
+Specifies the Permissions objects to export to th file. Enter a variable that contains the objects or type a command or expression that gets the objects. You can also pipe ACLReportTools.Permissions objects to Save-ACLs.
+
+.PARAMETER Force
+Causes the file to be overwritten if it exists.
+
+.EXAMPLE 
+ Save-ACLs -Path C:\ACLReports\server01.acl -InputObject $Acls
+
+ Saves the ACLs in the $Acls variable to the file C:\ACLReports\server01.acl.  If the file exists it will be overwritten if the Force switch is set.
+
+.EXAMPLE 
+ Save-ACLs -Path C:\ACLReports\server01.acl -InputObject (Get-Shares -ComputerName SERVER01 | Get-ShareFileACLs -Recurse)
+
+ Saves the file ACLs for all shares on the compuer SERVER01 to the file C:\ACLReports\server01.acl. If the file exists it will be overwritten if the Force switch is set.
+#>    
+    [CmdLetBinding()]
+    Param(
+        [Parameter(Mandatory=$true)]
+        [ValidateNotNullOrEmpty()]
+        [String]$Path,
+
+        [Parameter(Mandatory=$true,
+            ValueFromPipeline=$true,
+            ValueFromPipelineByPropertyName=$true)]
+        [ValidateScript({$_.GetType().FullName -ne 'ACLReportTools.Permission[]'})]
+        [ACLReportTools.Permission[]]$InputObject,
+
+        [Switch]$Force
+
+    ) # param
+
+    Begin {
+        If ((Test-Path -Path $Path -PathType Leaf) -and ($force -eq $false)) {
+            Write-Error "The file $Path already exists. Use Force to overwrite it."
+            return
+        }
+        [array]$Output = $null
+    } # Begin
+    Process {
+        Foreach ($Permission in $InputObject) {
+            $Output += $Permission
+        } # Foreach
+    } # Process
+    End {
+        $Output | Export-Clixml -Path $Path -Force
+    } # End
+} # Function Save-ACLs
+
 
 
 
@@ -611,4 +671,4 @@ function Convert-FileSystemACLToString {
 Initialize-Module
 
 # Export the Module Cmdlets
-Export-ModuleMember -Function Get-Shares,Get-ShareACLs,Get-PathFileACLs,Get-ShareFileACLs
+Export-ModuleMember -Function Get-Shares,Get-ShareACLs,Get-PathFileACLs,Get-ShareFileACLs,Save-ACLs
