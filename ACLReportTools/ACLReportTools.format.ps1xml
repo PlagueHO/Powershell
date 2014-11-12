@@ -18,6 +18,10 @@
                         <Width>10</Width>
                     </TableColumnHeader>
                     <TableColumnHeader>
+                        <Label>Share</Label>
+                        <Width>32</Width>
+                    </TableColumnHeader>
+                    <TableColumnHeader>
                         <Label>Path</Label>
                     </TableColumnHeader>
                 </TableHeaders>
@@ -30,6 +34,9 @@
                             </TableColumnItem>
                             <TableColumnItem>
                                 <PropertyName>Type</PropertyName>
+                            </TableColumnItem>
+                            <TableColumnItem>
+                                <PropertyName>Share</PropertyName>
                             </TableColumnItem>
                             <TableColumnItem>
                                 <PropertyName>Path</PropertyName>

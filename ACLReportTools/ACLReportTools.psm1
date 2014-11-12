@@ -1,45 +1,91 @@
 ﻿#Requires -Version 2.0
 
 ##########################################################################################################################################
+# Data Sections
+##########################################################################################################################################
+$Html_Header = Data {
+@'
+<!doctype html><html><head><title>{0}</title>
+<style type="text/css">
+h1, h2, h3, h4, h5, h6, p, a, ul, li, ol, td, label, input, span, div {font-weight:normal !important; font-family:Tahoma, Arial, Helvetica, sans-serif;}
+.sharebad {color: red; font-weight: bold;}
+.shareadded {color: green; font-weight: bold;}
+.shareremoved {color: red; font-weight: bold;}
+.permissionremoved {color: red; font-weight: bold;}
+.permissionchanged {color: orange; font-weight: bold;}
+.permissionadded { color: green; font-weight: bold;}
+.nochange { color: gray; font-style: italic;}
+.typelabel { color: cyan;}
+</style>
+</head>
+<body>
+<h1>{0}</h1>
+'@
+}
+
+$Html_Footer = Data {
+@'
+</body></html>
+'@
+}
+##########################################################################################################################################
 # Main CmdLets
 ##########################################################################################################################################
 
-Function New-ACLShareReport {
+Function Get-ACLShareReport {
 <#
 .SYNOPSIS
 
 .DESCRIPTION 
      
 .PARAMETER ComputerName
-This is the computer to get the shares from. If this parameter is not set it will default to the current machine.
+This is the computer(s) to create the ACL Share report for. The Computer names can also be passed in via the pipeline.
 
 .PARAMETER Include
-This is a list of shares to include from the computer. If this parameter is not set it will default to including all shares. This parameter can't be set if the Exclude parameter is set.
+This is a list of shares to include from the report. If this parameter is not set it will default to including all shares. This parameter can't be set if the Exclude parameter is set.
 
 .PARAMETER Exclude
-This is a list of shares to exclude from the computer. If this parameter is not set it will default to excluding no shares. This parameter can't be set if the Include parameter is set.
+This is a list of shares to exclude from the report. If this parameter is not set it will default to excluding no shares. This parameter can't be set if the Include parameter is set.
 
 .EXAMPLE 
- New-ACLShareReport -ComputerName CLIENT01
+ Get-ACLShareReport -ComputerName CLIENT01
+ Creates a report of all the Share and file/folder ACLs on the CLIENT01 machine.
 
 .EXAMPLE 
- New-ACLShareReport -ComputerName CLIENT01 -Include MyShare,OtherShare
+ Get-ACLShareReport -ComputerName CLIENT01 -Include MyShare,OtherShare
+ Creates a report of all the Share and file/folder ACLs on the CLIENT01 machine that are in shares named either MyShare or OtherShare.
 
 .EXAMPLE 
- New-ACLShareReport -ComputerName CLIENT01 -Exclude SysVol
+ Get-ACLShareReport -ComputerName CLIENT01 -Exclude SysVol
+ Creates a report of all the Share and file/folder ACLs on the CLIENT01 machine that are in shares not named SysVol.
 #>
     [CmdLetBinding()]
     Param(
-        [String]$ComputerName='Localhost',
+        [Parameter(
+            ValueFromPipeline=$true,
+            ValueFromPipelineByPropertyName=$true)]
+        [String[]]$ComputerName=$env:computername,
 
         [String[]]$Include,
 
         [String[]]$Exclude
     ) # param
+    Begin {
+        [ACLReportTools.Permission[]]$acls = $null
+    } # Begin
+    Process {
+        $Shares = Get-Shares @PSBoundParameters
+        $acls += $Shares | Get-ShareACLs
+        $acls += $Shares | Get-ShareFileACLs
+    } # Process
+    End {
+        return $acls
+    } # End
+} # Function Get-ACLShareReport
 
-} # Function New-ACLShareReport
 
-Function Compare-ACLShareReport {
+
+Function Compare-ACLShareReports {
 <#
 .SYNOPSIS
 
@@ -65,14 +111,41 @@ This is a list of shares to exclude from the computer. If this parameter is not 
 #>
     [CmdLetBinding()]
     Param(
-        [String]$ComputerName='Localhost',
+        [Parameter(
+            Mandatory=$true)]
+        [ACLReportTools.Permission[]]$Report,
 
+        [Parameter(
+            ParameterSetName='CompareToCurrent',
+            ValueFromPipeline=$true,
+            ValueFromPipelineByPropertyName=$true)]
+        [String[]]$ComputerName=$env:computername,
+
+        [Parameter(
+            ParameterSetName='CompareToCurrent')]
         [String[]]$Include,
 
-        [String[]]$Exclude
-    ) # param
+        [Parameter(
+            ParameterSetName='CompareToCurrent')]
+        [String[]]$Exclude,
 
-} # Function Compare-ACLShareReport
+        [Parameter(
+            ParameterSetName='CompareToOther')]
+        [ACLReportTools.Permission[]]$With
+    ) # param
+    Begin {
+        [ACLReportTools.PermissionDiff[]]$Comparison = $Null
+    } # Begin
+    Process {
+        If ($PsCmdlet.ParameterSetName = 'CompareToCurrent') {
+            # A report to compare to wasn't specified so we need to generate
+            # the current report using the other parameters passed.
+            $With = Get-ACLShareReport @PSBoundParameters
+        }
+    } # Process
+    End {
+    } # End
+} # Function Compare-ACLShareReports
 
 
 
@@ -166,6 +239,8 @@ This is a list of shares to exclude from the computer. If this parameter is not 
     } # End
 } # Function Get-Shares
 
+
+
 function Get-ShareACLs {
 <#
 .SYNOPSIS
@@ -227,7 +302,8 @@ Get-Shares -ComputerName CLIENT01,CLIENT02 -Exclude SYSVOL | Get-ShareACLs
                 If ($ace.Trustee.Domain -ne $Null)  {$UserName = "$($ace.Trustee.Domain)\$UserName" }    
                 If ($ace.Trustee.Name -eq $Null) { $UserName = $ace.Trustee.SIDString }      
                 $fs_rule = New-Object Security.AccessControl.FileSystemAccessRule($UserName, $ace.AccessMask, $ace.AceType)
-                $acl_object =  New-ACLObject -Type 'Share' -ComputerName $ComputerName -Path "\\$ComputerName\$ShareName\" -Access $fs_rule
+                $type = [ACLReportTools.PermissionTypeEnum]::Share
+                $acl_object =  New-PermissionObject -Type $type -ComputerName $ComputerName -Share $ShareName -Access $fs_rule
                 $share_acls += $acl_object
            } # Foreach           
         } catch { 
@@ -238,6 +314,8 @@ Get-Shares -ComputerName CLIENT01,CLIENT02 -Exclude SYSVOL | Get-ShareACLs
         Return $share_acls
     } # End
 } # function Get-ShareACLs
+
+
 
 function Get-ShareFileACLs {
 <#
@@ -300,7 +378,8 @@ Setting this switch will cause the non inherited file/folder ACLs to be pulled r
             $owner = $root_file_acl.Owner
             $group = $root_file_acl.Group
             $SDDL = $root_file_acl.SDDL
-            $acl_object =  New-ACLObject -Type 'Folder' -ComputerName $ComputerName -Path $purepath -Owner $owner -Group $group -SDDL $SDDL -Access $access
+            $type = [ACLReportTools.PermissionTypeEnum]::Folder
+            $acl_object =  New-PermissionObject -Type $type -ComputerName $ComputerName -Path $purepath -Share $ShareName -Owner $owner -Group $group -SDDL $SDDL -Access $access
             $file_acls += $acl_object
         } # Foreach
         If ($Recurse) {
@@ -312,12 +391,12 @@ Setting this switch will cause the non inherited file/folder ACLs to be pulled r
                 Foreach ($access in $node_file_acl.Access) {
                     If (-not $access.IsInherited) {
                         # Write each non-inherited ACL from the file/folder into the array of ACL's 
-                        If ($node_file_acl.PSChildName -eq '') { $type = 'Folder' } else { $type = 'File' }
+                        If ($node_file_acl.PSChildName -eq '') { $type = [ACLReportTools.PermissionTypeEnum]::Folder } else { $type = [ACLReportTools.PermissionTypeEnum]::File }
                         $purepath = $node_file_acl.PurePath
                         $owner = $node_file_acl.Owner
                         $group = $node_file_acl.Group
                         $SDDL = $node_file_acl.SDDL
-                        $acl_object =  New-ACLObject -Type $type -ComputerName $ComputerName -Path $purepath -Owner $owner -Group $group -SDDL $SDDL -Access $access
+                        $acl_object =  New-PermissionObject -Type $type -ComputerName $ComputerName -Path $purepath -Share $ShareName -Owner $owner -Group $group -SDDL $SDDL -Access $access
                         $file_acls += $acl_object
                     } # If
                 } # Foreach
@@ -328,6 +407,8 @@ Setting this switch will cause the non inherited file/folder ACLs to be pulled r
         Return $file_acls
     } # End
 } # Function Get-ShareFileACLs
+
+
 
 function Get-PathFileACLs {
 <#
@@ -373,7 +454,8 @@ Setting this switch will cause the non inherited file/folder ACLs to be pulled r
     $SDDL = $root_file_acl.SDDL
     Foreach ($access in $root_file_acl.Access) {
         # Write each non-inherited ACL from the root into the array of ACL's 
-        $acl_object =  New-ACLObject -Type 'Folder' -Path $purepath -Owner $owner -Group $group -SDDL $SDDL -Access $access
+        $type = [ACLReportTools.PermissionTypeEnum]::Folder
+        $acl_object = New-PermissionObject -Type $type -Path $purepath -Owner $owner -Group $group -SDDL $SDDL -Access $access
         $file_acls += $acl_object
     } # Foreach
     If ($Recurse) {
@@ -389,8 +471,8 @@ Setting this switch will cause the non inherited file/folder ACLs to be pulled r
             Foreach ($access in $node_file_acl.Access) {
                 If (-not $access.IsInherited) {
                     # Write each non-inherited ACL from the file/folder into the array of ACL's 
-                    If ($node_file_acl.PSChildName -eq '') { $type = 'Folder' } else { $type = 'File' }
-                    $acl_object =  New-ACLObject -Type $type -Path $purepath -Owner $owner -Group $group -SDDL $SDDL -Access $access
+                    If ($node_file_acl.PSChildName -eq '') { $type = [ACLReportTools.PermissionTypeEnum]::Folder } else { $type = [ACLReportTools.PermissionTypeEnum]::File }
+                    $acl_object = New-PermissionObject -Type $type -Path $purepath -Owner $owner -Group $group -SDDL $SDDL -Access $access
                     $file_acls += $acl_object
                 } # If
             } # Foreach
@@ -398,6 +480,7 @@ Setting this switch will cause the non inherited file/folder ACLs to be pulled r
     } # If
     return $file_acls
 } # Function Get-PathFileACLs
+
 
 
 function Export-ACLs {
@@ -464,6 +547,8 @@ Causes the file to be overwritten if it exists.
     } # End
 } # Function Export-ACLs
 
+
+
 function Import-ACLs {
 <#
 .SYNOPSIS
@@ -504,7 +589,6 @@ This is the path to the ACL output file. This parameter is required.
 ##########################################################################################################################################
 # Hidden Support CmdLets
 ##########################################################################################################################################
-
 function Initialize-Module {
 <#
 .SYNOPSIS
@@ -526,11 +610,20 @@ This function creates a .net dynamic module via reflection and adds classes and 
         $AssemblyBuilder = $Domain.DefineDynamicAssembly($DynAssembly, 'Run')
         $ModuleBuilder = $AssemblyBuilder.DefineDynamicModule($ModuleName, $False)
 
+        # Define Permission Difference Enumeration
+        $EnumBuilder = $ModuleBuilder.DefineEnum('ACLReportTools.PermissionTypeEnum', 'Public', [Int])
+        # Define values of the enum
+        $EnumBuilder.DefineLiteral('Share', [Int]0)
+        $EnumBuilder.DefineLiteral('Folder', [Int]1)
+        $EnumBuilder.DefineLiteral('File', [Int]2)
+        $PermissionTypeEnumType = $EnumBuilder.CreateType()
+
         # Define the ACLReportTools.Permission Class
         $Attributes = 'AutoLayout, AnsiClass, Class, Public'
         $TypeBuilder  = $ModuleBuilder.DefineType('ACLReportTools.Permission',$Attributes,[System.Object])
         $TypeBuilder.DefineField('ComputerName', [string], 'Public') | Out-Null
-        $TypeBuilder.DefineField('Type', [string], 'Public') | Out-Null
+        $TypeBuilder.DefineField('Type', $PermissionTypeEnumType, 'Public') | Out-Null
+        $TypeBuilder.DefineField('Share', [string], 'Public') | Out-Null
         $TypeBuilder.DefineField('Path', [string], 'Public') | Out-Null
         $TypeBuilder.DefineField('Owner', [string], 'Public') | Out-Null
         $TypeBuilder.DefineField('Group', [string], 'Public') | Out-Null
@@ -545,8 +638,34 @@ This function creates a .net dynamic module via reflection and adds classes and 
         $TypeBuilder.DefineField('Name', [string], 'Public') | Out-Null
         $TypeBuilder.CreateType() | Out-Null
 
+        # Define Permission Difference Enumeration
+        $EnumBuilder = $ModuleBuilder.DefineEnum('ACLReportTools.PermissionDiffEnum', 'Public', [Int])
+        # Define values of the enum
+        $EnumBuilder.DefineLiteral('No Change', [Int]0)
+        $EnumBuilder.DefineLiteral('Share Removed', [Int]1)
+        $EnumBuilder.DefineLiteral('Share Added', [Int]2)
+        $EnumBuilder.DefineLiteral('Permission Removed', [Int]3)
+        $EnumBuilder.DefineLiteral('Permission Added', [Int]4)
+        $EnumBuilder.DefineLiteral('Permission Rights Changed', [Int]5)
+        $EnumBuilder.DefineLiteral('Permission Access Control Changed', [Int]6)
+        $EnumBuilder.DefineLiteral('Owner Changed', [Int]7)
+        $EnumBuilder.DefineLiteral('Group Changed', [Int]8)
+        $PermissionDiffEnumType = $EnumBuilder.CreateType()
+
+        # Define the ACLReportTools.PermissionDiff Class
+        $Attributes = 'AutoLayout, AnsiClass, Class, Public'
+        $TypeBuilder  = $ModuleBuilder.DefineType('ACLReportTools.PermissionDiff',$Attributes,[System.Object])
+        $TypeBuilder.DefineField('ComputerName', [string], 'Public') | Out-Null
+        $TypeBuilder.DefineField('Type', $PermissionTypeEnumType, 'Public') | Out-Null
+        $TypeBuilder.DefineField('Share', [string], 'Public') | Out-Null
+        $TypeBuilder.DefineField('Path', [string], 'Public') | Out-Null
+        $TypeBuilder.DefineField('DiffType', $PermissionDiffEnumType, 'Public') | Out-Null
+        $TypeBuilder.DefineField('Difference', [String], 'Public') | Out-Null
+        $TypeBuilder.CreateType() | Out-Null
     } # If
 } # Function Initialize-Module
+
+
 
 function New-ShareObject {
 <#
@@ -573,7 +692,9 @@ This function creates an ACLReportTools.Share object from the class definition i
     return $share_object
 } # function New-ShareObject
 
-function New-ACLObject {
+
+
+function New-PermissionObject {
 <#
 .SYNOPSIS
 This function creates an ACLReportTools.Permission object and populates it.
@@ -584,17 +705,16 @@ This function creates an ACLReportTools.Permission object from the class definit
     [CmdLetBinding()]
     Param (
         [Parameter(Mandatory=$true)]
-        [ValidateSet('File','Folder','Share')]
-        [String]$Type,
+        [ACLReportTools.PermissionTypeEnum]$Type,
         
         [Parameter(Mandatory=$true)]
         [ValidateNotNullOrEmpty()]
         [String]$ComputerName,
 
-        [Parameter(Mandatory=$true)]
-        [ValidateNotNullOrEmpty()]
-        [String]$Path,
+        [String]$Path='',
         
+        [String]$Share='',
+
         [String]$Owner='',
         
         [String]$Group='',
@@ -608,16 +728,59 @@ This function creates an ACLReportTools.Permission object from the class definit
 
     # Need to correct the $Access objects to ensure the FileSystemRights values correctly converted to string
     # When the "Generic Rights" bits are set: http://msdn.microsoft.com/en-us/library/aa374896%28v=vs.85%29.aspx
-    $acl_object = New-Object -TypeName 'ACLReportTools.Permission'
-    $acl_object.Type = $Type
-    $acl_object.ComputerName = $ComputerName
-    $acl_object.Path = $Path
-    $acl_object.Owner = $OWner
-    $acl_object.Group = $Group
-    $acl_object.SDDL = $SDDL
-    $acl_object.Access = $Access
-    return $acl_object
-} # function New-ACLObject
+    $permission_object = New-Object -TypeName 'ACLReportTools.Permission'
+    $permission_object.Type = $Type
+    $permission_object.ComputerName = $ComputerName
+    $permission_object.Path = $Path
+    $permission_object.Share = $Share
+    $permission_object.Owner = $OWner
+    $permission_object.Group = $Group
+    $permission_object.SDDL = $SDDL
+    $permission_object.Access = $Access
+    return $permission_object
+} # function New-PermissionObject
+
+
+
+function New-PermissionDiffObject {
+<#
+.SYNOPSIS
+This function creates an ACLReportTools.PermissionDiff object and populates it.
+
+.DESCRIPTION 
+This function creates an ACLReportTools.PermissionDiff object from the class definition in the dynamic module ACLREportsModule and assigns the function parameters to the field values of the object.
+#>
+    [CmdLetBinding()]
+    Param (
+        [Parameter(Mandatory=$true)]
+        [ACLReportTools.PermissionTypeEnum]$Type,
+        
+        [Parameter(Mandatory=$true)]
+        [ValidateNotNullOrEmpty()]
+        [String]$ComputerName,
+
+        [String]$Path='',
+        
+        [String]$Share='',
+
+        [ACLReportTools.PermissionDiffEnum]$DiffType=([ACLReportTools.PermissionDiffEnum]::'No Change'),
+        
+        [String]$Difference=''
+    ) # Param
+
+    # Need to correct the $Access objects to ensure the FileSystemRights values correctly converted to string
+    # When the "Generic Rights" bits are set: http://msdn.microsoft.com/en-us/library/aa374896%28v=vs.85%29.aspx
+    $permissiondiff_object = New-Object -TypeName 'ACLReportTools.PermissionDiff'
+    $permissiondiff_object.Type = $Type
+    $permissiondiff_object.ComputerName = $ComputerName
+    $permissiondiff_object.Path = $Path
+    $permissiondiff_object.Share = $Share
+    $permissiondiff_object.DiffType = $DiffType
+    $permissiondiff_object.Difference = $Difference
+    return $permissiondiff_object
+} # function New-PermissionDiffObject
+
+
 
 function Convert-FileSystemAccessToString {
 <#
@@ -637,6 +800,8 @@ function Convert-FileSystemAccessToString {
         Return $FileSystemAccess
     }
 } # function Convert-FileSystemAccessToString
+
+
 
 function Convert-FileSystemAppliesToString {
 <#
@@ -668,6 +833,8 @@ function Convert-FileSystemAppliesToString {
     return "Unknown"
 } # function Convert-FileSystemAppliesToString
 
+
+
 function Convert-ACEToString {
 <#
 .SYNOPSIS
@@ -687,6 +854,8 @@ function Convert-ACEToString {
     Return "FileSystemRights  : $rights`nAccessControlType : $controltype`nIdentityReference : $IdentityReference`nIsInherited       : $IsInherited`nAppliesTo         : $AppliesTo`n"
 } # function Convert-ACEToString
 
+
+
 function Convert-FileSystemACLToString {
 <#
 .SYNOPSIS
@@ -705,8 +874,26 @@ function Convert-FileSystemACLToString {
     Return "Path              : $path`nOwner             : $owner`nGroup             : $group`n$acestring"
 } # function Convert-FileSystemACLToString
 
+
+
+Function Create-HTMLReportHeader {
+    Param (
+        [Parameter(Mandatory=$true)]
+        [String]$Title
+    ) # Param
+    return $Html_Header -f $Title
+} # Function Create-HTMLReportHeader
+
+
+
+Function Create-HTMLReportFooter {
+    return $Html_Footer
+} # Function Create-HTMLReportFooter
+
+
+
 # Ensure all the custom classes are loaded in available
 Initialize-Module
 
 # Export the Module Cmdlets
-Export-ModuleMember -Function Get-Shares,Get-ShareACLs,Get-PathFileACLs,Get-ShareFileACLs,Import-ACLs,Export-ACLs
+Export-ModuleMember -Function Get-ACLShareReport,Compare-ACLShareReports,Get-Shares,Get-ShareACLs,Get-PathFileACLs,Get-ShareFileACLs,Import-ACLs,Export-ACLs
