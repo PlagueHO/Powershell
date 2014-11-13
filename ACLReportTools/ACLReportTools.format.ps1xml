@@ -2,7 +2,7 @@
 <Configuration>
     <ViewDefinitions>
         <View>
-            <Name>System Info</Name>
+            <Name>Permission</Name>
             <ViewSelectedBy>
                 <TypeName>ACLReportTools.Permission</TypeName>
             </ViewSelectedBy>
@@ -40,6 +40,59 @@
                             </TableColumnItem>
                             <TableColumnItem>
                                 <PropertyName>Path</PropertyName>
+                            </TableColumnItem>
+                        </TableColumnItems>
+                    </TableRowEntry>
+                </TableRowEntries>
+
+            </TableControl>
+        </View>
+
+        <View>
+            <Name>Permission Difference</Name>
+            <ViewSelectedBy>
+                <TypeName>ACLReportTools.PermissionDiff</TypeName>
+            </ViewSelectedBy>
+            <TableControl>
+
+                <TableHeaders>
+                    <TableColumnHeader>
+                        <Label>Computer</Label>
+			<Width>32</Width>
+                    </TableColumnHeader>
+                    <TableColumnHeader>
+                        <Label>Type</Label>
+                        <Width>15</Width>
+                    </TableColumnHeader>
+                    <TableColumnHeader>
+                        <Label>Share</Label>
+                        <Width>32</Width>
+                    </TableColumnHeader>
+                    <TableColumnHeader>
+                        <Label>Path</Label>
+                    </TableColumnHeader>
+                    <TableColumnHeader>
+                        <Label>Difference</Label>
+                    </TableColumnHeader>
+                </TableHeaders>
+
+                <TableRowEntries>
+                    <TableRowEntry>
+                        <TableColumnItems>
+                            <TableColumnItem>
+                                <PropertyName>ComputerName</PropertyName>
+                            </TableColumnItem>
+                            <TableColumnItem>
+                                <PropertyName>Type</PropertyName>
+                            </TableColumnItem>
+                            <TableColumnItem>
+                                <PropertyName>Share</PropertyName>
+                            </TableColumnItem>
+                            <TableColumnItem>
+                                <PropertyName>Path</PropertyName>
+                            </TableColumnItem>
+                            <TableColumnItem>
+                                <PropertyName>Difference</PropertyName>
                             </TableColumnItem>
                         </TableColumnItems>
                     </TableRowEntry>
