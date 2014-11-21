@@ -355,6 +355,126 @@ For example:
 } # Start-DSCPullMode
 
 
+Function Start-DSCPushMode {
+<#
+.SYNOPSIS
+Configures a Node for Push Mode.
+
+.DESCRIPTION 
+This function will create all configuration files required for a node to be placed into DSC Push mode.
+
+It will take an array of nodes in the nodes parameter which will list all nodes that should be configured for push mode.
+
+The function will:
+1. Create the node DSC configuration MOF file if it is missing (and the configration file is noted in the Nodes array).
+2. Create the node LCM configuration MOF file to configure the LCM for push mode.
+3. Execute the node LCM configuration MOF on the node. 
+     
+.PARAMETER NodeConfigSourceFolder
+
+This parameter is used to specify the folder where the node configration files can be found. If it is not passed it will default to the
+module variable $DSCTools_DefaultNodeConfigSourceFolder.
+
+This value will be ignored for any node that has a MOFFile key value set.
+
+.PARAMETER Nodes
+Must contain an array of hash tables. Each hash table will represent a node that should be configured full DSC push mode.
+
+The hash table must contain the following entries:
+Name = 
+
+Each hash entry can also contain the following optional items. If each item is not specified it will default.
+Guid = This is not required but retained for compatibility with Pull Mode
+RebootNodeIfNeeded = $false
+ConfigurationMode = 'ApplyAndAutoCorrect'
+MofFile = This is the path and filename of the MOF file to use for this node. If not provided the MOF file will be used
+
+For example:
+@(@{Name='SERVER01';},@{Name='SERVER02';RebootNodeIfNeeded=$true;MofFile='c:\users\Administrtor\Documents\WindowsPowerShell\DSCConfig\SERVER02.MOF'})
+
+.EXAMPLE 
+ Start-DSCPushlMode `
+    -Nodes @(@{Name='SERVER01'},@{Name='SERVER02';RebootNodeIfNeeded=$true;MofFile='c:\users\Administrtor\Documents\WindowsPowerShell\DSCConfig\SERVER02.MOF'})
+ This command will cause the nodes SERVER01 and SERVER02 to be switched into Push mode.
+#>
+    [CmdletBinding()]
+    Param (
+        [String]$NodeConfigSourceFolder=$DSCTools_DefaultNodeConfigSourceFolder,
+
+        [Parameter(Mandatory=$true)]
+        [Array]$Nodes
+    )
+    
+    # Set up a temporary path
+    $TempPath = "$Env:TEMP\Start-DSCPullMode"
+    Write-Verbose "Creating temporary folder $TempPath"
+    New-Item -Path $TempPath -ItemType 'Directory' -Force | Out-Null
+
+    Foreach ($Node In $Nodes) {
+        # Clear the node error flag
+        $NodeError = $false
+        
+        # Get the Node parameters into variables and check them
+        $NodeName = $Node.Name
+        If ($NodeName -eq '') {
+            Throw 'Node name is empty.'
+        }
+
+        Write-Verbose "Node $NodeName begin processing"
+        $RebootNodeIfNeeded = $Node.RebootNodeIfNeeded
+        If ($RebootNodeIfNeeded -eq $null) {
+            $RebootNodeIfNeeded = $false
+        }
+        $ConfigurationMode = $Node.ConfigurationMode
+        If ($ConfigurationMode -eq $null) {
+            $ConfigurationMode = 'ApplyAndAutoCorrect'
+        }
+
+        # If the node doesn't have a specific MOF path specified then see if we can figure it out
+        # Based on other parameters specified - or even create it.
+        $MofFile = $Node.MofFile
+        If ($MofFile -eq $null) {
+            $SourceMof = "$NodeConfigSourceFolder\$NodeName.mof"
+        } Else {
+            $SourceMof = $MofFile
+        }
+        Write-Verbose "Node $NodeName will use configuration MOF $SourceMof"
+
+        # If the MOF doesn't throw an error?
+        If (-not (Test-Path -PathType Leaf -Path $SourceMof)) {
+            #TODO: Can we try to create the MOF file from the configuration?
+            Write-Error "The node configuration MOF file $SourceMof could not be found for node $NodeName"
+            $NodeError = $true
+        }
+
+        If (-not $NodeError) {
+            # Create the LCM MOF File to set the nodes LCM to pull mode
+            ConfigureLCMPushMode `
+                -NodeName $NodeName `
+                -RebootNodeIfNeeded $RebootNodeIfNeeded `
+                -ConfigurationMode $ConfigurationMode `
+                -Output $TempPath `
+                | Out-Null
+
+            Write-Verbose "Node $NodeName LCM MOF $TempPath\$NodeName.MOF created"
+        
+            # Apply the LCM MOF File to the node
+            Set-DSCLocalConfigurationManager -Computer $NodeName -Path $TempPath
+
+            Write-Verbose "Node $NodeName set to use LCM MOF $TempPath"
+
+            # Reove the LCM MOF File
+            Remove-Item -Path "$TempPath\$NodeName.meta.MOF"
+            Write-Verbose "Node $NodeName LCM MOF $TempPath\$NodeName.meta.MOF removed"
+        } # If
+
+    Write-Verbose "Node $NodeName processing complete"
+    } # Foreach
+
+    Remove-Item -Path $TempPath -Recurse -Force
+    Write-Verbose "Temporary folder $TempPath deleted"
+} # Stop-DSCPullMode
+
 
 ##########################################################################################################################################
 # Configurations
@@ -407,31 +527,68 @@ Configuration ConfigureLCMPullMode {
 
 	Node $NodeName {
 		LocalConfigurationManager {
-			ConfigurationMode = 'ApplyAndAutoCorrect'
+			ConfigurationMode = $ConfigurationMode
+            ConfigurationModeFrequencyMins = 30
 			ConfigurationID = $NodeGuid
 			RefreshMode = 'Pull'
             RebootNodeIfNeeded = $RebootNodeIfNeeded
 			DownloadManagerName = $DownloadManagerName
 			DownloadManagerCustomData = $DownloadManagerCustomData
+            RefreshFrequencyMins = 15
 		} # LocalConfigurationManager
 	} # Node $NodeName
 } # Configuration ConfigureLCMPullMode
+
+
+Configuration ConfigureLCMPushMode {
+    Param (
+        [Parameter(
+            Mandatory=$true
+            )]
+        [string]$NodeName,
+
+        [string]$ConfigurationMode = 'ApplyAndAutoCorrect',
+
+        [boolean]$RebootNodeIfNeeded = $false
+
+    ) # Param
+
+    If ($ConfigurationMode -notin ('ApplyAndAutoCorrect','ApplyAndMonitor','ApplyOnly')) {
+        Throw 'ConfigurationMode is invalid.'
+    }
+
+	Node $NodeName {
+		LocalConfigurationManager {
+			ConfigurationMode = $ConfigurationMode
+            ConfigurationModeFrequencyMins = 30
+			RefreshMode = 'Push'
+            RebootNodeIfNeeded = $RebootNodeIfNeeded
+			DownloadManagerName = $Null
+			DownloadManagerCustomData = $Null
+            RefreshFrequencyMins = 30
+		} # LocalConfigurationManager
+	} # Node $NodeName
+} # Configuration ConfigureLCMPushMode
 
 
 
 ##########################################################################################################################################
 # Self Test functions
 ##########################################################################################################################################
-Function Test-Start-DSCPullMode {
+Function Test-StartDSCPullMode {
     $DSCTools_PullServerName = 'PLAGUE-PDC'
     Start-DSCPullMode -Nodes @(@{Name='PLAGUE-MEMBER';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e7';RebootNodeIfNeeded=$true;MofFile='C:\Users\Daniel.PLAGUEHO\OneDrive\PS\DSC\PLAGUEConfiguration\PLAGUE-MEMBER.MOF'}) -Verbose
-} # Test-Start-DSCPullMode
+} # Test-StartDSCPullMode
 
+Function Test-StartDSCPushMode {
+    $DSCTools_PullServerName = 'PLAGUE-PDC'
+    Start-DSCPushMode -Nodes @(@{Name='PLAGUE-MEMBER';RebootNodeIfNeeded=$false;ConfigurationMode='ApplyAndMonitor';MofFile='C:\Users\Daniel.PLAGUEHO\OneDrive\PS\DSC\PLAGUEConfiguration\PLAGUE-MEMBER.MOF'}) -Verbose
+} # Test-StartDSCPushMode
 
 
 ##########################################################################################################################################
 # Exports
 ##########################################################################################################################################
 Export-ModuleMember `
-    -Function Invoke-DSCPull,Publish-DSCPullResources,Start-DSCPullMode `
+    -Function Invoke-DSCPull,Publish-DSCPullResources,Start-DSCPullMode,Test-StartDSCPushMode `
     -Variable DSCTools_PullServerName,DSCTools_PullServerProtocol,DSCTools_PullServerPort,DSCTools_PullServerPath,DSCTools_DefaultModuleFolder,DSCTools_DefaultResourceFolder,DSCTools_DefaultConfigFolder,DSCTools_DefaultNodeConfigSourceFolder,DSCTools_PSVersion
