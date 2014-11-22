@@ -1,4 +1,64 @@
 ﻿#Requires -Version 4.0
+##########################################################################################################################################
+# DSCTools
+##########################################################################################################################################
+<#
+.SYNOPSIS
+This module provides miscellaneous helper functions for setting up and using Powershell DSC.
+
+.DESCRIPTION 
+This module contains functions to try and make setting up and using Desired State Configuration easier.
+
+I noticed while attempting to set up my first DSC Pull server that it was a resonably intricate process with lots of room for mistakes.
+There were many manual steps that could all go wrong. So I attempted to try and automate some of the steps involved with setting up
+Pull servers and installing resource files onto them as well as configuring the LCM on the machines being configured.
+
+The functions in this module should all multiple machines to be switched to pull mode (or back to push mode) with a single command.
+
+An example of how this module would be used:
+
+# Configure where the pull server is and how it can be connected to.
+$DSCTools_PullServerName = 'PULLSERVER01'
+$DSCTools_PullServerProtocol = 'HTTPS'  # Pull server has a valid trusted cert installed
+$DSCTools_PullServerPort = 26054  # Pull server is running on this port
+$DSCTools_PullServerPath = 'PrimaryPullServer/PSDSCPullServer.svc'
+$DSCTools_DefaultModuleFolder = 'c:\DSC\Resources\'  # This is where all the DSC resources can be found
+$DSCTools_DefaultResourceFolder = 'DscService\Modules'  # This is a share+path on the Pull Server
+$DSCTools_DefaultConfigFolder = 'DscService\configuration'   # This is a share+path on the Pull Server
+$DSCTools_DefaultNodeConfigSourceFolder = "c:\DSC\Configuratons\"  
+
+# These are the nodes that we are going to set up Pull mode for
+$Nodes = @( `
+    @{Name='SERVER01';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e7';RebootNodeIfNeeded=$true;MofFile='C:\DSConfigs\SERVER01.MOF'} , `
+    @{Name='SERVER02';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e1';RebootNodeIfNeeded=$true;MofFile='C:\DSConfigs\SERVER02.MOF'} , `
+    @{Name='SERVER03';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e3';RebootNodeIfNeeded=$true;MofFile='C:\DSConfigs\SERVER03.MOF'} , `
+    @{Name='SERVER04';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e4';RebootNodeIfNeeded=$true;MofFile='C:\DSConfigs\SERVER04.MOF'} , `
+    @{Name='SERVER05';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e9';RebootNodeIfNeeded=$true;MofFile='C:\DSConfigs\SERVER05.MOF'} )
+
+# Copy all th resources up to the pull server (zipped and with a checksum file).
+Publish-DSCPullResources
+
+# Set all the nodes to pull mode and copy the config files over to the pull server.
+Start-DSCPullMode -Nodes $Nodes
+
+# Force the all the machines to pull thier config from the Pull server (although we could just wait 15 minutes for this to happen automatically)
+Invoke-DSCPull -Nodes $Nodes
+
+# Set all the nodes to back to push mode if we don't want to use Pul mode any more.
+# Start-DSCPushMode -Nodes $Nodes
+
+.VERSIONS
+1.1   2014-11-22   Daniel Scott-Raynsford       Alowed Invoke-DSCPull to use a Nodes param
+                                                Added test functions
+                                                Added Configuration ConfigureLCMPushMode
+                                                Added Function Start-DSCPushMode
+1.0   2014-10-23   Daniel Scott-Raynsford       Initial Version
+
+.TODO
+Add ability to build the DSC configuration files if the MOF can't be found but the PS1 file can be found. Could also force rebuild the MOF
+if the PS1 file is newer.
+#>
+
 
 ##########################################################################################################################################
 # Default Configuration Variables
@@ -8,72 +68,128 @@
 # to each function that needs it.
 $DSCTools_PullServerName = 'Localhost'
 
+# This is the protocol that will be used by the DSC machines to connect to the pull server. This must be HTTP or HTTPS.
+# If HTTPS is used then the HTTPS certificate on your Pull server must be trusted by all DSC Machines.
 $DSCTools_PullServerProtocol = 'HTTP'
 
+# This is the port the Pull server is running on.
 $DSCTools_PullServerPort = 8080
 
+# This is the path and svc name component of the uRL used to access the Pull server.
 $DSCTools_PullServerPath = 'PSDSCPullServer.svc'
 
+# This is the location of the powershell modules folder where all the resources can be found that will be
+# Installed into the pull server by the Publish-DSCPullResources function.
 $DSCTools_DefaultModuleFolder = 'c:\program files\windowspowershell\modules\'
 
+# This is the default folder on your pull server where any resources will get copied to by the
+# Publish-DSCPullResources function. This should be a network
+# path as it will be combined with the $DSCTools_PullServerName variable above.
 $DSCTools_DefaultResourceFolder = 'c$\Program Files\WindowsPowerShell\DscService\Modules'
 
+# This is the default folder on your pull server where the DSC configuration files will get copied to
+# by the Start-DSCPullMode function. This should be a network path as it will be combined with the
+# $DSCTools_PullServerName variable above.
 $DSCTools_DefaultConfigFolder = 'c$\program files\windowspowershell\DscService\configuration'
 
+# This is the default folder where the DSC configuration MOF files will be found.
 $DSCTools_DefaultNodeConfigSourceFolder = "$HOME\Documents\windowspowershell\configuration"
 
+# This is the version of PowerShell that the Configuration files should be built to use.
+# This is for future use when WMF 5.0 is available the LCM configuration files can be
+# written in a more elegant fashion. Currently this should always be set to 4.0
 $DSCTools_PSVersion = 4.0
 
 
 ##########################################################################################################################################
 # Main CmdLets
 ##########################################################################################################################################
-Function Invoke-DSCPull {
+Function Invoke-DSCCheck {
 <#
 .SYNOPSIS
-Forces the LCM on destination computer(s) to repull DSC configuration data from a pull server.
+Forces the LCM on the specified nodes to trigger a DSC check.
 
 .DESCRIPTION 
-This function will cause the Local Configuration Manager on the computers listed in the ComputerName parameter to repull the DSC configuration MOF file from the pull server.
-
-The computers listed must already have the LCM correctly configured for pull mode.
+This function will cause the Local Configuration Manager on the nodes provided to trigger a DSC check. If a node is set for pull mode
+then the latest DSC configuration will be pulled down from the pull server. If a node is in push mode then the current DSC configuration
+will be used.
 
 The command is executed via a call to Invoke-Command on the destination computer's LCM which will be called via WinRM.
 Therefore WinRM must be enabled on the destination computer's LCM and the appropriate firewall ports opened.
      
 .PARAMETER ComputerName
-This must contain a list of computers that will have the LCM repull triggered on.
+This parameter should contain a list of computers that will have the a DSC check triggered.
+
+.PARAMETER Nodes
+This must contain an array of hash tables. Each hash table will represent a node that a DSC check should be triggered.
+
+This parameter is provided to be consistent with the Start-DSCPullMode and Start-DSCPushMode functions.
+
+The hash table must contain the following entries (other entries will be ignored):
+Name = 
+
+For example:
+@(@{Name='SERVER01'},@{Name='SERVER02'})
 
 .EXAMPLE 
- Invoke-DSCPull -ComputerName CLIENT01,CLIENT02,CLIENT03
- Causes the LCMs on computers CLIENT01, CLIENT02 and CLIENT03 to repull DSC Configuration MOF files from the DSC Pull server.
-#>
+ Invoke-DSCPull -ComputerName SERVER01,SERVER02,SERVER03
+ Causes the LCMs on computers SERVER01, SERVER02 and SERVER03 to repull DSC Configuration MOF files from the DSC Pull server.
+
+.EXAMPLE 
+ Invoke-DSCPull -Nodes @(@{Name='SERVER01'},@{Name='SERVER02'})
+ Causes the LCMs on computers SERVER01 and SERVER02 to repull DSC Configuration MOF files from the DSC Pull server.
+ #>
     [CmdletBinding()]
     Param (
         [Parameter(
-            Mandatory=$true,
+            ParameterSetName='ComputerName',
             ValueFromPipeline=$true,
             ValueFromPipelineByPropertyName=$true
             )]
-        [String[]]$ComputerName
+        [String[]]$ComputerName,
+
+        [Parameter(
+            ParameterSetName='Nodes'
+            )]
+        [Array]$Nodes
     ) # Param
 
     Begin {}
     Process {
-        Foreach ($Computer In $ComputerName) {
-            # For some reason using the Invoke-CimMethod cmdlet with the -ComputerName parameter doesn't work
-            # So the Invoke-Command is used instead to execute the command on the destination computer.
-            Invoke-Command -ComputerName $Computer { `
-                Invoke-CimMethod `
-                    -Namespace 'root/Microsoft/Windows/DesiredStateConfiguration' `
-                    -ClassName 'MSFT_DSCLocalConfigurationManager' `
-                    -MethodName 'PerformRequiredConfigurationChecks' `
-                    -Arguments @{ Flags = [uint32]1 }
-                } # Invoke-Command
-        } # Foreach ($Computer In $ComputerName)
+        If ($ComputerName -eq $null) {
+            Foreach ($Node In $Nodes) {
+                # For some reason using the Invoke-CimMethod cmdlet with the -ComputerName parameter doesn't work
+                # So the Invoke-Command is used instead to execute the command on the destination computer.
+                $ComputerName = $Node.Name
+                If (($ComputerName -eq $null) -or ($ComputerName -eq '')) {
+                    Throw 'Node name is empty.'
+                }
+                Write-Verbose "Invoking Method PerformRequiredConfigurationChecks on node $ComputerName"
+                Invoke-Command -ComputerName $ComputerName { `
+                    Invoke-CimMethod `
+                        -Namespace 'root/Microsoft/Windows/DesiredStateConfiguration' `
+                        -ClassName 'MSFT_DSCLocalConfigurationManager' `
+                        -MethodName 'PerformRequiredConfigurationChecks' `
+                        -Arguments @{ Flags = [uint32]1 }
+                    } # Invoke-Command
+            } # Foreach ($Node In $Nodes)
+        } Else {
+            Foreach ($Computer In $ComputerName) {
+                # For some reason using the Invoke-CimMethod cmdlet with the -ComputerName parameter doesn't work
+                # So the Invoke-Command is used instead to execute the command on the destination computer.
+                Write-Verbose "Invoking Method PerformRequiredConfigurationChecks on node $ComputerName"
+                Invoke-Command -ComputerName $Computer { `
+                    Invoke-CimMethod `
+                        -Namespace 'root/Microsoft/Windows/DesiredStateConfiguration' `
+                        -ClassName 'MSFT_DSCLocalConfigurationManager' `
+                        -MethodName 'PerformRequiredConfigurationChecks' `
+                        -Arguments @{ Flags = [uint32]1 }
+                    } # Invoke-Command
+            } # Foreach ($Computer In $ComputerName)
+        } # If ($ComputerName -eq $null)
     } # Process
     End {}
-} # Function Invoke-DSCPull
+} # Function Invoke-DSCCheck
 
 
 
@@ -187,10 +303,10 @@ If this parameter is not set the path will be set to:
 Function Start-DSCPullMode {
 <#
 .SYNOPSIS
-Configures a Node for Pull Mode.
+Configures one or mode nodes for Pull Mode.
 
 .DESCRIPTION 
-This function will create all configuration files required for a node to be placed into DSC Pull mode.
+This function will create all configuration files required for a set of nodes to be placed into DSC Pull mode.
 
 It will take an array of nodes in the nodes parameter which will list all nodes that should be configured for pull mode.
 
@@ -358,10 +474,10 @@ For example:
 Function Start-DSCPushMode {
 <#
 .SYNOPSIS
-Configures a Node for Push Mode.
+Configures one or mode nodes for Push Mode.
 
 .DESCRIPTION 
-This function will create all configuration files required for a node to be placed into DSC Push mode.
+This function will create all configuration files required for a set of nodes to be placed into DSC Push mode.
 
 It will take an array of nodes in the nodes parameter which will list all nodes that should be configured for push mode.
 
@@ -473,7 +589,7 @@ For example:
 
     Remove-Item -Path $TempPath -Recurse -Force
     Write-Verbose "Temporary folder $TempPath deleted"
-} # Stop-DSCPullMode
+} # Start-DSCPushMode
 
 
 ##########################################################################################################################################
@@ -575,6 +691,16 @@ Configuration ConfigureLCMPushMode {
 ##########################################################################################################################################
 # Self Test functions
 ##########################################################################################################################################
+Function Test-InvokeDSCCheck {
+    Invoke-DSCPull -ComputerName PLAGUE-MEMBER -Verbose
+    Invoke-DSCPull -Nodes @(@{Name='PLAGUE-MEMBER'}) -Verbose
+} # Test-InvokeDSCCheck
+
+Function Test-PublishDSCPullResources {
+    $DSCTools_PullServerName = 'PLAGUE-PDC'
+    Publish-DSCPullResources
+} # Test-PublishDSCPullResources
+
 Function Test-StartDSCPullMode {
     $DSCTools_PullServerName = 'PLAGUE-PDC'
     Start-DSCPullMode -Nodes @(@{Name='PLAGUE-MEMBER';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e7';RebootNodeIfNeeded=$true;MofFile='C:\Users\Daniel.PLAGUEHO\OneDrive\PS\DSC\PLAGUEConfiguration\PLAGUE-MEMBER.MOF'}) -Verbose
@@ -590,5 +716,5 @@ Function Test-StartDSCPushMode {
 # Exports
 ##########################################################################################################################################
 Export-ModuleMember `
-    -Function Invoke-DSCPull,Publish-DSCPullResources,Start-DSCPullMode,Test-StartDSCPushMode `
+    -Function Invoke-DSCPull,Publish-DSCPullResources,Start-DSCPullMode,Start-DSCPushMode `
     -Variable DSCTools_PullServerName,DSCTools_PullServerProtocol,DSCTools_PullServerPort,DSCTools_PullServerPath,DSCTools_DefaultModuleFolder,DSCTools_DefaultResourceFolder,DSCTools_DefaultConfigFolder,DSCTools_DefaultNodeConfigSourceFolder,DSCTools_PSVersion
