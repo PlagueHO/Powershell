@@ -114,14 +114,14 @@ If ( Test-Path -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\
 # This Office Product is already installed - so uninstall it.
 If ($Installed) { 
     If ($ConfigFile -eq '') {
-        Add-LogEntry -Path $Path -Message "$ProductId Uninstall from $SourcePath with /admin $AdminFile started."
+        Add-LogEntry -Path $LogPath -Message "$ProductId Uninstall from $SourcePath with /admin $AdminFile started."
         [Int]$ErrorCode = Invoke-Expression "$(Join-Path -Path $SourcePath -ChildPath 'setup.exe') /uninstall $Product /admin $AdminFile | Out-String"
     } Else {
-        Add-LogEntry -Path $Path -Message "$ProductId Uninstall from $SourcePath with /config $ConfigFile started."
+        Add-LogEntry -Path $LogPath -Message "$ProductId Uninstall from $SourcePath with /config $ConfigFile started."
         [Int]$ErrorCode = Invoke-Expression "$(Join-Path -Path $SourcePath -ChildPath 'setup.exe') /config $ConfigFile | Out-String"
     } #  ($ConfigFile -eq '')
     If ($ErrorCode -eq 0) {
-        Add-LogEntry -Path $Path -Message "$ProductId Uninstall from $SourcePath completed successfully."
+        Add-LogEntry -Path $LogPath -Message "$ProductId Uninstall from $SourcePath completed successfully."
     } Else {
         Add-LogEntry -Path $LogFile -Message "$ProductId Uninstall from $SourcePath failed with error code $ErrorCode."
     } # ($ErrorCode -eq 0)
