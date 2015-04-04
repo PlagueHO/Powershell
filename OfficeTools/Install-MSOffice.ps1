@@ -114,7 +114,7 @@ If ( Test-Path -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\
 # This Office Product is not already installed - so install it.
 If (-not $Installed) { 
     If ($ConfigFile -eq '') {
-        Add-LogEntry -Path $LogPath -Message "$ProductId Install from $SourcePath with /admin $AdminFile started."
+        Add-LogEntry -Path $LogFile -Message "$ProductId Install from $SourcePath with /admin $AdminFile started."
         [Int]$ErrorCode = Invoke-Expression "$(Join-Path -Path $SourcePath -ChildPath 'setup.exe') /admin $AdminFile | Out-String"
     } Else {
         Add-LogEntry -Path $LogFile -Message "$ProductId Install from $SourcePath with /config $ConfigFile started."
