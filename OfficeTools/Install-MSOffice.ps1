@@ -117,12 +117,12 @@ If (-not $Installed) {
         Add-LogEntry -Path $LogPath -Message "$ProductId Install from $SourcePath with /admin $AdminFile started."
         [Int]$ErrorCode = Invoke-Expression "$(Join-Path -Path $SourcePath -ChildPath 'setup.exe') /admin $AdminFile | Out-String"
     } Else {
-        Add-LogEntry -Path $LogPath -Message "$ProductId Install from $SourcePath with /config $ConfigFile started."
+        Add-LogEntry -Path $LogFile -Message "$ProductId Install from $SourcePath with /config $ConfigFile started."
         [Int]$ErrorCode = Invoke-Expression "$(Join-Path -Path $SourcePath -ChildPath 'setup.exe') /config $ConfigFile | Out-String"
     } #  ($ConfigFile -eq '')
     If ($ErrorCode -eq 0) {
-        Add-LogEntry -Path $LogPath -Message "$ProductId Install from $SourcePath completed successfully."
+        Add-LogEntry -Path $LogFile -Message "$ProductId Install from $SourcePath completed successfully."
     } Else {
-        Add-LogEntry -Path $LogPath -Message "$ProductId Install from $SourcePath failed with error code $ErrorCode."
+        Add-LogEntry -Path $LogFile -Message "$ProductId Install from $SourcePath failed with error code $ErrorCode."
     } # ($ErrorCode -eq 0)
 } # (-not $Installed)
