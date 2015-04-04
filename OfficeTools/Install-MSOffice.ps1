@@ -79,6 +79,14 @@ param(
     $LogPath
 ) # Param
  
+Function Add-LogEntry ( [String]$Path ,[String]$Message)
+{
+    # Only write log entry if a path was specified
+    If ( $Path -ne '' ) {
+        Add-Content -Path $Path -Value "$(Get-Date): $Message"
+    } # ( $Path -ne '' )
+} # Function Add-LogEntry
+
 # If a Log Path was specified get up a log file name to write to.
 If ($LogPath -eq '') {
     [String]$LogFile = ''
@@ -118,11 +126,3 @@ If (-not $Installed) {
         Add-LogEntry -Path $LogFile -Message "$ProductId Install from $SourcePath failed with error code $ErrorCode."
     } # ($ErrorCode -eq 0)
 } # (-not $Installed)
-
-Function Add-LogEntry ( [String]$Path ,[String]$Message)
-{
-    # Only write log entry if a path was specified
-    If ( $Path -ne '' ) {
-        Add-Content -Path $Path -Value "$(Get-Date): $Message"
-    } # ( $Path -ne '' )
-} # Function Add-LogEntry
