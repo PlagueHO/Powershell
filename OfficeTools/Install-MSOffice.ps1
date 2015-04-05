@@ -1,15 +1,3 @@
-# ---------------------------------------------------------------------------------------------------------------------------
-# By:                Daniel Scott-Raynsford
-#                    http://dscottraynsford.wordpress.com/
-#
-# Versions:
-# 1.0   2015-04-05   Daniel Scott-Raynsford       Initial Version
-#
-# Requires:          Office 2013, Office 2013 Pro Plus, Office 2013 Project, Office 2013 Visio
-#
-# Todo:
-# ---------------------------------------------------------------------------------------------------------------------------
-#
 <#
   .SYNOPSIS
   Installs a Microsoft Office Product from a local or network media source.
@@ -54,9 +42,22 @@
 
   .NOTES
 #>
+
+# AUTHOR
+# Daniel Scott-Raynsford
+# http://dscottraynsford.wordpress.com/
+#
+# VERSION
+# 1.0   2015-04-05   Daniel Scott-Raynsford       Initial Version
+#
+# REQUIRES
+# Office 2013, Office 2013 Pro Plus, Office 2013 Project, Office 2013 Visio
+
+
 [CmdLetBinding(
     SupportsShouldProcess=$true
     )]
+
 param( 
     [String]
     [ValidateNotNullOrEmpty()]
