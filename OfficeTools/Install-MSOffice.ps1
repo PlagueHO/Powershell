@@ -1,5 +1,3 @@
-#Requires -Version 2.0
-#
 # ---------------------------------------------------------------------------------------------------------------------------
 # By:                Daniel Scott-Raynsford
 #                    http://dscottraynsford.wordpress.com/
