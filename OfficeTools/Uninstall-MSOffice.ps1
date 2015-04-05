@@ -47,8 +47,7 @@
   .NOTES
 #>
 [CmdLetBinding(
-    SupportsShouldProcess=$true,
-    ConfirmImpact="High"
+    SupportsShouldProcess=$true
     )]
 
 param( 
