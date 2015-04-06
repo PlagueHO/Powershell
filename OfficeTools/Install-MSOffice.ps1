@@ -18,12 +18,16 @@
   .PARAMETER SourcePath
   The location of the installation source files. Can be a local or network path.
 
+  .PARAMETER NoConfig
+  Use this switch to prevent the requirement for a Config or Admin file to be specified to control the product installation. Should not be specified
+  if the ConfigFile or AdminFile parameters are set. 
+
   .PARAMETER ConfigFile
-  The location of the config XML file to use to control the product installation. Should not be specified if the AdminFile parameter is passed.
+  The location of the config XML file to use to control the product installation. Should not be specified if the AdminFile or NoConfig parameter is set.
   Must contain a valid config file with an XML extension.
 
   .PARAMETER AdminFile
-  The location of the admin MSP file to use to control the product installation. Should not be specified if the ConfigFile parameter is passed.
+  The location of the admin MSP file to use to control the product installation. Should not be specified if the ConfigFile or NoConfig parameter is set.
   Must contain a valid admin file with an MSP extension.
 
   .PARAMETER LogPath
@@ -60,36 +64,48 @@
 
 param( 
     [String]
-    [ValidateNotNullOrEmpty()]
-    [ValidateScript({ ($_ -split '\.').Count -gt 1 })]
+    [Parameter(
+        Position=1
+        )]
+    [ValidateScript({ ($_ -ne '') -and ($_ -split '\.').Count -gt 1 })]
     $ProductId='Office15.PROPLUS',
  
     [String]
     [Parameter(
-            Mandatory=$true
-            )]
-    [ValidateNotNullOrEmpty()]
-    [ValidateScript({ Test-Path $_ })]
+        Position=2,
+        Mandatory=$true
+        )]
+    [ValidateScript({ ($_ -ne '') -and ( Test-Path $_ ) })]
     $SourcePath,
  
+    [Switch]
+    [Parameter(
+        Position=3,
+        ParameterSetName='NoConfig'
+        )]
+    $NoConfig,
+
     [String]
     [Parameter(
-            ParameterSetName='ConfigFile'
-            )]
-    [ValidateNotNullOrEmpty()]
-    [ValidateScript({ ( Test-Path $_ ) -and ( [System.IO.Path]::GetExtension($_) -eq '.xml' ) })]
-    $ConfigFile,
+        Position=3,
+        ParameterSetName='ConfigFile'
+        )]
+    [ValidateScript({ ($_ -ne '') -and ( Test-Path $_ ) -and ( [System.IO.Path]::GetExtension($_) -eq '.xml' ) })]
+    $ConfigFile='',
  
     [String]
     [Parameter(
-            ParameterSetName='AdminFile'
-            )]
-    [ValidateNotNullOrEmpty()]
-    [ValidateScript({ ( Test-Path $_ ) -and ( [System.IO.Path]::GetExtension($_) -eq '.msp' )  })]
-    $AdminFile,
+        Position=3,
+        ParameterSetName='AdminFile'
+        )]
+    [ValidateScript({ ($_ -ne '') -and  ( Test-Path $_ ) -and ( [System.IO.Path]::GetExtension($_) -eq '.msp' )  })]
+    $AdminFile='',
 
     [String]
-    [ValidateScript({  ( $_ -eq '' ) -or ( Test-Path $_ ) })]
+    [Parameter(
+        Position=4
+        )]
+    [ValidateScript({ ( $_ -ne '' ) -and ( Test-Path $_ ) })]
     $LogPath
 ) # Param
  
@@ -128,21 +144,23 @@ If ( Test-Path -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\
  
 # This Office Product is not already installed - so install it.
 If (-not $Installed) { 
-    If ($ConfigFile -eq '') {
-        Add-LogEntry -Path $LogFile -Message "Install $ProductId from $SourcePath with /adminfile $AdminFile started."
-        If ($PSCmdlet.ShouldProcess("Install $ProductId from $SourcePath with /adminfile $AdminFile")) {
-            [Int]$ErrorCode = Invoke-Expression "$(Join-Path -Path $SourcePath -ChildPath 'setup.exe') /adminfile $AdminFile | Out-String"
-        } # ShouldProcess
-    } Else {
-        Add-LogEntry -Path $LogFile -Message "Install $ProductId from $SourcePath with /config $ConfigFile started."
-        If ($PSCmdlet.ShouldProcess("Install $ProductId from $SourcePath with /config $ConfigFile")) {
-            [Int]$ErrorCode = Invoke-Expression "$(Join-Path -Path $SourcePath -ChildPath 'setup.exe') /config $ConfigFile | Out-String"
-        } # ShouldProcess
-    } #  ($ConfigFile -eq '')
+    # Sort out the command that will be used to uinstall the product.
+    [String]$Command="$(Join-Path -Path $SourcePath -ChildPath 'setup.exe')"
+    If ($ConfigFile -ne '') {
+        [String]$Command+=" /config $ConfigFile"
+    } ElseIf ($AdminFile -ne '') {
+        [String]$Command+=" /adminfile $AdminFile"
+    }
+    Add-LogEntry -Path $LogFile -Message "Install $ProductId using $Command started."
+    If ($PSCmdlet.ShouldProcess("Install $ProductId using $Command started")) {
+        # Call the product Install.
+        & cmd.exe /c "$Command && exit 0 || exit 1"
+        [Int]$ErrorCode = $LASTEXITCODE
+    } # ShouldProcess
     If ($ErrorCode -eq 0) {
-        Add-LogEntry -Path $LogFile -Message "Install $ProductId from $SourcePath completed successfully."
+        Add-LogEntry -Path $LogFile -Message "Install $ProductId using $Command completed successfully."
     } Else {
-        Add-LogEntry -Path $LogFile -Message "Install $ProductId from $SourcePath failed with error code $ErrorCode."
+        Add-LogEntry -Path $LogFile -Message "Install $ProductId using $Command failed with error code $ErrorCode."
     } # ($ErrorCode -eq 0)
 } Else {
     Write-Verbose -Message "$ProductId is already installed."

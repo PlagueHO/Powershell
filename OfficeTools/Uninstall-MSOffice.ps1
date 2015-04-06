@@ -50,29 +50,33 @@
 
 param( 
     [String]
-    [ValidateNotNullOrEmpty()]
-    [ValidateScript({ ($_ -split '\.').Count -gt 1 })]
+    [Parameter(
+        Position=1
+        )]
+    [ValidateScript({ ($_ -ne '') -and ($_ -split '\.').Count -gt 1 })]
     $ProductId='Office15.PROPLUS',
  
     [String]
     [Parameter(
-            Mandatory=$true
-            )]
-    [ValidateNotNullOrEmpty()]
-    [ValidateScript({ Test-Path $_ })]
+        Position=2,
+        Mandatory=$true
+        )]
+    [ValidateScript({ ($_ -ne '') -and (Test-Path $_) })]
     $SourcePath,
  
     [String]
     [Parameter(
-            ParameterSetName='ConfigFile'
-            )]
-    [ValidateNotNullOrEmpty()]
-    [ValidateScript({ ( Test-Path $_ ) -and ( [System.IO.Path]::GetExtension($_) -eq '.xml' )  })]
-    $ConfigFile,
+        Position=3
+        )]
+    [ValidateScript({ ($_ -ne '') -and ( Test-Path $_ ) -and ( [System.IO.Path]::GetExtension($_) -eq '.xml' )  })]
+    $ConfigFile='',
  
     [String]
+    [Parameter(
+        Position=4
+        )]
     [ValidateScript({  ( $_ -eq '' ) -or ( Test-Path $_ ) })]
-    $LogPath
+    $LogPath=''
 ) # Param
 Function Add-LogEntry ( [String]$Path ,[String]$Message)
 {
@@ -109,14 +113,21 @@ If ( Test-Path -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\
  
 # This Office Product is already installed - so uninstall it.
 If ($Installed) { 
-    Add-LogEntry -Path $LogFile -Message "Uninstall $ProductId from $SourcePath with /config $ConfigFile started."
-    If ($PSCmdlet.ShouldProcess("Uninstall $ProductId from $SourcePath with /config $ConfigFile")) {
-        [Int]$ErrorCode = Invoke-Expression "$(Join-Path -Path $SourcePath -ChildPath 'setup.exe') /uninstall $ProductCode /config $ConfigFile | Out-String"
+    # Sort out the command that will be used to uinstall the product.
+    [String]$Command="$(Join-Path -Path $SourcePath -ChildPath 'setup.exe') /uninstall $ProductCode"
+    If ($ConfigFile -ne '') {
+        [String]$Command+=" /config $ConfigFile"
+    }
+    Add-LogEntry -Path $LogFile -Message "Uninstall $ProductId using $Command started."
+    If ($PSCmdlet.ShouldProcess("Uninstall $ProductId using $Command")) {
+        # Call the product Uninstall.
+        & cmd.exe /c "$Command && exit 0 || exit 1"
+        [Int]$ErrorCode = $LASTEXITCODE
     } # ShouldProcess
     If ($ErrorCode -eq 0) {
-        Add-LogEntry -Path $LogFile -Message "Uninstall $ProductId from $SourcePath completed successfully."
+        Add-LogEntry -Path $LogFile -Message "Uninstall $ProductId using $Command completed successfully."
     } Else {
-        Add-LogEntry -Path $LogFile -Message "Uninstall $ProductId from $SourcePath failed with error code $ErrorCode."
+        Add-LogEntry -Path $LogFile -Message "Uninstall $ProductId using $Command failed with error code $ErrorCode."
     } # ($ErrorCode -eq 0)
 } Else {
     Write-Verbose -Message "$ProductId is not installed."
