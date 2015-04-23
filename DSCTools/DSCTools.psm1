@@ -18,7 +18,7 @@ The functions in this module should all multiple machines to be switched to pull
 An example of how this module would be used:
 
 # Configure where the pull server is and how it can be connected to.
-$DSCTools_PullServerName = 'PULLSERVER01'
+$DSCTools_PullServerName = 'DSCPULLSVR01'
 $DSCTools_PullServerProtocol = 'HTTPS'  # Pull server has a valid trusted cert installed
 $DSCTools_PullServerPort = 26054  # Pull server is running on this port
 $DSCTools_PullServerPath = 'PrimaryPullServer/PSDSCPullServer.svc'
@@ -29,14 +29,17 @@ $DSCTools_DefaultNodeConfigSourceFolder = "c:\DSC\Configuratons\"
 
 # These are the nodes that we are going to set up Pull mode for
 $Nodes = @( `
-    @{Name='SERVER01';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e7';RebootNodeIfNeeded=$true;MofFile='C:\DSConfigs\SERVER01.MOF'} , `
-    @{Name='SERVER02';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e1';RebootNodeIfNeeded=$true;MofFile='C:\DSConfigs\SERVER02.MOF'} , `
-    @{Name='SERVER03';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e3';RebootNodeIfNeeded=$true;MofFile='C:\DSConfigs\SERVER03.MOF'} , `
-    @{Name='SERVER04';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e4';RebootNodeIfNeeded=$true;MofFile='C:\DSConfigs\SERVER04.MOF'} , `
-    @{Name='SERVER05';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e9';RebootNodeIfNeeded=$true;MofFile='C:\DSConfigs\SERVER05.MOF'} )
+    @{Name='SERVER01';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e7';RebootNodeIfNeeded=$true;MofFile='c:\DSC\Configuratons\SERVER01.MOF'} , `
+    @{Name='SERVER02';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e1';RebootNodeIfNeeded=$true;MofFile='c:\DSC\Configuratons\SERVER02.MOF'} , `
+    @{Name='SERVER03';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e3';RebootNodeIfNeeded=$true;MofFile='c:\DSC\Configuratons\SERVER03.MOF'} , `
+    @{Name='SERVER04';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e4';RebootNodeIfNeeded=$true;MofFile='c:\DSC\Configuratons\SERVER04.MOF'} , `
+    @{Name='SERVER05';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e9';RebootNodeIfNeeded=$true;MofFile='c:\DSC\Configuratons\SERVER05.MOF'} )
 
-# Copy all th resources up to the pull server (zipped and with a checksum file).
+# Copy all the resources up to the pull server (zipped and with a checksum file).
 Publish-DSCPullResources
+
+# Install a DSC Pull Server
+Start-DSCPullMode -Nodes $Nodes
 
 # Set all the nodes to pull mode and copy the config files over to the pull server.
 Start-DSCPullMode -Nodes $Nodes
@@ -75,6 +78,9 @@ $DSCTools_PullServerProtocol = 'HTTP'
 # This is the port the Pull server is running on.
 $DSCTools_PullServerPort = 8080
 
+# This is the port the Compliance server is running on.
+$DSCTools_ComplianceServerPort = 8090
+
 # This is the path and svc name component of the uRL used to access the Pull server.
 $DSCTools_PullServerPath = 'PSDSCPullServer.svc'
 
@@ -85,7 +91,7 @@ $DSCTools_DefaultModuleFolder = 'c:\program files\windowspowershell\modules\'
 # This is the default folder on your pull server where any resources will get copied to by the
 # Publish-DSCPullResources function. This should be a network
 # path as it will be combined with the $DSCTools_PullServerName variable above.
-$DSCTools_DefaultResourceFolder = 'c$\Program Files\WindowsPowerShell\DscService\Modules'
+$DSCTools_DefaultResourceFolder = "$($env:PROGRAMFILES)\WindowsPowerShell\DscService\Modules"
 
 # This is the default folder on your pull server where the DSC configuration files will get copied to
 # by the Start-DSCPullMode function. This should be a network path as it will be combined with the
@@ -218,7 +224,7 @@ This is the path containing the folders containing all the DSC resources. If thi
 This is the destination path to which the zipped resources and checksum files will be written to. The user running this command must have write access to this folder.
 
 If this parameter is not set the path will be set to:
-\\$DSCTools_PullServer\c$\Program Files\WindowsPowerShell\DscService\Modules
+c:\Program Files\WindowsPowerShell\DscService\Modules
 
 .EXAMPLE 
  Publish-DSCPullResources -SourcePath 'c:\program files\windowspowershell\modules\a*' -PullServerResourcePath '\\DSCPullServer\c$\program files\windowspowershell\DSCService\Modules'
@@ -246,7 +252,8 @@ If this parameter is not set the path will be set to:
         [Alias('FullName')]
         [String[]]$SourcePath=$DSCTools_DefaultModuleFolder,
 
-        [String]$PullServerResourcePath="\\$DSCTools_PullServerName\$DSCTools_DefaultResourceFolder"
+        [ValidateNotNullOrEmpty()]
+        [String]$PullServerResourcePath=$DSCTools_DefaultResourceFolder
     ) # Param
 
     Begin {
@@ -592,8 +599,90 @@ For example:
 } # Start-DSCPushMode
 
 
+Function Enable-DSCPullServer {
+<#
+.SYNOPSIS
+Installs and configures a server as a DSC Pull Server.
+
+.DESCRIPTION 
+This function will create a MOF file for configuring a Windows Server computer to be a DSC Pull Server and then force DSC to apply the MOF to the server.
+
+The name of the computer to install as a Pull Server is mandatory.
+
+Important Note: The server that will be installed onto must contain the DSC module xPSDesiredStateConfiguration installed into the PowerShell Module path.
+This module is part of the DSC Resource kit found here: https://gallery.technet.microsoft.com/scriptcenter/DSC-Resource-Kit-All-c449312d
+
+The function will:
+1. Create the node DSC Pull Server configuration MOF file for the server.
+2. Execute the node DSC Pull Server configuration MOF on the server. 
+     
+.PARAMETER ComputerName
+Must contain the computer name of the computer to install as a DSC Pull Server.
+
+.PARAMETER PullServerPort
+Optional field that specifies the port number the pull server should run on. It will default to the value of $DSCTools_PullServerPort which is set to 8080 by default.
+
+.PARAMETER ComplianceServerPort
+Optional field that specifies the port number the compliance server should run on. It will default to the value of $DSCTools_ComplianceServerPort which is set to 8090 by default.
+
+.PARAMETER PullServerResourcePath
+Optional field that specifies an alternate path where the DSC Pull Server can find any resource files required by the node configuration files.
+Usually the resource files will be created in this folder by the Publish-DSCPullResources cmdlet.
+
+.EXAMPLE 
+ Enable-DSCPullServer -ComputerName DSCPULLSVR1 -PullServerResourcePath c:\DSC\Resources\
+ This command will install and configure a DSC Pull Server onto machine DSCPULLSVR1 with the resource path of c:\DSC\Resources\
+#>
+    [CmdletBinding()]
+    Param (
+        [Parameter(Mandatory=$true)]
+        [String]$ComputerName,
+
+        [ValidateNotNullOrEmpty()]
+        [Int]$PullServerPort = $DSCTools_PullServerPort,
+
+        [ValidateNotNullOrEmpty()]
+        [Int]$PullCompliancePort = $DSCTools_ComplianceServerPort,
+
+        [ValidateNotNullOrEmpty()]
+        [String]$PullServerResourcePath = $DSCTools_DefaultResourceFolder
+    )
+    
+    # Set up a temporary path
+    $TempPath = "$Env:TEMP\Enable-DSCPullServer"
+    Write-Verbose "Creating temporary folder $TempPath"
+    New-Item -Path $TempPath -ItemType 'Directory' -Force | Out-Null
+
+    # Create the Pull Mode MOF that will configure the elements on this computer needed for Pull Mode
+    CreatePullServer `
+        -NodeName $ComputerName `
+        -Output $TempPath `
+        -PullServerPort $PullServerPort `
+        -PullCompliancePort $PullCompliancePort `
+        -ModulePath $PullServerResourcePath `
+        | Out-Null
+
+    Write-Verbose "Node $ComputerName Pull Server MOF $TempPath\$ComputerName.MOF created"
+        
+    # Apply the Pull Mode MOF File to the node
+    Try {
+        Start-DSCConfiguration -ComputerName $ComputerName -Path $TempPath -Wait
+    } Catch {
+        Throw "An error occurred creating the Pull Server MOF."
+    }
+
+    Write-Verbose "Node $ComputerName set to use Pull Server MOF $TempPath"
+
+    # Reove the LCM MOF File
+    Remove-Item -Path "$TempPath\$ComputerName.MOF"
+    Write-Verbose "Node $NodeName Pull Server MOF $TempPath\$ComputerName.MOF removed"
+    
+    Remove-Item -Path $TempPath -Recurse -Force
+    Write-Verbose "Temporary folder $TempPath deleted"
+} # Enable-DSCPullServer
+
 ##########################################################################################################################################
-# Configurations
+# DSC Configurations for configuring DSC Pull Server and LCM
 ##########################################################################################################################################
 Configuration ConfigureLCMPullMode {
     Param (
@@ -607,8 +696,10 @@ Configuration ConfigureLCMPullMode {
             )]
         [string]$NodeGuid,
 
+        [ValidateNotNullOrEmpty()]
         [string]$ConfigurationMode = 'ApplyAndAutoCorrect',
 
+        [ValidateNotNullOrEmpty()]
         [boolean]$RebootNodeIfNeeded = $false,
 
         [Parameter(
@@ -663,8 +754,10 @@ Configuration ConfigureLCMPushMode {
             )]
         [string]$NodeName,
 
+        [ValidateNotNullOrEmpty()]
         [string]$ConfigurationMode = 'ApplyAndAutoCorrect',
 
+        [ValidateNotNullOrEmpty()]
         [boolean]$RebootNodeIfNeeded = $false
 
     ) # Param
@@ -687,6 +780,64 @@ Configuration ConfigureLCMPushMode {
 } # Configuration ConfigureLCMPushMode
 
 
+Configuration CreatePullServer {
+    Param (
+        [Parameter(
+            Mandatory=$true
+            )]
+        [string]$NodeName,
+
+        [ValidateNotNullOrEmpty()]
+        [Int]$PullServerPort = 8080,
+
+        [ValidateNotNullOrEmpty()]
+        [Int]$PullCompliancePort = 8090,
+
+        [ValidateNotNullOrEmpty()]
+        [String]$PullServerResourcePath = "$($env:PROGRAMFILES)\WindowsPowerShell\DscService\Modules"
+    ) # Param
+
+    Import-DSCResource -ModuleName xPSDesiredStateConfiguration
+
+	Node $NodeName {
+        WindowsFeature WebServer
+        {
+          Ensure = "Present"
+          Name  = "Web-Server"
+        }
+
+        WindowsFeature DSCServiceFeature
+        {
+          Ensure = "Present"
+          Name  = "DSC-Service"
+        }
+
+        xDscWebService PSDSCPullServer
+        {
+          Ensure = "Present"
+          EndpointName = "PSDSCPullServer"
+          Port = $PullServerPort
+          PhysicalPath = "$($env:SystemDrive)\inetpub\wwwroot\PSDSCPullServer"
+          CertificateThumbPrint = "AllowUnencryptedTraffic"
+          ModulePath = $PullServerResourcePath
+          ConfigurationPath = "$($env:PROGRAMFILES)\WindowsPowerShell\DscService\Configuration"
+          State = "Started"
+          DependsOn = "[WindowsFeature]DSCServiceFeature"
+        }
+
+        xDscWebService PSDSCComplianceServer
+        {
+          Ensure  = "Present"
+          EndpointName = "PSDSCComplianceServer"
+          Port = $PullCompliancePort
+          PhysicalPath = "$($env:SystemDrive)\inetpub\wwwroot\PSDSCComplianceServer"
+          CertificateThumbPrint = "AllowUnencryptedTraffic"
+          State = "Started"
+          IsComplianceServer = $true
+          DependsOn        = ("[WindowsFeature]DSCServiceFeature","[xDSCWebService]PSDSCPullServer")
+        }
+	} # Node $NodeName
+} # Configuration CreatePullServer
 
 ##########################################################################################################################################
 # Self Test functions
@@ -711,10 +862,15 @@ Function Test-StartDSCPushMode {
     Start-DSCPushMode -Nodes @(@{Name='PLAGUE-MEMBER';RebootNodeIfNeeded=$false;ConfigurationMode='ApplyAndMonitor';MofFile='C:\Users\Daniel.PLAGUEHO\OneDrive\PS\DSC\PLAGUEConfiguration\PLAGUE-MEMBER.MOF'}) -Verbose
 } # Test-StartDSCPushMode
 
+Function Test-EnableDSCPullServer {
+    $DSCTools_PullServerName = 'PLAGUE-PDC'
+    Enable-DSCPullServer -ComputerName $DSCTools_PullServerName -Verbose
+    Get-DSCConfiguration
+} # Test-StartDSCPushMode
 
 ##########################################################################################################################################
 # Exports
 ##########################################################################################################################################
 Export-ModuleMember `
-    -Function Invoke-DSCPull,Publish-DSCPullResources,Start-DSCPullMode,Start-DSCPushMode `
+    -Function Invoke-DSCPull,Publish-DSCPullResources,Start-DSCPullMode,Start-DSCPushMode,Enable-DSCPullServer,Test* `
     -Variable DSCTools_PullServerName,DSCTools_PullServerProtocol,DSCTools_PullServerPort,DSCTools_PullServerPath,DSCTools_DefaultModuleFolder,DSCTools_DefaultResourceFolder,DSCTools_DefaultConfigFolder,DSCTools_DefaultNodeConfigSourceFolder,DSCTools_PSVersion
