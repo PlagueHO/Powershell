@@ -28,6 +28,7 @@
   </PropertyGroup>
   <ItemGroup />
   <ItemGroup>
+    <Compile Include="CreatePullServer.ps1" />
     <Compile Include="DSCTools.psd1" />
     <Compile Include="DSCTools.psm1" />
     <Compile Include="DSCTools.test.ps1" />
