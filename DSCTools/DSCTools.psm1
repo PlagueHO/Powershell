@@ -550,47 +550,47 @@ Function Enable-DSCPullServer {
     [CmdletBinding()]
     Param (
         [Parameter(ParameterSetName='ComputerName')]
-		[ValdidateNotNullOrEmpty()]
+		[ValidateNotNullOrEmpty()]
 		[String]$ComputerName,
 
         [Parameter(ParameterSetName='ComputerName')]
-		[ValdidateNotNullOrEmpty()]
+		[ValidateNotNullOrEmpty()]
 		[Int]$PullServerPort,
 
         [Parameter(ParameterSetName='ComputerName')]
-		[ValdidateNotNullOrEmpty()]
+		[ValidateNotNullOrEmpty()]
 		[Int]$ComplianceServerPort,
 
         [Parameter(ParameterSetName='ComputerName')]
-		[ValdidateNotNullOrEmpty()]
+		[ValidateNotNullOrEmpty()]
 		[String]$CertificateThumbprint,
 
         [Parameter(ParameterSetName='ComputerName')]
-		[ValdidateNotNullOrEmpty()]
+		[ValidateNotNullOrEmpty()]
 		[String]$PullServerEndpointName,
 
         [Parameter(ParameterSetName='ComputerName')]
-		[ValdidateNotNullOrEmpty()]
+		[ValidateNotNullOrEmpty()]
 		[String]$PullServerResourcePath,
 
         [Parameter(ParameterSetName='ComputerName')]
-		[ValdidateNotNullOrEmpty()]
+		[ValidateNotNullOrEmpty()]
 	    [String]$PullServerConfigurationPath,
 
         [Parameter(ParameterSetName='ComputerName')]
-		[ValdidateNotNullOrEmpty()]
+		[ValidateNotNullOrEmpty()]
 	    [String]$PullServerPhysicalPath,
 
         [Parameter(ParameterSetName='ComputerName')]
-		[ValdidateNotNullOrEmpty()]
+		[ValidateNotNullOrEmpty()]
 	    [String]$ComplianceServerEndpointName,
 
         [Parameter(ParameterSetName='ComputerName')]
-		[ValdidateNotNullOrEmpty()]
+		[ValidateNotNullOrEmpty()]
 	    [String]$ComplianceServerPhysicalPath,
 
         [Parameter(ParameterSetName='ComputerName')]
-		[ValdidateNotNullOrEmpty()]
+		[ValidateNotNullOrEmpty()]
 	    [PSCredential]$Credential,
 
         [Parameter(
