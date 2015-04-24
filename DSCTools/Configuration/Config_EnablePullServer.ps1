@@ -1,7 +1,7 @@
 ##########################################################################################################################################
-# Configuration CreatePullServer
+# Configuration Config_EnablePullServer
 ##########################################################################################################################################
-Configuration CreatePullServer {
+Configuration Config_EnablePullServer {
     Param (
         [Parameter(
             Mandatory=$true
@@ -76,5 +76,5 @@ Configuration CreatePullServer {
           DependsOn        = ("[WindowsFeature]DSCServiceFeature","[xDSCWebService]PSDSCPullServer")
         }
 	} # Node $NodeName
-} # Configuration CreatePullServer
+} # Configuration Config_EnablePullServer
 ##########################################################################################################################################

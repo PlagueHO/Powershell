@@ -4,75 +4,75 @@
 ##########################################################################################################################################
 <#
 .SYNOPSIS
-This module provides miscellaneous helper functions for setting up and using Powershell DSC.
+		This module provides miscellaneous helper functions for setting up and using Powershell DSC.
 
 .DESCRIPTION 
-This module contains functions to try and make setting up and using Desired State Configuration easier.
+		This module contains functions to try and make setting up and using Desired State Configuration easier.
 
-I noticed while attempting to set up my first DSC Pull server that it was a resonably intricate process with lots of room for mistakes.
-There were many manual steps that could all go wrong. So I attempted to try and automate some of the steps involved with setting up
-Pull servers and installing resource files onto them as well as configuring the LCM on the machines being configured.
+		I noticed while attempting to set up my first DSC Pull server that it was a resonably intricate process with lots of room for mistakes.
+		There were many manual steps that could all go wrong. So I attempted to try and automate some of the steps involved with setting up
+		Pull servers and installing resource files onto them as well as configuring the LCM on the machines being configured.
 
-The functions in this module should all multiple machines to be switched to pull mode (or back to push mode) with a single command.
+		The functions in this module should all multiple machines to be switched to pull mode (or back to push mode) with a single command.
 
-An example of how this module would be used:
+		An example of how this module would be used:
 
-# Configure where the pull server is and how it can be connected to.
-$DSCTools_DefaultPullServerName = 'PLAGUE-PDC'
-$DSCTools_DefaultPullServerProtocol = 'HTTPS'  # Pull server has a valid trusted cert installed
-$DSCTools_DefaultResourcePath = "c:\program files\windowspowershel\DscService\Modules\All Resources\"  # This is where the DSC resource module files are usually located.
-$DSCTools_DefaultPullServerResourcePath = "\\$DSCTools_DefaultPullServerName\c$\DSC\Resources\"  # This is the path where a DSC Pull Server will look for Resources.
-$DSCTools_DefaultPullServerConfigurationPath = "\\$DSCTools_DefaultPullServerName\c$\DSC\Configuration\"   # This is the path where a DSC Pull Server will look for MOF Files.
-$DSCTools_DefaultNodeConfigurationSourceFolder = "$HOME\Documents\WindowsPowerShell\Configuration\" # Where to find source configuration files.
-$DSCTools_DefaultPullServerPhysicalPath = "c:\DSC\PSDSCPullServer\" # The location a Pull Server web site will be installed to.
-$DSCTools_DefaultComplianceServerPhysicalPath = "c:\DSC\PSDSCComplianceServer\" # The location a Pull Server compliance site will be installed to.
+		# Configure where the pull server is and how it can be connected to.
+		# This could be done by passing these parameters to the individual cmdlets below, but this is slightly easier to read.
+		$DSCTools_DefaultPullServerName = 'PLAGUE-PDC'
+		$DSCTools_DefaultPullServerProtocol = 'HTTPS'  # Pull server has a valid trusted cert installed
+		$DSCTools_DefaultResourcePath = "c:\program files\windowspowershel\DscService\Modules\All Resources\"  # This is where the DSC resource module files are usually located.
+		$DSCTools_DefaultPullServerResourcePath = "\\$DSCTools_DefaultPullServerName\c$\DSC\Resources\"  # This is the path where a DSC Pull Server will look for Resources.
+		$DSCTools_DefaultPullServerConfigurationPath = "\\$DSCTools_DefaultPullServerName\c$\DSC\Configuration\"   # This is the path where a DSC Pull Server will look for MOF Files.
+		$DSCTools_DefaultNodeConfigurationSourceFolder = "$HOME\Documents\WindowsPowerShell\Configuration\" # Where to find source configuration files.
+		$DSCTools_DefaultPullServerPhysicalPath = "c:\DSC\PSDSCPullServer\" # The location a Pull Server web site will be installed to.
+		$DSCTools_DefaultComplianceServerPhysicalPath = "c:\DSC\PSDSCComplianceServer\" # The location a Pull Server compliance site will be installed to.
 
-# These are the nodes that will become DSC Pull Servers
-$PullServers = @( `
-	@{Name=$DSCTools_DefaultPullServerName;CertificateThumbprint='3aaeef3f4b6dad0c8cb59930b48a9ffc25daa7d8';Credential=Get-Credential;} )
+		# These are the nodes that will become DSC Pull Servers.
+		$PullServers = @( `
+			@{Name=$DSCTools_DefaultPullServerName;CertificateThumbprint='3aaeef3f4b6dad0c8cb59930b48a9ffc25daa7d8';Credential=Get-Credential;} )
 
-# These are the nodes that we are going to set up Pull mode for
-$Nodes = @( `
-    @{Name='PLAGUE-MEMBER';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e7';RebootNodeIfNeeded=$true;MofFile='c:\DSC\Configuration\PLAGUE-MEMBER.MOF'} , `
-    @{Name='PLAGUE-RODC';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e1';RebootNodeIfNeeded=$true;MofFile='c:\DSC\Configuration\PLAGUE-RODC.MOF'} , `
-    @{Name='PLAGUE-SQL2014';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e3';RebootNodeIfNeeded=$true;MofFile='c:\DSC\Configuration\PLAGUE-SQL2014.MOF'} , `
-    @{Name='PLAGUE-PROXY';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e4';RebootNodeIfNeeded=$true;MofFile='c:\DSC\Configuration\PLAGUE-PROXY.MOF'} , `
-    @{Name='PLAGUE-SC2012';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e9';RebootNodeIfNeeded=$true;MofFile='c:\DSC\Configuration\PLAGUE-SC2012.MOF'} , `
-	@{Name='PLAGUE-SP2013';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e8';RebootNodeIfNeeded=$true;MofFile='c:\DSC\Configuration\PLAGUE-SP2013.MOF'} , `
-	@{Name='PLAGUE-IIS01';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e8';RebootNodeIfNeeded=$true;MofFile='c:\DSC\Configuration\PLAGUE-IIS01.MOF'} )
+		# These are the nodes that we are going to set up Pull mode for and the configuration files for each.
+		$Nodes = @( `
+			@{Name='PLAGUE-MEMBER';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e7';RebootNodeIfNeeded=$true;MofFile='c:\DSC\Configuration\PLAGUE-MEMBER.MOF'} , `
+			@{Name='PLAGUE-RODC';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e1';RebootNodeIfNeeded=$true;MofFile='c:\DSC\Configuration\PLAGUE-RODC.MOF'} , `
+			@{Name='PLAGUE-SQL2014';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e3';RebootNodeIfNeeded=$true;MofFile='c:\DSC\Configuration\PLAGUE-SQL2014.MOF'} , `
+			@{Name='PLAGUE-PROXY';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e4';RebootNodeIfNeeded=$true;MofFile='c:\DSC\Configuration\PLAGUE-PROXY.MOF'} , `
+			@{Name='PLAGUE-SC2012';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e9';RebootNodeIfNeeded=$true;MofFile='c:\DSC\Configuration\PLAGUE-SC2012.MOF'} , `
+			@{Name='PLAGUE-SP2013';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e8';RebootNodeIfNeeded=$true;MofFile='c:\DSC\Configuration\PLAGUE-SP2013.MOF'} , `
+			@{Name='PLAGUE-IIS01';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e8';RebootNodeIfNeeded=$true;MofFile='c:\DSC\Configuration\PLAGUE-IIS01.MOF'} )
 
-# Download the DSC Resource Kit and install it to the local machine and to the DSC Pull Server
-Install-DSCResourceKit -UseCache -Verbose
-Install-DSCResourceKit -ModulePath "\\$DSCTools_DefaultPullServerName\c$\program files\windowspowershell\modules\" -UseCache -Verbose
+		# Download the DSC Resource Kit and install it to the local machine and to the DSC Pull Server
+		Install-DSCResourceKit -UseCache -Verbose
+		Install-DSCResourceKit -ModulePath "\\$DSCTools_DefaultPullServerName\c$\program files\windowspowershell\modules\" -UseCache -Verbose
 
-# Copy all the resources up to the pull server (zipped and with a checksum file).
-Publish-DSCPullResources -Verbose
+		# Copy all the resources up to the pull server (zipped and with a checksum file).
+		Publish-DSCPullResources -Verbose
 
-# Install a DSC Pull Server
-Enable-DSCPullServer -Nodes $PullServers -Verbose
+		# Install the DSC Pull Server(s) - only one in this case.
+		Enable-DSCPullServer -Nodes $PullServers -Verbose
 
-# Set all the nodes to pull mode and copy the config files over to the pull server.
-Start-DSCPullMode -Nodes $Nodes -Verbose
+		# Set all the nodes to pull mode and copy the config files over to the pull server.
+		Start-DSCPullMode -Nodes $Nodes -Verbose
 
-# Force the all the machines to pull thier config from the Pull server (although we could just wait 15 minutes for this to happen automatically)
-Invoke-DSCPull -Nodes $Nodes -Verbose
+		# Force the all the machines to pull thier config from the Pull server (although we could just wait 15 minutes for this to happen automatically)
+		Invoke-DSCPull -Nodes $Nodes -Verbose
 
-# Set all the nodes to back to push mode if we don't want to use Pul mode any more.
-# Start-DSCPushMode -Nodes $Nodes -Verbose
+		# Set all the nodes to back to push mode if we don't want to use Pul mode any more.
+		# Start-DSCPushMode -Nodes $Nodes -Verbose
 
 .VERSIONS
-1.2   2015-04-23   Daniel Scott-Raynsford       Added Install-DSCResourceKit CmdLet
-                                                Added Enable-DSCPullServer CmdLet
-1.1   2014-11-22   Daniel Scott-Raynsford       Alowed Invoke-DSCPull to use a Nodes param
-                                                Added test functions
-                                                Added Configuration ConfigureLCMPushMode
-                                                Added Function Start-DSCPushMode
-1.0   2014-10-23   Daniel Scott-Raynsford       Initial Version
+		1.2   2015-04-23   Daniel Scott-Raynsford       Added Install-DSCResourceKit CmdLet
+														Added Enable-DSCPullServer CmdLet
+		1.1   2014-11-22   Daniel Scott-Raynsford       Alowed Invoke-DSCPull to use a Nodes param
+														Added test functions
+														Added Configuration ConfigureLCMPushMode
+														Added Function Start-DSCPushMode
+		1.0   2014-10-23   Daniel Scott-Raynsford       Initial Version
 
 .TODO
-Add ability to build the DSC configuration files if the MOF can't be found but the PS1 file can be found.
-Force rebuild MOF if the PS1 file is newer.
-Once PS5 has been released add support for built in Compression code and remove dependence on PSCX
+		Add ability to build the DSC configuration files if the MOF can't be found but the PS1 file can be found.
+		Force rebuild MOF if the PS1 file is newer.
 #>
 
 
@@ -187,37 +187,37 @@ Function ZipFolder ([String]$ZipFileName,[String]$SourcePath)
 Function Invoke-DSCCheck {
 <#
 .SYNOPSIS
-Forces the LCM on the specified nodes to trigger a DSC check.
+		Forces the LCM on the specified nodes to trigger a DSC check.
 
 .DESCRIPTION 
-This function will cause the Local Configuration Manager on the nodes provided to trigger a DSC check. If a node is set for pull mode
-then the latest DSC configuration will be pulled down from the pull server. If a node is in push mode then the current DSC configuration
-will be used.
+		This function will cause the Local Configuration Manager on the nodes provided to trigger a DSC check. If a node is set for pull mode
+		then the latest DSC configuration will be pulled down from the pull server. If a node is in push mode then the current DSC configuration
+		will be used.
 
-The command is executed via a call to Invoke-Command on the destination computer's LCM which will be called via WinRM.
-Therefore WinRM must be enabled on the destination computer's LCM and the appropriate firewall ports opened.
+		The command is executed via a call to Invoke-Command on the destination computer's LCM which will be called via WinRM.
+		Therefore WinRM must be enabled on the destination computer's LCM and the appropriate firewall ports opened.
      
 .PARAMETER ComputerName
-This parameter should contain a list of computers that will have the a DSC check triggered.
+		This parameter should contain a list of computers that will have the a DSC check triggered.
 
 .PARAMETER Nodes
-This must contain an array of hash tables. Each hash table will represent a node that a DSC check should be triggered.
+		This must contain an array of hash tables. Each hash table will represent a node that a DSC check should be triggered.
 
-This parameter is provided to be consistent with the Start-DSCPullMode and Start-DSCPushMode functions.
+		This parameter is provided to be consistent with the Start-DSCPullMode and Start-DSCPushMode functions.
 
-The hash table must contain the following entries (other entries will be ignored):
-Name = 
+		The hash table must contain the following entries (other entries will be ignored):
+		Name = 
 
-For example:
-@(@{Name='SERVER01'},@{Name='SERVER02'})
-
-.EXAMPLE 
- Invoke-DSCPull -ComputerName SERVER01,SERVER02,SERVER03
- Causes the LCMs on computers SERVER01, SERVER02 and SERVER03 to repull DSC Configuration MOF files from the DSC Pull server.
+		For example:
+		@(@{Name='SERVER01'},@{Name='SERVER02'})
 
 .EXAMPLE 
- Invoke-DSCPull -Nodes @(@{Name='SERVER01'},@{Name='SERVER02'})
- Causes the LCMs on computers SERVER01 and SERVER02 to repull DSC Configuration MOF files from the DSC Pull server.
+		 Invoke-DSCPull -ComputerName SERVER01,SERVER02,SERVER03
+		 Causes the LCMs on computers SERVER01, SERVER02 and SERVER03 to repull DSC Configuration MOF files from the DSC Pull server.
+
+.EXAMPLE 
+		 Invoke-DSCPull -Nodes @(@{Name='SERVER01'},@{Name='SERVER02'})
+		 Causes the LCMs on computers SERVER01 and SERVER02 to repull DSC Configuration MOF files from the DSC Pull server.
  #>
     [CmdletBinding()]
     Param (
@@ -276,56 +276,56 @@ For example:
 Function Publish-DSCPullResources {
 <#
 .SYNOPSIS
-Publishes DSC Resources to a DSC pull server.
+		Publishes DSC Resources to a DSC pull server.
 
 .DESCRIPTION 
-This function takes a path where all the source DSC resources are contained in subfolders.
+		This function takes a path where all the source DSC resources are contained in subfolders.
 
-These resources will then be zipped up and renamed based on the manifest version found in the resource.
+		These resources will then be zipped up and renamed based on the manifest version found in the resource.
 
-A checksum file will also be created for each resource zip.
+		A checksum file will also be created for each resource zip.
 
-The resource zip and checksum will then be moved into the folder provided in the PullServerResourcePath paramater.
+		The resource zip and checksum will then be moved into the folder provided in the PullServerResourcePath paramater.
 
-If PS 4 is used then this function requires the PSCX module to be available and installed on this computer.
+		If PS 4 is used then this function requires the PSCX module to be available and installed on this computer.
 
-PSCX Module can be downloaded from http://pscx.codeplex.com/
+		PSCX Module can be downloaded from http://pscx.codeplex.com/
      
 .PARAMETER ModulePath
-This is the path containing the folders containing all the DSC resources.
-If this is not passed the default path of "c:\program files\windowspowershell\modules\" will be used.
+		This is the path containing the folders containing all the DSC resources.
+		If this is not passed the default path of "c:\program files\windowspowershell\modules\" will be used.
 
 .PARAMETER PullServerResourcePath
-This is the destination path to which the zipped resources and checksum files will be written to.
-The user running this command must have write access to this folder.
+		This is the destination path to which the zipped resources and checksum files will be written to.
+		The user running this command must have write access to this folder.
 
-If this parameter is not set the path will be set to:
-c:\Program Files\WindowsPowerShell\DscService\Modules
-
-.EXAMPLE 
- Publish-DSCPullResources -ModulePath 'c:\program files\windowspowershell\modules\all resources\a*' `
-	-PullServerResourcePath '\\DSCPullServer\c$\program files\windowspowershell\DSCService\Modules'
- This will cause all resources found in the c:\program files\windowspowershell\modules\all resources\ folder
- starting with the letter A to be zipped up and copied into the folder
- \\DSCPullServer\c$\program files\windowspowershell\DSCService\Modules
- A checksum file will also be created for each zipped resource.
+		If this parameter is not set the path will be set to:
+		c:\Program Files\WindowsPowerShell\DscService\Modules
 
 .EXAMPLE 
- Publish-DSCPullResources -ModulePath 'c:\program files\windowspowershell\modules\all resources\*'
- This will cause all resources found in the c:\program files\windowspowershell\modules\all resources\ folder
- to be zipped up and copied into the folder found in the default variable $DSCTools_DefaultPullServerResourcePath.
- A checksum file will also be created for each zipped resource.
+		 Publish-DSCPullResources -ModulePath 'c:\program files\windowspowershell\modules\all resources\a*' `
+			-PullServerResourcePath '\\DSCPullServer\c$\program files\windowspowershell\DSCService\Modules'
+		 This will cause all resources found in the c:\program files\windowspowershell\modules\all resources\ folder
+		 starting with the letter A to be zipped up and copied into the folder
+		 \\DSCPullServer\c$\program files\windowspowershell\DSCService\Modules
+		 A checksum file will also be created for each zipped resource.
 
 .EXAMPLE 
- 'c:\program files\windowspowershell\modules\all resources\','c:\powershell\modules\' | Publish-DSCPullResources `
-	-PullServerResourcePath '\\DSCPullServer\c$\program files\windowspowershell\DSCService\Modules'
- This will cause all resources found in either the c:\program files\windowspowershell\modules\all resources folder or
- c:\powershell\modules\ folder to be zipped up and copied into the folder
- \\DSCPullServer\c$\program files\windowspowershell\DSCService\Modules
- A checksum file will also be created for each zipped resource.
+		 Publish-DSCPullResources -ModulePath 'c:\program files\windowspowershell\modules\all resources\*'
+		 This will cause all resources found in the c:\program files\windowspowershell\modules\all resources\ folder
+		 to be zipped up and copied into the folder found in the default variable $DSCTools_DefaultPullServerResourcePath.
+		 A checksum file will also be created for each zipped resource.
+
+.EXAMPLE 
+		 'c:\program files\windowspowershell\modules\all resources\','c:\powershell\modules\' | Publish-DSCPullResources `
+			-PullServerResourcePath '\\DSCPullServer\c$\program files\windowspowershell\DSCService\Modules'
+		 This will cause all resources found in either the c:\program files\windowspowershell\modules\all resources folder or
+		 c:\powershell\modules\ folder to be zipped up and copied into the folder
+		 \\DSCPullServer\c$\program files\windowspowershell\DSCService\Modules
+		 A checksum file will also be created for each zipped resource.
 
  .LINK
- http://pscx.codeplex.com/
+		http://pscx.codeplex.com/
 #>
     [CmdletBinding()]
     Param (
@@ -402,44 +402,44 @@ c:\Program Files\WindowsPowerShell\DscService\Modules
 Function Install-DSCResourceKit {
 <#
 .SYNOPSIS
-Downlaods and installs the DSC Resource Kit.
+		Downlaods and installs the DSC Resource Kit.
 
 .DESCRIPTION 
-The DSC Resource Kit is a set of DSC Resources and other tools that are commonly used by DSC servers and nodes. It can be downloaded
-manually from the Microsoft Script Center Gallery.
+		The DSC Resource Kit is a set of DSC Resources and other tools that are commonly used by DSC servers and nodes. It can be downloaded
+		manually from the Microsoft Script Center Gallery.
 
-This function will attempt to download this file automatically and install it to the c:\program files\windows powershell\modules folder
-on this computer.
+		This function will attempt to download this file automatically and install it to the c:\program files\windows powershell\modules folder
+		on this computer.
 
-If PS 4 is used then this function requires the PSCX module to be available and installed on this computer.
+		If PS 4 is used then this function requires the PSCX module to be available and installed on this computer.
 
-PSCX Module can be downloaded from http://pscx.codeplex.com/
+		PSCX Module can be downloaded from http://pscx.codeplex.com/
      
 .PARAMETER ResourceKitURL
 This is the URL to use to download the DSC Resource Kit from. It defaults to the URL contained in $DSCTools_ResourceKitURL.
 
 .PARAMETER ModulePath
-This optional parameter allows an alternate folder to install the DSC Resource Kit into. By default it will be installed into
-$($ENV:PROGRAMFILES)\windowspowershell\modules
+		This optional parameter allows an alternate folder to install the DSC Resource Kit into. By default it will be installed into
+		$($ENV:PROGRAMFILES)\windowspowershell\modules
 
-The Resouce Kit zip file contains a single folder called All Resources that will be created within the Modules folder.
-All Resources will be inside this folder. All other cmdlets default to using this folder.
+		The Resouce Kit zip file contains a single folder called All Resources that will be created within the Modules folder.
+		All Resources will be inside this folder. All other cmdlets default to using this folder.
 
 .PARAMETER Publish
-If this switch is set to $true the DSC Resorce Kit files will also be published using Publish-DSCPullResources.
+		If this switch is set to $true the DSC Resorce Kit files will also be published using Publish-DSCPullResources.
 
 .PARAMETER UseCache
-If this switch is set to $true then the DSC Resouce Kit File will not be redownloaded if one already exists in the temp folder.
-If one does not exist it will be downloaded and it will not be deleted after the cmdlet finishes.
+		If this switch is set to $true then the DSC Resouce Kit File will not be redownloaded if one already exists in the temp folder.
+		If one does not exist it will be downloaded and it will not be deleted after the cmdlet finishes.
 
 .PARAMETER PullServerResourcePath
-This is the destination path to which the zipped resources and checksum files will be written to. The user running this command must have write access to this folder.
+		This is the destination path to which the zipped resources and checksum files will be written to. The user running this command must have write access to this folder.
 
 .EXAMPLE 
- Install-DSCResourceKit -Publish
+		 Install-DSCResourceKit -Publish
 
  .LINK
-  http://pscx.codeplex.com/
+		http://pscx.codeplex.com/
 #>
     [CmdletBinding()]
     Param (
@@ -474,18 +474,18 @@ This is the destination path to which the zipped resources and checksum files wi
 		Try {
 			Invoke-WebRequest $ResourceKitURL -OutFile $TempPath	    
 		} Catch {
-			Throw "Error downloading DSC Resource File from $ResourceKitURL"
+			Throw
 		}
 	}
 
 	# Unzip the Resouce Kit File
 	Write-Verbose "Extracting $TempPath to $ModulePath"
-#	Try {
+	Try {
 		UnzipFile -ZipFileName $TempPath -DestinationPath $ModulePath
 		#Expand-Archive -Path $TempPath -OutputPath $ModulePath
-#	} Catch {
-#		Throw "Error unzipping Resource Kit file $TempPath to $ModulePath"
-#	} # Try
+	} Catch {
+		Throw
+	} # Try
 
 	If ($Publish)
 	{ 
@@ -505,73 +505,73 @@ This is the destination path to which the zipped resources and checksum files wi
 Function Start-DSCPullMode {
 <#
 .SYNOPSIS
-Configures one or mode nodes for Pull Mode.
+		Configures one or mode nodes for Pull Mode.
 
 .DESCRIPTION 
-This function will create all configuration files required for a set of nodes to be placed into DSC Pull mode.
+		This function will create all configuration files required for a set of nodes to be placed into DSC Pull mode.
 
-It will take an array of nodes in the nodes parameter which will list all nodes that should be configured for pull mode.
+		It will take an array of nodes in the nodes parameter which will list all nodes that should be configured for pull mode.
 
-The function will:
-1. Create the node DSC configuration MOF file if it is missing (and the configration file is noted in the Nodes array).
-2. Copy the node DSC configuration MOF file and rename with GUID provided in the nodes array or to a new GUID if one is not provided in the nodes array.
-3. Create a node DSC configuration MOF checksum file.
-4. Move the node DSC configration MOF and checksum file to the Pull server.
-5. Create the node LCM configuration MOF file to configure the LCM for pull mode.
-6. Execute the node LCM configuration MOF on the node. 
+		The function will:
+		1. Create the node DSC configuration MOF file if it is missing (and the configration file is noted in the Nodes array).
+		2. Copy the node DSC configuration MOF file and rename with GUID provided in the nodes array or to a new GUID if one is not provided in the nodes array.
+		3. Create a node DSC configuration MOF checksum file.
+		4. Move the node DSC configration MOF and checksum file to the Pull server.
+		5. Create the node LCM configuration MOF file to configure the LCM for pull mode.
+		6. Execute the node LCM configuration MOF on the node. 
      
-.PARAMETER PullServerURL
-This is the URL that will be used by the Local Configuration Manager of the Node to pull the configuration files.
+		.PARAMETER PullServerURL
+		This is the URL that will be used by the Local Configuration Manager of the Node to pull the configuration files.
 
-If this parameter is not passed it is generated from the Module Variables:
+		If this parameter is not passed it is generated from the Module Variables:
 
-$($DSCTools_DefaultPullServerProtocol)://$($DSCTools_DefaultPullServerName):$($DSCTools_DefaultPullServerPort)/$($DSCTools_DefaultPullServerPath)
+		$($DSCTools_DefaultPullServerProtocol)://$($DSCTools_DefaultPullServerName):$($DSCTools_DefaultPullServerPort)/$($DSCTools_DefaultPullServerPath)
 
-For example:
+		For example:
 
-http://MyPullServer:8080/PSDSCPullServer.svc
+		http://MyPullServer:8080/PSDSCPullServer.svc
 
 .PARAMETER PullServerConfigurationPath
-This optional parameter contains the full path to where the Pull Server DSC Node configuration files should be written to.
+		This optional parameter contains the full path to where the Pull Server DSC Node configuration files should be written to.
 
-If this parameter is not passed it will be set to $DSCTools_DefaultConfigFolder
+		If this parameter is not passed it will be set to $DSCTools_DefaultConfigFolder
 
-For example:
+		For example:
 
-c:\program files\windowspowershell\DscService\configuration
+		c:\program files\windowspowershell\DscService\configuration
 
-.PARAMETER NodeConfigSourceFolder
+		.PARAMETER NodeConfigSourceFolder
 
-This parameter is used to specify the folder where the node configration files can be found. If it is not passed it will default to the
-module variable $DSCTools_DefaultNodeConfigSourceFolder.
+		This parameter is used to specify the folder where the node configration files can be found. If it is not passed it will default to the
+		module variable $DSCTools_DefaultNodeConfigSourceFolder.
 
-This value will be ignored for any node that has a MOFFile key value set.
+		This value will be ignored for any node that has a MOFFile key value set.
 
 .PARAMETER Nodes
-Must contain an array of hash tables. Each hash table will represent a node that should be configured full DSC pull mode.
+		Must contain an array of hash tables. Each hash table will represent a node that should be configured full DSC pull mode.
 
-The hash table must contain the following entries:
-Name = 
+		The hash table must contain the following entries:
+		Name = 
 
-Each hash entry can also contain the following optional items. If each item is not specified it will default.
-Guid = If no guid is passed for this node a new one will be created
-RebootNodeIfNeeded = $false
-ConfigurationMode = 'ApplyAndAutoCorrect'
-MofFile = This is the path and filename of the MOF file to use for this node. If not provided the MOF file will be used
+		Each hash entry can also contain the following optional items. If each item is not specified it will default.
+		Guid = If no guid is passed for this node a new one will be created
+		RebootNodeIfNeeded = $false
+		ConfigurationMode = 'ApplyAndAutoCorrect'
+		MofFile = This is the path and filename of the MOF file to use for this node. If not provided the MOF file will be used
 
-For example:
-@(@{Name='SERVER01';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e7'},@{Name='SERVER02';Guid='';RebootNodeIfNeeded=$true;MofFile='c:\users\Administrtor\Documents\WindowsPowerShell\DSCConfig\SERVER02.MOF'})
-
-.EXAMPLE 
- Start-DSCPullMode `
-    -Nodes @(@{Name='SERVER01';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e7'},@{Name='SERVER02';RebootNodeIfNeeded=$true;MofFile='c:\users\Administrtor\Documents\WindowsPowerShell\DSCConfig\SERVER02.MOF'})
- This command will cause the nodes SERVER01 and SERVER02 to be switched into Pull mode and the appropriate configration files uploaded to the Pull server specified in $DSCTools_DefaultConfigFolder.
+		For example:
+		@(@{Name='SERVER01';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e7'},@{Name='SERVER02';Guid='';RebootNodeIfNeeded=$true;MofFile='c:\users\Administrtor\Documents\WindowsPowerShell\DSCConfig\SERVER02.MOF'})
 
 .EXAMPLE 
- Start-DSCPullMode `
-    -Nodes @(@{Name='SERVER01';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e7'},@{Name='SERVER02';RebootNodeIfNeeded=$true;MofFile='c:\users\Administrtor\Documents\WindowsPowerShell\DSCConfig\SERVER02.MOF'}) `
-    -PullServerConfigPath '\\MyPullServer\DSCConfiguration'
- This command will cause the nodes SERVER01 and SERVER02 to be switched into Pull mode and the appropriate configration files uploaded to the Pull server configration folder '\\MyPullServer\DSCConfiguration'
+		 Start-DSCPullMode `
+			-Nodes @(@{Name='SERVER01';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e7'},@{Name='SERVER02';RebootNodeIfNeeded=$true;MofFile='c:\users\Administrtor\Documents\WindowsPowerShell\DSCConfig\SERVER02.MOF'})
+		 This command will cause the nodes SERVER01 and SERVER02 to be switched into Pull mode and the appropriate configration files uploaded to the Pull server specified in $DSCTools_DefaultConfigFolder.
+
+.EXAMPLE 
+		 Start-DSCPullMode `
+			-Nodes @(@{Name='SERVER01';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e7'},@{Name='SERVER02';RebootNodeIfNeeded=$true;MofFile='c:\users\Administrtor\Documents\WindowsPowerShell\DSCConfig\SERVER02.MOF'}) `
+			-PullServerConfigPath '\\MyPullServer\DSCConfiguration'
+		 This command will cause the nodes SERVER01 and SERVER02 to be switched into Pull mode and the appropriate configration files uploaded to the Pull server configration folder '\\MyPullServer\DSCConfiguration'
 #>
     [CmdletBinding()]
     Param (
@@ -641,7 +641,8 @@ For example:
             Write-Verbose "Node $NodeName configuration MOF checksum created $DestMof"
 
             # Create the LCM MOF File to set the nodes LCM to pull mode
-            ConfigureLCMPullMode `
+			. "$(Join-Path -Path $PSScriptRoot -ChildPath 'Configuration\Config_SetLCMPullMode.ps1')"
+            Config_SetLCMPullMode `
                 -NodeName $NodeName `
                 -NodeGuid $NodeGuid `
                 -RebootNodeIfNeeded $RebootNodeIfNeeded `
@@ -674,44 +675,43 @@ For example:
 Function Start-DSCPushMode {
 <#
 .SYNOPSIS
-Configures one or mode nodes for Push Mode.
+		Configures one or mode nodes for Push Mode.
 
 .DESCRIPTION 
-This function will create all configuration files required for a set of nodes to be placed into DSC Push mode.
+		This function will create all configuration files required for a set of nodes to be placed into DSC Push mode.
 
-It will take an array of nodes in the nodes parameter which will list all nodes that should be configured for push mode.
+		It will take an array of nodes in the nodes parameter which will list all nodes that should be configured for push mode.
 
-The function will:
-1. Create the node DSC configuration MOF file if it is missing (and the configration file is noted in the Nodes array).
-2. Create the node LCM configuration MOF file to configure the LCM for push mode.
-3. Execute the node LCM configuration MOF on the node. 
+		The function will:
+		1. Create the node DSC configuration MOF file if it is missing (and the configration file is noted in the Nodes array).
+		2. Create the node LCM configuration MOF file to configure the LCM for push mode.
+		3. Execute the node LCM configuration MOF on the node. 
      
 .PARAMETER NodeConfigSourceFolder
+		This parameter is used to specify the folder where the node configration files can be found. If it is not passed it will default to the
+		module variable $DSCTools_DefaultNodeConfigSourceFolder.
 
-This parameter is used to specify the folder where the node configration files can be found. If it is not passed it will default to the
-module variable $DSCTools_DefaultNodeConfigSourceFolder.
-
-This value will be ignored for any node that has a MOFFile key value set.
+		This value will be ignored for any node that has a MOFFile key value set.
 
 .PARAMETER Nodes
-Must contain an array of hash tables. Each hash table will represent a node that should be configured full DSC push mode.
+		Must contain an array of hash tables. Each hash table will represent a node that should be configured full DSC push mode.
 
-The hash table must contain the following entries:
-Name = 
+		The hash table must contain the following entries:
+		Name = 
 
-Each hash entry can also contain the following optional items. If each item is not specified it will default.
-Guid = This is not required but retained for compatibility with Pull Mode
-RebootNodeIfNeeded = $false
-ConfigurationMode = 'ApplyAndAutoCorrect'
-MofFile = This is the path and filename of the MOF file to use for this node. If not provided the MOF file will be used
+		Each hash entry can also contain the following optional items. If each item is not specified it will default.
+		Guid = This is not required but retained for compatibility with Pull Mode
+		RebootNodeIfNeeded = $false
+		ConfigurationMode = 'ApplyAndAutoCorrect'
+		MofFile = This is the path and filename of the MOF file to use for this node. If not provided the MOF file will be used
 
-For example:
-@(@{Name='SERVER01';},@{Name='SERVER02';RebootNodeIfNeeded=$true;MofFile='c:\users\Administrtor\Documents\WindowsPowerShell\DSCConfig\SERVER02.MOF'})
+		For example:
+		@(@{Name='SERVER01';},@{Name='SERVER02';RebootNodeIfNeeded=$true;MofFile='c:\users\Administrtor\Documents\WindowsPowerShell\DSCConfig\SERVER02.MOF'})
 
 .EXAMPLE 
- Start-DSCPushlMode `
-    -Nodes @(@{Name='SERVER01'},@{Name='SERVER02';RebootNodeIfNeeded=$true;MofFile='c:\users\Administrtor\Documents\WindowsPowerShell\DSCConfig\SERVER02.MOF'})
- This command will cause the nodes SERVER01 and SERVER02 to be switched into Push mode.
+		 Start-DSCPushlMode `
+			-Nodes @(@{Name='SERVER01'},@{Name='SERVER02';RebootNodeIfNeeded=$true;MofFile='c:\users\Administrtor\Documents\WindowsPowerShell\DSCConfig\SERVER02.MOF'})
+		 This command will cause the nodes SERVER01 and SERVER02 to be switched into Push mode.
 #>
     [CmdletBinding()]
     Param (
@@ -765,7 +765,8 @@ For example:
 
         If (-not $NodeError) {
             # Create the LCM MOF File to set the nodes LCM to pull mode
-            ConfigureLCMPushMode `
+			. "$(Join-Path -Path $PSScriptRoot -ChildPath 'Configuration\Config_SetLCMPushMode.ps1')"
+            Config_SetLCMPushMode `
                 -NodeName $NodeName `
                 -RebootNodeIfNeeded $RebootNodeIfNeeded `
                 -ConfigurationMode $ConfigurationMode `
@@ -796,44 +797,43 @@ For example:
 Function Enable-DSCPullServer {
 <#
 .SYNOPSIS
-Installs and configures a server as a DSC Pull Server.
+		Installs and configures a server as a DSC Pull Server.
 
 .DESCRIPTION 
-This function will create a MOF file for configuring a Windows Server computer to be a DSC Pull Server and then force DSC to apply the MOF to the server.
+		This function will create a MOF file for configuring a Windows Server computer to be a DSC Pull Server and then force DSC to apply the MOF to the server.
 
-The name of as least one computer to install as a Pull Server is mandatory. Multiple computers can be specified to install more than one Pull Server.
+		The name of as least one computer to install as a Pull Server is mandatory. Multiple computers can be specified to install more than one Pull Server.
 
-Important Note: The server that will be installed onto must contain the DSC module xPSDesiredStateConfiguration installed into the PowerShell Module path.
-This module is part of the DSC Resource kit found here: https://gallery.technet.microsoft.com/scriptcenter/DSC-Resource-Kit-All-c449312d
+		Important Note: The server that will be installed onto must contain the DSC module xPSDesiredStateConfiguration installed into the PowerShell Module path. This module is part of the DSC Resource kit found here: https://gallery.technet.microsoft.com/scriptcenter/DSC-Resource-Kit-All-c449312d
 
-The function will:
-1. Create the node DSC Pull Server configuration MOF file for the server.
-2. Execute the node DSC Pull Server configuration MOF on the server. 
+		The function will:
+		1. Create the node DSC Pull Server configuration MOF file for the server.
+		2. Execute the node DSC Pull Server configuration MOF on the server. 
      
 .PARAMETER Nodes
-Must contain an array of hash tables. Each hash table will represent a node that should be configured as a DSC Pull Server.
+		Must contain an array of hash tables. Each hash table will represent a node that should be configured as a DSC Pull Server.
 
-The hash table must contain the following entries:
-Name = 
+		The hash table must contain the following entries:
+		Name = 
 
-Each hash entry can also contain the following optional items. If each item is not specified it will default.
-PullServerPort = The port the Pull Server will run on. Defaults to $DSCTools_DefaultPullServerPort
-ComplianceServerPort = The port the Complaince Server will run on. Defaults to $DSCTools_DefaultComplianceServerPort
-CertificateThumbprint = The certificate thumbprint to use if HTTPS should be used. Defaults to using HTTP.
-PullServerEndpointName = The endpoint name to use when creating the Pull Server web site. Defaults to $DSCTools_DefaultPullServerEndpointName
-PullServerResourcePath = The path the DSC Pull Server will look for resource files in. Defaults to $DSCTools_DefaultPullServerResourcePath
-PullServerConfigurationPath = The path the DSC Pull Server will use look for configuration (MOF) files in. Defaults to $DSCTools_DefaultPullServerConfigurationPath
-PullServerPhysicalPath =  The local path to where the DSC Pull Server web site will be created. Defaults to $DSCTools_DefaultPullServerPhysicalPath
-ComplianceServerEndpointName = The endpoint name to use when creating the Compliance Server web site. Defaults to $DSCTools_DefaultComplianceServerEndpointName
-ComplianceServerPhysicalPath = The local path to where the DSC Compliance Server web site will be created. Defaults to $DSCTools_DefaultComplianceServerPhysicalPath
-Credential = Credentials to use to configure the DSC Pull Server using. Defaults to none.
+		Each hash entry can also contain the following optional items. If each item is not specified it will default.
+		PullServerPort = The port the Pull Server will run on. Defaults to $DSCTools_DefaultPullServerPort
+		ComplianceServerPort = The port the Complaince Server will run on. Defaults to $DSCTools_DefaultComplianceServerPort
+		CertificateThumbprint = The certificate thumbprint to use if HTTPS should be used. Defaults to using HTTP.
+		PullServerEndpointName = The endpoint name to use when creating the Pull Server web site. Defaults to $DSCTools_DefaultPullServerEndpointName
+		PullServerResourcePath = The path the DSC Pull Server will look for resource files in. Defaults to $DSCTools_DefaultPullServerResourcePath
+		PullServerConfigurationPath = The path the DSC Pull Server will use look for configuration (MOF) files in. Defaults to $DSCTools_DefaultPullServerConfigurationPath
+		PullServerPhysicalPath =  The local path to where the DSC Pull Server web site will be created. Defaults to $DSCTools_DefaultPullServerPhysicalPath
+		ComplianceServerEndpointName = The endpoint name to use when creating the Compliance Server web site. Defaults to $DSCTools_DefaultComplianceServerEndpointName
+		ComplianceServerPhysicalPath = The local path to where the DSC Compliance Server web site will be created. Defaults to $DSCTools_DefaultComplianceServerPhysicalPath
+		Credential = Credentials to use to configure the DSC Pull Server using. Defaults to none.
 
-For example:
-@(@{Name='DSCPULLSRV01';},@{Name='DSCPULLSRV01';})
+		For example:
+		@(@{Name='DSCPULLSRV01';},@{Name='DSCPULLSRV01';})
 
 .EXAMPLE 
- Enable-DSCPullServer -Nodes @(@{Name='DSCPULLSRV01';},@{Name='DSCPULLSRV01';})
- This command will install and configure a DSC Pull Server onto machines DSCPULLSRV01 and DSCPULLSRV02.
+		 Enable-DSCPullServer -Nodes @(@{Name='DSCPULLSRV01';},@{Name='DSCPULLSRV01';})
+		 This command will install and configure a DSC Pull Server onto machines DSCPULLSRV01 and DSCPULLSRV02.
 #>
     [CmdletBinding()]
     Param (
@@ -879,8 +879,8 @@ For example:
 
 			# Load the CreatePullServer Configuration into memory (dot source it)
 			# The file should be in the same folder as the Module.
-			. "$(Join-Path -Path $PSScriptRoot -ChildPath 'CreatePullServer.ps1')"
-			CreatePullServer `
+			. "$(Join-Path -Path $PSScriptRoot -ChildPath 'Configuration\Config_EnablePullServer.ps1')"
+			Config_EnablePullServer `
 				-NodeName $NodeName `
 				-Output $TempPath `
 				-PullServerPort $PullServerPort `
@@ -894,7 +894,7 @@ For example:
 				-ComplianceServerPhysicalPath $ComplianceServerPhysicalPath `
 				| Out-Null
 		} Catch {
-			Throw "Error Creating $NodeName Pull Server MOF $TempPath\$NodeName.MOF."
+			Throw
 		}
 		Write-Verbose "Finished Creating $NodeName Pull Server MOF $TempPath\$NodeName.MOF."
         
@@ -908,7 +908,7 @@ For example:
 				Start-DSCConfiguration -ComputerName $NodeName -Path $TempPath -Wait -Force -Credential $Credential
 			}
 		} Catch {
-			Throw "Error Applying MOF $TempPath\$NodeName.MOF to $NodeName Pull Server."
+			Throw
 		}
 		Write-Verbose "Finished Applying MOF $TempPath\$NodeName.MOF to $NodeName Pull Server."
 
@@ -923,224 +923,146 @@ For example:
 ##########################################################################################################################################
 
 ##########################################################################################################################################
+Function Get-DscConfigurationRemote {
+<#
+.SYNOPSIS
+        Gets the current configuration of a remote node.
+
+.DESCRIPTION
+        The Get-DscConfiguration cmdlet gets the current configuration of the node, if configuration exists. Specify computers by using Common Information Model (CIM) sessions. If you do not specify a target computer, the cmdlet gets the configuration from the local computer.
+
+.PARAMETER AsJob
+        Runs the cmdlet as a background job. Use this parameter to run commands that take a long time to complete.
+        The cmdlet immediately returns an object that represents the job and then displays the command prompt. You can continue to work in the session while the job completes. To manage the job, use the *-Job cmdlets. To get the job results, use the Receive-Job cmdlet.
+        For more information about Windows PowerShell® background jobs, see about_Jobs.
+
+.PARAMETER CimSession
+        Runs the cmdlet in a remote session or on a remote computer. Enter a computer name or a session object, such as the output of a New-CimSession or Get-CimSession cmdlet. The default is the current session on the local computer.
+
+.PARAMETER ComputerName
+        Runs the cmdlet on a remote computer, forming a CIM session connection and then closing it after getting the configuration.
+
+.PARAMETER UseSSL
+        Runs the cmdlet on a remote computer connecting with SSL.
+
+.PARAMETER Credemtial
+        Uses these credentials to connect to the remote computer.
+
+.PARAMETER ThrottleLimit
+        Specifies the maximum number of concurrent operations that can be established to run the cmdlet. If this parameter is omitted or a value of 0 is entered, then Windows PowerShell® calculates an optimum throttle limit for the cmdlet based on the number of CIM cmdlets that are running on the computer. The throttle limit applies only to the current cmdlet, not to the session or to the computer.
+
+.EXAMPLE
+        PS C:\> Get-DscConfigurationRemote
+        This command gets the current configuration for the local computer.
+
+.EXAMPLE
+        PS C:\> Get-DscConfigurationRemote -ComputerName DSCSVR01 -Credential (Get-Credential) -UseSSL
+        This example gets the current configuration from computer DSCSVR01, connecting to it via SSL and the credentials supplied.
+
+.INPUTS
+.OUTPUTS
+.LINK
+        http://go.microsoft.com/fwlink/?LinkID=288760
+#>
+    [CmdletBinding(PositionalBinding=$false)]
+    param(
+        [Parameter(
+			ParameterSetName='CimSession')]
+        [Alias('Session')]
+        [ValidateNotNullOrEmpty()]
+        [Microsoft.Management.Infrastructure.CimSession[]]
+        ${CimSession},
+
+        [int]
+        ${ThrottleLimit},
+
+        [switch]
+        ${AsJob},
+
+        [Parameter(ParameterSetName='ComputerName')]
+        [ValidateNotNullOrEmpty()]
+		[String]
+		${ComputerName},
+
+        [Parameter(ParameterSetName='ComputerName')]
+        [PSCredential]
+		${Credential},
+
+        [Parameter(ParameterSetName='ComputerName')]
+        [switch]
+		${UseSSL}
+		)
+
+    begin {
+        try {
+            $outBuffer = $null
+            if ($PSBoundParameters.TryGetValue('OutBuffer', [ref]$outBuffer)) {
+                $PSBoundParameters['OutBuffer'] = 1
+            } # if
+
+            $wrappedCmd = $ExecutionContext.InvokeCommand.GetCommand('Get-DscConfiguration', [System.Management.Automation.CommandTypes]::Function)
+			if ($ComputerName) {
+				$cimSessionParameters = @{}
+				[Void]$PSBoundParameters.Remove('ComputerName')
+				if ($UseSSL) {
+					[Void]$PSBoundParameters.Remove('UseSSL')
+					$cimSessionOption = New-CimSessionOption -SkipCACheck -SkipCNCheck -SkipRevocationCheck -UseSsl
+					$cimSessionParameters += @{SessionOption=$cimSessionOption}
+				} # if
+				if ($Credential) {
+					[Void]$PSBoundParameters.Remove('Credential')
+					$cimSessionParameters += @{Credential=$Credential}
+				} # if
+				$cimSession = New-CimSession -ComputerName $ComputerName @CimSessionParameters
+				$scriptCmd = {& $wrappedCmd @PSBoundParameters -CimSession $cimSession }
+			} else {
+				$scriptCmd = {& $wrappedCmd @PSBoundParameters }
+			} # if
+            $steppablePipeline = $scriptCmd.GetSteppablePipeline($myInvocation.CommandOrigin)
+            $steppablePipeline.Begin($PSCmdlet)
+        } catch {
+            throw
+        } # try
+    } # begin
+
+    process {
+        try {
+            $steppablePipeline.Process($_)
+        } catch {
+            throw
+        } # try
+    } # process
+
+    end {
+        try {
+            $steppablePipeline.End()
+			if ($ComputerName) {
+				Remove-CimSession -CimSession $cimSession
+			} # if
+        } catch {
+            throw
+        } # try
+    } # end
+} # Function Get-DscConfigurationRemote
+##########################################################################################################################################
+
+##########################################################################################################################################
 # DSC Configurations for configuring DSC Pull Server and LCM
+# These sections are now containined in separate files found in the .\Configurations folder.
+# This is so that this module will load even if the configurations contain import-dscresource commands that import resources
+# That aren't available on the local computer. For example if the computer being used has not yet had the DSC Resource Kit Installed.
 ##########################################################################################################################################
-Configuration ConfigureLCMPullMode {
-    Param (
-        [Parameter(
-            Mandatory=$true
-            )]
-        [string]$NodeName,
-
-        [Parameter(
-            Mandatory=$true
-            )]
-        [string]$NodeGuid,
-
-        [ValidateNotNullOrEmpty()]
-        [string]$ConfigurationMode = 'ApplyAndAutoCorrect',
-
-        [ValidateNotNullOrEmpty()]
-        [boolean]$RebootNodeIfNeeded = $false,
-
-        [Parameter(
-            Mandatory=$true
-            )]
-        [string]$PullServerURL
-    ) # Param
-
-    If ($ConfigurationMode -notin ('ApplyAndAutoCorrect','ApplyAndMonitor','ApplyOnly')) {
-        Throw 'ConfigurationMode is invalid.'
-    }
-
-    If ($PullServerURL -match '^https?://') {
-		$DownloadManagerName = 'WebDownloadManager'
-		If ($PullServerURL.ToLower().StartsWith('https')) {
-            $DownloadManagerCustomData = @{
-			    ServerUrl = $PullServerURL;
-			    AllowUnsecureConnection = 'false'
-                }
-        } Else {
-            $DownloadManagerCustomData = @{
-			    ServerUrl = $PullServerURL;
-			    AllowUnsecureConnection = 'true'
-                }
-        } # If
-    } Else {
-        $DownloadManagerName = 'DscFileDownloadManager'
-        $DownloadManagerCustomData = @{
-	        SourcePath = $PullServerURL
-            }
-    } # If
-
-	Node $NodeName {
-		LocalConfigurationManager {
-			ConfigurationMode = $ConfigurationMode
-            ConfigurationModeFrequencyMins = 30
-			ConfigurationID = $NodeGuid
-			RefreshMode = 'Pull'
-            RebootNodeIfNeeded = $RebootNodeIfNeeded
-			DownloadManagerName = $DownloadManagerName
-			DownloadManagerCustomData = $DownloadManagerCustomData
-            RefreshFrequencyMins = 15
-		} # LocalConfigurationManager
-	} # Node $NodeName
-} # Configuration ConfigureLCMPullMode
-##########################################################################################################################################
-
-##########################################################################################################################################
-Configuration ConfigureLCMPushMode {
-    Param (
-        [Parameter(
-            Mandatory=$true
-            )]
-        [string]$NodeName,
-
-        [ValidateNotNullOrEmpty()]
-        [string]$ConfigurationMode = 'ApplyAndAutoCorrect',
-
-        [ValidateNotNullOrEmpty()]
-        [boolean]$RebootNodeIfNeeded = $false
-
-    ) # Param
-
-    If ($ConfigurationMode -notin ('ApplyAndAutoCorrect','ApplyAndMonitor','ApplyOnly')) {
-        Throw 'ConfigurationMode is invalid.'
-    }
-
-	Node $NodeName {
-		LocalConfigurationManager {
-			ConfigurationMode = $ConfigurationMode
-            ConfigurationModeFrequencyMins = 30
-			RefreshMode = 'Push'
-            RebootNodeIfNeeded = $RebootNodeIfNeeded
-			DownloadManagerName = $Null
-			DownloadManagerCustomData = $Null
-            RefreshFrequencyMins = 30
-		} # LocalConfigurationManager
-	} # Node $NodeName
-} # Configuration ConfigureLCMPushMode
-##########################################################################################################################################
-
-##########################################################################################################################################
-# Configuration CreatePullServer
-# If the configriation is embedded in this module and the xPSDesiredStateConfiguration DSC Resouce is not installed then the module
-# Won't load because the Configuration can't load the rquired DSC module. Therefore this configuration is moved into a separate file.
-##########################################################################################################################################
-
-##########################################################################################################################################
-# Self Test functions
-##########################################################################################################################################
-Function Test-InvokeDSCCheck {
-    Invoke-DSCPull -ComputerName PLAGUE-MEMBER -Verbose
-    Invoke-DSCPull -Nodes @(@{Name='PLAGUE-MEMBER'}) -Verbose
-} # Test-InvokeDSCCheck
-##########################################################################################################################################
-
-##########################################################################################################################################
-Function Test-InstallDSCResourceKit {
-    $DSCTools_DefaultPullServerName = 'PLAGUE-PDC'
-	# Download the DSC Resource Kit and install it to the local machine and to the DSC Pull Server
-	Install-DSCResourceKit -UseCache -Verbose
-	Install-DSCResourceKit -UseCache -ModulePath "\\$DSCTools_DefaultPullServerName\c$\program files\windowspowershell\modules\" -Verbose
-} # Test-InstallDSCResourceKit
-##########################################################################################################################################
-
-##########################################################################################################################################
-Function Test-PublishDSCPullResources {
-    $DSCTools_DefaultPullServerName = 'PLAGUE-PDC'
-	$DSCTools_DefaultPullServerResourcePath = "\\$DSCTools_DefaultPullServerName\c$\DSC\Resources\"  # This is the path where a DSC Pull Server will look for Resources.
-    Publish-DSCPullResources -Verbose
-} # Test-PublishDSCPullResources
-##########################################################################################################################################
-
-##########################################################################################################################################
-Function Test-EnableDSCPullServer {
-	$DSCTools_DefaultPullServerName = 'PLAGUE-PDC'
-	$DSCTools_DefaultPullServerProtocol = 'HTTPS'  # Pull server has a valid trusted cert installed
-	$DSCTools_DefaultResourcePath = "c:\program files\windowspowershel\DscService\Modules\All Resources\"  # This is where the DSC resource module files are usually located.
-	$DSCTools_DefaultPullServerResourcePath = "\\$DSCTools_DefaultPullServerName\c$\DSC\Resources\"  # This is the path where a DSC Pull Server will look for Resources.
-	$DSCTools_DefaultPullServerConfigurationPath = "\\$DSCTools_DefaultPullServerName\c$\DSC\Configuration\"   # This is the path where a DSC Pull Server will look for MOF Files.
-	$DSCTools_DefaultNodeConfigurationSourceFolder = "$HOME\Documents\WindowsPowerShell\Configuration\" # Where to find source configuration files.
-	$DSCTools_DefaultPullServerPhysicalPath = "c:\DSC\PSDSCPullServer\" # The location a Pull Server web site will be installed to.
-	$DSCTools_DefaultComplianceServerPhysicalPath = "c:\DSC\PSDSCComplianceServer\" # The location a Pull Server compliance site will be installed to.
-	$Credential = Get-Credential
-	$PullServers = @( `
-		@{Name=$DSCTools_DefaultPullServerName;CertificateThumbprint='3aaeef3f4b6dad0c8cb59930b48a9ffc25daa7d8';Credential=$Credential;} )
-
-    Enable-DSCPullServer -Nodes $PullServers -Verbose
-    $Cim = New-CimSession -ComputerName $DSCTools_DefaultPullServerName -Credential $Credential
-	Get-DSCConfiguration -CimSession $Cim
-	Remove-CimSession -CimSession $Cim
-} # Test-StartDSCPushMode
-##########################################################################################################################################
-
-##########################################################################################################################################
-Function Test-StartDSCPullMode {
-    $DSCTools_DefaultPullServerName = 'PLAGUE-PDC'
-    Start-DSCPullMode -Nodes @(@{Name='PLAGUE-MEMBER';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e7';RebootNodeIfNeeded=$true;MofFile='C:\Users\Daniel.PLAGUEHO\OneDrive\PS\DSC\PLAGUEConfiguration\PLAGUE-MEMBER.MOF'}) -Verbose
-} # Test-StartDSCPullMode
-##########################################################################################################################################
-
-##########################################################################################################################################
-Function Test-StartDSCPushMode {
-    $DSCTools_DefaultPullServerName = 'PLAGUE-PDC'
-    Start-DSCPushMode -Nodes @(@{Name='PLAGUE-MEMBER';RebootNodeIfNeeded=$false;ConfigurationMode='ApplyAndMonitor';MofFile='C:\Users\Daniel.PLAGUEHO\OneDrive\PS\DSC\PLAGUEConfiguration\PLAGUE-MEMBER.MOF'}) -Verbose
-} # Test-StartDSCPushMode
-##########################################################################################################################################
-
-##########################################################################################################################################
-Function Test-Full {
-	# Configure where the pull server is and how it can be connected to.
-	$DSCTools_DefaultPullServerName = 'PLAGUE-PDC'
-	$DSCTools_DefaultPullServerProtocol = 'HTTPS'  # Pull server has a valid trusted cert installed
-	$DSCTools_DefaultResourcePath = "c:\program files\windowspowershel\DscService\Modules\All Resources\"  # This is where the DSC resource module files are usually located.
-	$DSCTools_DefaultPullServerResourcePath = "\\$DSCTools_DefaultPullServerName\c$\DSC\Resources\"  # This is the path where a DSC Pull Server will look for Resources.
-	$DSCTools_DefaultPullServerConfigurationPath = "\\$DSCTools_DefaultPullServerName\c$\DSC\Configuration\"   # This is the path where a DSC Pull Server will look for MOF Files.
-	$DSCTools_DefaultNodeConfigurationSourceFolder = "$HOME\Documents\WindowsPowerShell\Configuration\" # Where to find source configuration files.
-	$DSCTools_DefaultPullServerPhysicalPath = "c:\DSC\PSDSCPullServer\" # The location a Pull Server web site will be installed to.
-	$DSCTools_DefaultComplianceServerPhysicalPath = "c:\DSC\PSDSCComplianceServer\" # The location a Pull Server compliance site will be installed to.
-	$Credential = Get-Credential
-
-	# These are the nodes that will become DSC Pull Servers
-	$PullServers = @( `
-		@{Name=$DSCTools_DefaultPullServerName;CertificateThumbprint='‎3aaeef3f4b6dad0c8cb59930b48a9ffc25daa7d8';Credential=$Credential;} )
-
-	# These are the nodes that we are going to set up Pull mode for
-	$Nodes = @( `
-		@{Name='PLAGUE-MEMBER';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e7';RebootNodeIfNeeded=$true;MofFile='c:\DSC\Configuration\PLAGUE-MEMBER.MOF'} , `
-		@{Name='PLAGUE-RODC';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e1';RebootNodeIfNeeded=$true;MofFile='c:\DSC\Configuration\PLAGUE-RODC.MOF'} , `
-		@{Name='PLAGUE-SQL2014';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e3';RebootNodeIfNeeded=$true;MofFile='c:\DSC\Configuration\PLAGUE-SQL2014.MOF'} , `
-		@{Name='PLAGUE-PROXY';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e4';RebootNodeIfNeeded=$true;MofFile='c:\DSC\Configuration\PLAGUE-PROXY.MOF'} , `
-		@{Name='PLAGUE-SC2012';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e9';RebootNodeIfNeeded=$true;MofFile='c:\DSC\Configuration\PLAGUE-SC2012.MOF'} , `
-		@{Name='PLAGUE-SP2013';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e8';RebootNodeIfNeeded=$true;MofFile='c:\DSC\Configuration\PLAGUE-SP2013.MOF'} , `
-		@{Name='PLAGUE-IIS01';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e8';RebootNodeIfNeeded=$true;MofFile='c:\DSC\Configuration\PLAGUE-IIS01.MOF'} )
-
-	# Download the DSC Resource Kit and install it to the local machine and to the DSC Pull Server
-	Install-DSCResourceKit -UseCache -Verbose
-	Install-DSCResourceKit -ModulePath "\\$DSCTools_DefaultPullServerName\c$\program files\windowspowershell\modules\" -UseCache -Verbose
-
-	# Copy all the resources up to the pull server (zipped and with a checksum file).
-	Publish-DSCPullResources -Verbose
-
-	# Install a DSC Pull Server
-	Enable-DSCPullServer -Nodes $PullServers -Verbose
-
-	# Set all the nodes to pull mode and copy the config files over to the pull server.
-	#Start-DSCPullMode -Nodes $Nodes -Verbose
-
-	# Force the all the machines to pull thier config from the Pull server (although we could just wait 15 minutes for this to happen automatically)
-	#Invoke-DSCPull -Nodes $Nodes -Verbose
-
-	# Set all the nodes to back to push mode if we don't want to use Pul mode any more.
-	#Start-DSCPushMode -Nodes $Nodes
-} # Test-Full
+# Available Configuration Files
+# -----------------------------
+# Configuration Config_SetLCMPullMode
+# Configuration Config_SetLCMPushMode
+# Configuration Config_EnablePullServer
 ##########################################################################################################################################
 
 ##########################################################################################################################################
 # Exports
 ##########################################################################################################################################
 Export-ModuleMember `
-    -Function Invoke-DSCPull,Publish-DSCPullResources,Install-DSCResourceKit,Start-DSCPullMode,Start-DSCPushMode,Enable-DSCPullServer,Test* `
+    -Function Invoke-DSCPull,Publish-DSCPullResources,Install-DSCResourceKit,Start-DSCPullMode,Start-DSCPushMode,Enable-DSCPullServer,Get-DSCConfigurationRemote `
     -Variable DSCTools_Default*,DSCTools_PSVersion
 ##########################################################################################################################################

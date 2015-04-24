@@ -26,11 +26,16 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
-  <ItemGroup />
   <ItemGroup>
-    <Compile Include="CreatePullServer.ps1" />
+    <Folder Include="Configuration\" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Configuration\Config_SetLCMPullMode.ps1" />
+    <Compile Include="Configuration\Config_SetLCMPushMode.ps1" />
+    <Compile Include="Configuration\Config_EnablePullServer.ps1" />
     <Compile Include="DSCTools.psd1" />
     <Compile Include="DSCTools.psm1" />
+    <Compile Include="DSCTools.SelfTest.ps1" />
     <Compile Include="DSCTools.test.ps1" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
