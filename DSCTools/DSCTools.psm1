@@ -524,28 +524,65 @@ Function Enable-DSCPullServer {
      
 .PARAMETER Nodes
 		Must contain an array of hash tables. Each hash table will represent a node that should be configured as a DSC Pull Server.
-
+		
 		The hash table must contain the following entries:
-		Name = 
+		Name = Name of the computer to install as a DSC Pull Server.
 
 		Each hash entry can also contain the following optional items. If each item is not specified it will default.
-		PullServerPort = The port the Pull Server will run on. Defaults to $DSCTools_DefaultPullServerPort
-		ComplianceServerPort = The port the Complaince Server will run on. Defaults to $DSCTools_DefaultComplianceServerPort
+		PullServerPort = The port the Pull Server will run on. Defaults to $DSCTools_DefaultPullServerPort.
+		ComplianceServerPort = The port the Complaince Server will run on. Defaults to $DSCTools_DefaultComplianceServerPort.
 		CertificateThumbprint = The certificate thumbprint to use if HTTPS should be used. Defaults to using HTTP.
-		PullServerEndpointName = The endpoint name to use when creating the Pull Server web site. Defaults to $DSCTools_DefaultPullServerEndpointName
-		PullServerResourcePath = The path the DSC Pull Server will look for resource files in. Defaults to $DSCTools_DefaultPullServerResourcePath
-		PullServerConfigurationPath = The path the DSC Pull Server will use look for configuration (MOF) files in. Defaults to $DSCTools_DefaultPullServerConfigurationPath
-		PullServerPhysicalPath =  The local path to where the DSC Pull Server web site will be created. Defaults to $DSCTools_DefaultPullServerPhysicalPath
-		ComplianceServerEndpointName = The endpoint name to use when creating the Compliance Server web site. Defaults to $DSCTools_DefaultComplianceServerEndpointName
-		ComplianceServerPhysicalPath = The local path to where the DSC Compliance Server web site will be created. Defaults to $DSCTools_DefaultComplianceServerPhysicalPath
+		PullServerEndpointName = The endpoint name to use when creating the Pull Server web site. Defaults to $DSCTools_DefaultPullServerEndpointName.
+		PullServerResourcePath = The path the DSC Pull Server will look for resource files in. Defaults to $DSCTools_DefaultPullServerResourcePath.
+		PullServerConfigurationPath = The path the DSC Pull Server will use look for configuration (MOF) files in. Defaults to $DSCTools_DefaultPullServerConfigurationPath.
+		PullServerPhysicalPath = The local path to where the DSC Pull Server web site will be created. Defaults to $DSCTools_DefaultPullServerPhysicalPath.
+		ComplianceServerEndpointName = The endpoint name to use when creating the Compliance Server web site. Defaults to $DSCTools_DefaultComplianceServerEndpointName.
+		ComplianceServerPhysicalPath = The local path to where the DSC Compliance Server web site will be created. Defaults to $DSCTools_DefaultComplianceServerPhysicalPath.
 		Credential = Credentials to use to configure the DSC Pull Server using. Defaults to none.
 
 		For example:
 		@(@{Name='DSCPULLSRV01';},@{Name='DSCPULLSRV01';})
 
+.PARAMETER ComputerName
+		Name of the computer to install as a DSC Pull Server.
+
+.PARAMETER PullServerPort
+		The port the Pull Server will run on. Defaults to $DSCTools_DefaultPullServerPort.
+
+.PARAMETER ComplianceServerPort
+		The port the Complaince Server will run on. Defaults to $DSCTools_DefaultComplianceServerPort.
+
+.PARAMETER CertificateThumbprint
+		The certificate thumbprint to use if HTTPS should be used. Defaults to using HTTP.
+
+.PARAMETER PullServerEndpointName
+		The endpoint name to use when creating the Pull Server web site. Defaults to $DSCTools_DefaultPullServerEndpointName.
+
+.PARAMETER PullServerResourcePath
+		The path the DSC Pull Server will look for resource files in. Defaults to $DSCTools_DefaultPullServerResourcePath.
+
+.PARAMETER PullServerConfigurationPath
+		The path the DSC Pull Server will use look for configuration (MOF) files in. Defaults to $DSCTools_DefaultPullServerConfigurationPath.
+
+.PARAMETER PullServerPhysicalPath
+		The local path to where the DSC Pull Server web site will be created. Defaults to $DSCTools_DefaultPullServerPhysicalPath.
+
+.PARAMETER ComplianceServerEndpointName
+		The endpoint name to use when creating the Compliance Server web site. Defaults to $DSCTools_DefaultComplianceServerEndpointName.
+
+.PARAMETER ComplianceServerPhysicalPath
+		The local path to where the DSC Compliance Server web site will be created. Defaults to $DSCTools_DefaultComplianceServerPhysicalPath.
+
+.PARAMETER Credential
+		Credentials to use to configure the DSC Pull Server using. Defaults to none.
+
 .EXAMPLE 
 		 Enable-DSCPullServer -Nodes @(@{Name='DSCPULLSRV01';},@{Name='DSCPULLSRV01';})
 		 This command will install and configure a DSC Pull Server onto machines DSCPULLSRV01 and DSCPULLSRV02.
+
+.EXAMPLE 
+		 Enable-DSCPullServer -ComputerName 'DSCPULLSRV01'
+		 This command will install and configure a DSC Pull Server onto machine DSCPULLSRV01
 #>
     [CmdletBinding()]
     Param (
