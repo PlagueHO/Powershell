@@ -15,10 +15,9 @@
 
 		The functions in this module should all multiple machines to be switched to pull mode (or back to push mode) with a single command.
 
-		An example of how this module would be used:
+		An example of how this module can be used:
 
 		# Configure where the pull server is and how it can be connected to.
-		# This could be done by passing these parameters to the individual cmdlets below, but this is slightly easier to read.
 		$DSCTools_DefaultPullServerName = 'PLAGUE-PDC'
 		$DSCTools_DefaultPullServerProtocol = 'HTTPS'  # Pull server has a valid trusted cert installed
 		$DSCTools_DefaultResourcePath = "c:\program files\windowspowershel\DscService\Modules\All Resources\"  # This is where the DSC resource module files are usually located.
@@ -27,12 +26,13 @@
 		$DSCTools_DefaultNodeConfigurationSourceFolder = "$HOME\Documents\WindowsPowerShell\Configuration\" # Where to find source configuration files.
 		$DSCTools_DefaultPullServerPhysicalPath = "c:\DSC\PSDSCPullServer\" # The location a Pull Server web site will be installed to.
 		$DSCTools_DefaultComplianceServerPhysicalPath = "c:\DSC\PSDSCComplianceServer\" # The location a Pull Server compliance site will be installed to.
+		$Credential = Get-Credential
 
-		# These are the nodes that will become DSC Pull Servers.
+		# These are the nodes that will become DSC Pull Servers
 		$PullServers = @( `
-			@{Name=$DSCTools_DefaultPullServerName;CertificateThumbprint='3aaeef3f4b6dad0c8cb59930b48a9ffc25daa7d8';Credential=Get-Credential;} )
+			@{Name=$DSCTools_DefaultPullServerName;CertificateThumbprint='3aaeef3f4b6dad0c8cb59930b48a9ffc25daa7d8';Credential=$Credential;} )
 
-		# These are the nodes that we are going to set up Pull mode for and the configuration files for each.
+		# These are the nodes that we are going to set up Pull mode for
 		$Nodes = @( `
 			@{Name='PLAGUE-MEMBER';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e7';RebootNodeIfNeeded=$true;MofFile='c:\DSC\Configuration\PLAGUE-MEMBER.MOF'} , `
 			@{Name='PLAGUE-RODC';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e1';RebootNodeIfNeeded=$true;MofFile='c:\DSC\Configuration\PLAGUE-RODC.MOF'} , `
@@ -49,17 +49,21 @@
 		# Copy all the resources up to the pull server (zipped and with a checksum file).
 		Publish-DSCPullResources -Verbose
 
-		# Install the DSC Pull Server(s) - only one in this case.
+		# Install a DSC Pull Server
 		Enable-DSCPullServer -Nodes $PullServers -Verbose
 
+		# Check the pull server
+		Get-DscConfigurationRemote -ComputerName PLAGUE-PDC -UseSSL -Credential ($Credential) -Verbose
+
 		# Set all the nodes to pull mode and copy the config files over to the pull server.
-		Start-DSCPullMode -Nodes $Nodes -Verbose
+		#Start-DSCPullMode -Nodes $Nodes -Verbose
 
 		# Force the all the machines to pull thier config from the Pull server (although we could just wait 15 minutes for this to happen automatically)
-		Invoke-DSCPull -Nodes $Nodes -Verbose
+		#Invoke-DSCPull -ComputerName PLAGUE-MEMBER -Verbose
+		#Invoke-DSCPull -Nodes @(@{Name='PLAGUE-MEMBER'}) -Verbose
 
 		# Set all the nodes to back to push mode if we don't want to use Pul mode any more.
-		# Start-DSCPushMode -Nodes $Nodes -Verbose
+		#Start-DSCPushMode -Nodes $Nodes
 
 .VERSIONS
 		1.2   2015-04-23   Daniel Scott-Raynsford       Added Install-DSCResourceKit CmdLet
@@ -502,6 +506,196 @@ This is the URL to use to download the DSC Resource Kit from. It defaults to the
 ##########################################################################################################################################
 
 ##########################################################################################################################################
+Function Enable-DSCPullServer {
+<#
+.SYNOPSIS
+		Installs and configures a server as a DSC Pull Server.
+
+.DESCRIPTION 
+		This function will create a MOF file for configuring a Windows Server computer to be a DSC Pull Server and then force DSC to apply the MOF to the server.
+
+		The name of as least one computer to install as a Pull Server is mandatory. Multiple computers can be specified to install more than one Pull Server.
+
+		Important Note: The server that will be installed onto must contain the DSC module xPSDesiredStateConfiguration installed into the PowerShell Module path. This module is part of the DSC Resource kit found here: https://gallery.technet.microsoft.com/scriptcenter/DSC-Resource-Kit-All-c449312d
+
+		The function will:
+		1. Create the node DSC Pull Server configuration MOF file for the server.
+		2. Execute the node DSC Pull Server configuration MOF on the server. 
+     
+.PARAMETER Nodes
+		Must contain an array of hash tables. Each hash table will represent a node that should be configured as a DSC Pull Server.
+
+		The hash table must contain the following entries:
+		Name = 
+
+		Each hash entry can also contain the following optional items. If each item is not specified it will default.
+		PullServerPort = The port the Pull Server will run on. Defaults to $DSCTools_DefaultPullServerPort
+		ComplianceServerPort = The port the Complaince Server will run on. Defaults to $DSCTools_DefaultComplianceServerPort
+		CertificateThumbprint = The certificate thumbprint to use if HTTPS should be used. Defaults to using HTTP.
+		PullServerEndpointName = The endpoint name to use when creating the Pull Server web site. Defaults to $DSCTools_DefaultPullServerEndpointName
+		PullServerResourcePath = The path the DSC Pull Server will look for resource files in. Defaults to $DSCTools_DefaultPullServerResourcePath
+		PullServerConfigurationPath = The path the DSC Pull Server will use look for configuration (MOF) files in. Defaults to $DSCTools_DefaultPullServerConfigurationPath
+		PullServerPhysicalPath =  The local path to where the DSC Pull Server web site will be created. Defaults to $DSCTools_DefaultPullServerPhysicalPath
+		ComplianceServerEndpointName = The endpoint name to use when creating the Compliance Server web site. Defaults to $DSCTools_DefaultComplianceServerEndpointName
+		ComplianceServerPhysicalPath = The local path to where the DSC Compliance Server web site will be created. Defaults to $DSCTools_DefaultComplianceServerPhysicalPath
+		Credential = Credentials to use to configure the DSC Pull Server using. Defaults to none.
+
+		For example:
+		@(@{Name='DSCPULLSRV01';},@{Name='DSCPULLSRV01';})
+
+.EXAMPLE 
+		 Enable-DSCPullServer -Nodes @(@{Name='DSCPULLSRV01';},@{Name='DSCPULLSRV01';})
+		 This command will install and configure a DSC Pull Server onto machines DSCPULLSRV01 and DSCPULLSRV02.
+#>
+    [CmdletBinding()]
+    Param (
+        [Parameter(ParameterSetName='ComputerName')]
+		[ValdidateNotNullOrEmpty()]
+		[String]$ComputerName,
+
+        [Parameter(ParameterSetName='ComputerName')]
+		[ValdidateNotNullOrEmpty()]
+		[Int]$PullServerPort,
+
+        [Parameter(ParameterSetName='ComputerName')]
+		[ValdidateNotNullOrEmpty()]
+		[Int]$ComplianceServerPort,
+
+        [Parameter(ParameterSetName='ComputerName')]
+		[ValdidateNotNullOrEmpty()]
+		[String]$CertificateThumbprint,
+
+        [Parameter(ParameterSetName='ComputerName')]
+		[ValdidateNotNullOrEmpty()]
+		[String]$PullServerEndpointName,
+
+        [Parameter(ParameterSetName='ComputerName')]
+		[ValdidateNotNullOrEmpty()]
+		[String]$PullServerResourcePath,
+
+        [Parameter(ParameterSetName='ComputerName')]
+		[ValdidateNotNullOrEmpty()]
+	    [String]$PullServerConfigurationPath,
+
+        [Parameter(ParameterSetName='ComputerName')]
+		[ValdidateNotNullOrEmpty()]
+	    [String]$PullServerPhysicalPath,
+
+        [Parameter(ParameterSetName='ComputerName')]
+		[ValdidateNotNullOrEmpty()]
+	    [String]$ComplianceServerEndpointName,
+
+        [Parameter(ParameterSetName='ComputerName')]
+		[ValdidateNotNullOrEmpty()]
+	    [String]$ComplianceServerPhysicalPath,
+
+        [Parameter(ParameterSetName='ComputerName')]
+		[ValdidateNotNullOrEmpty()]
+	    [PSCredential]$Credential,
+
+        [Parameter(
+            ParameterSetName='Nodes'
+            )]
+        [Array]$Nodes
+    )
+    
+	# Set up a temporary path
+	$TempPath = "$Env:TEMP\Enable-DSCPullServer"
+	Write-Verbose "Creating temporary folder $TempPath."
+	New-Item -Path $TempPath -ItemType 'Directory' -Force | Out-Null
+
+	If ($ComputerName) {
+		$Nodes = @{
+			Name=$ComputerName;
+			PullServerPort = $PullServerPort;
+			ComplianceServerPort = $ComplianceServerPort;
+			CertificateThumbprint = $CertificateThumbprint;
+			PullServerEndpointName = $PullServerEndpointName;
+			PullServerResourcePath = $PullServerResourcePath;
+			PullServerConfigurationPath = $PullServerConfigurationPath;
+			PullServerPhysicalPath = $PullServerPhysicalPath;
+			ComplianceServerEndpointName = $ComplianceServerEndpointName;
+			ComplianceServerPhysicalPath = $ComplianceServerPhysicalPath;
+			Credential = $Credential;
+		}
+	} # If
+	Foreach ($Node In $Nodes) {
+		# Create the Pull Mode MOF that will configure the elements on this computer needed for Pull Mode
+		[String]$NodeName = $Node.Name
+		If (($NodeName -eq '') -or ($NodeName -eq $null)) {
+			Throw 'Node name is empty.'
+		} # If
+
+        Write-Verbose "Node $NodeName begin processing."
+		# Get all the Pull Server properties from the node or use defaults.
+		[Int]$PullServerPort = $Node.PullServerPort
+		If (($PullServerPort -eq 0) -or ($PullServerPort -eq $null)) { $PullServerPort = $DSCTools_DefaultPullServerPort }
+		[Int]$ComplianceServerPort = $Node.ComplianceServerPort
+		If (($ComplianceServerPort -eq 0) -or ($ComplianceServerPort -eq $null)) { $ComplianceServerPort = $DSCTools_DefaultComplianceServerPort }
+		[String]$CertificateThumbprint = $Node.CertificateThumbprint
+		If (($CertificateThumbprint -eq '') -or ($CertificateThumbprint -eq $null)) { $CertificateThumbprint = 'AllowUnencryptedTraffic' }
+		[String]$PullServerEndpointName = $Node.PullServerEndpointName
+		If (($PullServerEndpointName -eq '') -or ($PullServerEndpointName -eq $null)) { $PullServerEndpointName = $DSCTools_DefaultPullServerEndpointName }
+		[String]$PullServerResourcePath = $Node.PullServerResourcePath
+		If (($PullServerResourcePath -eq '') -or ($PullServerResourcePath -eq $null)) { $PullServerResourcePath = $DSCTools_DefaultPullServerResourcePath }
+	    [String]$PullServerConfigurationPath = $Node.PullServerConfigurationPath
+		If (($PullServerConfigurationPath -eq '') -or ($PullServerConfigurationPath -eq $null)) { $PullServerConfigurationPath = $DSCTools_DefaultPullServerConfigurationPath }
+	    [String]$PullServerPhysicalPath = $Node.PullServerPhysicalPath
+		If (($PullServerPhysicalPath -eq '') -or ($PullServerPhysicalPath -eq $null)) { $PullServerPhysicalPath = $DSCTools_DefaultPullServerPhysicalPath }
+	    [String]$ComplianceServerEndpointName = $Node.ComplianceServerEndpointName
+		If (($ComplianceServerEndpointName -eq '') -or ($ComplianceServerEndpointName -eq $null)) { $ComplianceServerEndpointName = $DSCTools_DefaultComplianceServerEndpointName }
+	    [String]$ComplianceServerPhysicalPath = $Node.ComplianceServerPhysicalPath
+		If (($ComplianceServerPhysicalPath -eq '') -or ($ComplianceServerPhysicalPath -eq $null)) { $ComplianceServerPhysicalPath = $DSCTools_DefaultComplianceServerPhysicalPath }
+	    [PSCredential]$Credential = $Node.Credential
+		Try {
+			Write-Verbose "Begin Creating $NodeName Pull Server MOF $TempPath\$NodeName.MOF."
+
+			# Load the CreatePullServer Configuration into memory (dot source it)
+			# The file should be in the same folder as the Module.
+			. "$(Join-Path -Path $PSScriptRoot -ChildPath 'Configuration\Config_EnablePullServer.ps1')"
+			Config_EnablePullServer `
+				-NodeName $NodeName `
+				-Output $TempPath `
+				-PullServerPort $PullServerPort `
+				-ComplianceServerPort $ComplianceServerPort `
+				-CertificateThumbprint $CertificateThumbprint `
+				-PullServerEndpointName $PullServerEndpointName `
+				-PullServerResourcePath $PullServerResourcePath `
+				-PullServerConfigurationPath $PullServerConfigurationPath `
+				-PullServerPhysicalPath $PullServerPhysicalPath `
+				-ComplianceServerEndpointName $ComplianceServerEndpointName `
+				-ComplianceServerPhysicalPath $ComplianceServerPhysicalPath `
+				| Out-Null
+		} Catch {
+			Throw
+		}
+		Write-Verbose "Finished Creating $NodeName Pull Server MOF $TempPath\$NodeName.MOF."
+        
+		# Apply the Pull Server MOF File to the Server
+		Try {
+			If ($Credential -eq $null) {
+				Write-Verbose "Begin Applying MOF $TempPath\$NodeName.MOF to $NodeName Pull Server."
+				Start-DSCConfiguration -ComputerName $NodeName -Path $TempPath -Wait -Force
+			} Else {
+				Write-Verbose "Begin Applying MOF $TempPath\$NodeName.MOF to $NodeName Pull Server using Credential."
+				Start-DSCConfiguration -ComputerName $NodeName -Path $TempPath -Wait -Force -Credential $Credential
+			}
+		} Catch {
+			Throw
+		}
+		Write-Verbose "Finished Applying MOF $TempPath\$NodeName.MOF to $NodeName Pull Server."
+
+		# Reove the LCM MOF File
+		Remove-Item -Path "$TempPath\$NodeName.MOF"
+		Write-Verbose "MOF $TempPath\$NodeName.MOF for $NodeName removed."
+	} # Foreach
+	
+	Remove-Item -Path $TempPath -Recurse -Force
+	Write-Verbose "Temporary folder $TempPath deleted."
+} # Enable-DSCPullServer
+##########################################################################################################################################
+
+##########################################################################################################################################
 Function Start-DSCPullMode {
 <#
 .SYNOPSIS
@@ -791,135 +985,6 @@ Function Start-DSCPushMode {
     Remove-Item -Path $TempPath -Recurse -Force
     Write-Verbose "Temporary folder $TempPath deleted"
 } # Start-DSCPushMode
-##########################################################################################################################################
-
-##########################################################################################################################################
-Function Enable-DSCPullServer {
-<#
-.SYNOPSIS
-		Installs and configures a server as a DSC Pull Server.
-
-.DESCRIPTION 
-		This function will create a MOF file for configuring a Windows Server computer to be a DSC Pull Server and then force DSC to apply the MOF to the server.
-
-		The name of as least one computer to install as a Pull Server is mandatory. Multiple computers can be specified to install more than one Pull Server.
-
-		Important Note: The server that will be installed onto must contain the DSC module xPSDesiredStateConfiguration installed into the PowerShell Module path. This module is part of the DSC Resource kit found here: https://gallery.technet.microsoft.com/scriptcenter/DSC-Resource-Kit-All-c449312d
-
-		The function will:
-		1. Create the node DSC Pull Server configuration MOF file for the server.
-		2. Execute the node DSC Pull Server configuration MOF on the server. 
-     
-.PARAMETER Nodes
-		Must contain an array of hash tables. Each hash table will represent a node that should be configured as a DSC Pull Server.
-
-		The hash table must contain the following entries:
-		Name = 
-
-		Each hash entry can also contain the following optional items. If each item is not specified it will default.
-		PullServerPort = The port the Pull Server will run on. Defaults to $DSCTools_DefaultPullServerPort
-		ComplianceServerPort = The port the Complaince Server will run on. Defaults to $DSCTools_DefaultComplianceServerPort
-		CertificateThumbprint = The certificate thumbprint to use if HTTPS should be used. Defaults to using HTTP.
-		PullServerEndpointName = The endpoint name to use when creating the Pull Server web site. Defaults to $DSCTools_DefaultPullServerEndpointName
-		PullServerResourcePath = The path the DSC Pull Server will look for resource files in. Defaults to $DSCTools_DefaultPullServerResourcePath
-		PullServerConfigurationPath = The path the DSC Pull Server will use look for configuration (MOF) files in. Defaults to $DSCTools_DefaultPullServerConfigurationPath
-		PullServerPhysicalPath =  The local path to where the DSC Pull Server web site will be created. Defaults to $DSCTools_DefaultPullServerPhysicalPath
-		ComplianceServerEndpointName = The endpoint name to use when creating the Compliance Server web site. Defaults to $DSCTools_DefaultComplianceServerEndpointName
-		ComplianceServerPhysicalPath = The local path to where the DSC Compliance Server web site will be created. Defaults to $DSCTools_DefaultComplianceServerPhysicalPath
-		Credential = Credentials to use to configure the DSC Pull Server using. Defaults to none.
-
-		For example:
-		@(@{Name='DSCPULLSRV01';},@{Name='DSCPULLSRV01';})
-
-.EXAMPLE 
-		 Enable-DSCPullServer -Nodes @(@{Name='DSCPULLSRV01';},@{Name='DSCPULLSRV01';})
-		 This command will install and configure a DSC Pull Server onto machines DSCPULLSRV01 and DSCPULLSRV02.
-#>
-    [CmdletBinding()]
-    Param (
-        [Parameter(Mandatory=$true)]
-        [Array]$Nodes
-    )
-    
-	# Set up a temporary path
-	$TempPath = "$Env:TEMP\Enable-DSCPullServer"
-	Write-Verbose "Creating temporary folder $TempPath."
-	New-Item -Path $TempPath -ItemType 'Directory' -Force | Out-Null
-
-	Foreach ($Node In $Nodes) {
-		# Create the Pull Mode MOF that will configure the elements on this computer needed for Pull Mode
-		[String]$NodeName = $Node.Name
-		If (($NodeName -eq '') -or ($NodeName -eq $null)) {
-			Throw 'Node name is empty.'
-		} # If
-
-        Write-Verbose "Node $NodeName begin processing."
-		# Get all the Pull Server properties from the node or use defaults.
-		[Int]$PullServerPort = $Node.PullServerPort
-		If (($PullServerPort -eq 0) -or ($PullServerPort -eq $null)) { $PullServerPort = $DSCTools_DefaultPullServerPort }
-		[Int]$ComplianceServerPort = $Node.ComplianceServerPort
-		If (($ComplianceServerPort -eq 0) -or ($ComplianceServerPort -eq $null)) { $ComplianceServerPort = $DSCTools_DefaultComplianceServerPort }
-		[String]$CertificateThumbprint = $Node.CertificateThumbprint
-		If (($CertificateThumbprint -eq '') -or ($CertificateThumbprint -eq $null)) { $CertificateThumbprint = 'AllowUnencryptedTraffic' }
-		[String]$PullServerEndpointName = $Node.PullServerEndpointName
-		If (($PullServerEndpointName -eq '') -or ($PullServerEndpointName -eq $null)) { $PullServerEndpointName = $DSCTools_DefaultPullServerEndpointName }
-		[String]$PullServerResourcePath = $Node.PullServerResourcePath
-		If (($PullServerResourcePath -eq '') -or ($PullServerResourcePath -eq $null)) { $PullServerResourcePath = $DSCTools_DefaultPullServerResourcePath }
-	    [String]$PullServerConfigurationPath = $Node.PullServerConfigurationPath
-		If (($PullServerConfigurationPath -eq '') -or ($PullServerConfigurationPath -eq $null)) { $PullServerConfigurationPath = $DSCTools_DefaultPullServerConfigurationPath }
-	    [String]$PullServerPhysicalPath = $Node.PullServerPhysicalPath
-		If (($PullServerPhysicalPath -eq '') -or ($PullServerPhysicalPath -eq $null)) { $PullServerPhysicalPath = $DSCTools_DefaultPullServerPhysicalPath }
-	    [String]$ComplianceServerEndpointName = $Node.ComplianceServerEndpointName
-		If (($ComplianceServerEndpointName -eq '') -or ($ComplianceServerEndpointName -eq $null)) { $ComplianceServerEndpointName = $DSCTools_DefaultComplianceServerEndpointName }
-	    [String]$ComplianceServerPhysicalPath = $Node.ComplianceServerPhysicalPath
-		If (($ComplianceServerPhysicalPath -eq '') -or ($ComplianceServerPhysicalPath -eq $null)) { $ComplianceServerPhysicalPath = $DSCTools_DefaultComplianceServerPhysicalPath }
-	    [PSCredential]$Credential = $Node.Credential
-		Try {
-			Write-Verbose "Begin Creating $NodeName Pull Server MOF $TempPath\$NodeName.MOF."
-
-			# Load the CreatePullServer Configuration into memory (dot source it)
-			# The file should be in the same folder as the Module.
-			. "$(Join-Path -Path $PSScriptRoot -ChildPath 'Configuration\Config_EnablePullServer.ps1')"
-			Config_EnablePullServer `
-				-NodeName $NodeName `
-				-Output $TempPath `
-				-PullServerPort $PullServerPort `
-				-ComplianceServerPort $ComplianceServerPort `
-				-CertificateThumbprint $CertificateThumbprint `
-				-PullServerEndpointName $PullServerEndpointName `
-				-PullServerResourcePath $PullServerResourcePath `
-				-PullServerConfigurationPath $PullServerConfigurationPath `
-				-PullServerPhysicalPath $PullServerPhysicalPath `
-				-ComplianceServerEndpointName $ComplianceServerEndpointName `
-				-ComplianceServerPhysicalPath $ComplianceServerPhysicalPath `
-				| Out-Null
-		} Catch {
-			Throw
-		}
-		Write-Verbose "Finished Creating $NodeName Pull Server MOF $TempPath\$NodeName.MOF."
-        
-		# Apply the Pull Server MOF File to the Server
-		Try {
-			If ($Credential -eq $null) {
-				Write-Verbose "Begin Applying MOF $TempPath\$NodeName.MOF to $NodeName Pull Server."
-				Start-DSCConfiguration -ComputerName $NodeName -Path $TempPath -Wait -Force
-			} Else {
-				Write-Verbose "Begin Applying MOF $TempPath\$NodeName.MOF to $NodeName Pull Server using Credential."
-				Start-DSCConfiguration -ComputerName $NodeName -Path $TempPath -Wait -Force -Credential $Credential
-			}
-		} Catch {
-			Throw
-		}
-		Write-Verbose "Finished Applying MOF $TempPath\$NodeName.MOF to $NodeName Pull Server."
-
-		# Reove the LCM MOF File
-		Remove-Item -Path "$TempPath\$NodeName.MOF"
-		Write-Verbose "MOF $TempPath\$NodeName.MOF for $NodeName removed."
-	} # Foreach
-	
-	Remove-Item -Path $TempPath -Recurse -Force
-	Write-Verbose "Temporary folder $TempPath deleted."
-} # Enable-DSCPullServer
 ##########################################################################################################################################
 
 ##########################################################################################################################################
