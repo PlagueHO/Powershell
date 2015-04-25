@@ -56,14 +56,14 @@
 		Get-DscConfigurationRemote -ComputerName PLAGUE-PDC -UseSSL -Credential ($Credential) -Verbose
 
 		# Set all the nodes to pull mode and copy the config files over to the pull server.
-		#Start-DSCPullMode -Nodes $Nodes -Verbose
+		Start-DSCPullMode -Nodes $Nodes -Verbose
 
 		# Force the all the machines to pull thier config from the Pull server (although we could just wait 15 minutes for this to happen automatically)
-		#Invoke-DSCPull -ComputerName PLAGUE-MEMBER -Verbose
-		#Invoke-DSCPull -Nodes @(@{Name='PLAGUE-MEMBER'}) -Verbose
+		Invoke-DSCPull -ComputerName PLAGUE-MEMBER -Verbose
+		Invoke-DSCPull -Nodes @(@{Name='PLAGUE-MEMBER'}) -Verbose
 
 		# Set all the nodes to back to push mode if we don't want to use Pul mode any more.
-		#Start-DSCPushMode -Nodes $Nodes
+		Start-DSCPushMode -Nodes $Nodes -Verbose
 
 .VERSIONS
 		1.2   2015-04-23   Daniel Scott-Raynsford       Added Install-DSCResourceKit CmdLet
@@ -216,11 +216,11 @@ Function Invoke-DSCCheck {
 		@(@{Name='SERVER01'},@{Name='SERVER02'})
 
 .EXAMPLE 
-		 Invoke-DSCPull -ComputerName SERVER01,SERVER02,SERVER03
+		 Invoke-DSCCheck -ComputerName SERVER01,SERVER02,SERVER03
 		 Causes the LCMs on computers SERVER01, SERVER02 and SERVER03 to repull DSC Configuration MOF files from the DSC Pull server.
 
 .EXAMPLE 
-		 Invoke-DSCPull -Nodes @(@{Name='SERVER01'},@{Name='SERVER02'})
+		 Invoke-DSCCheck -Nodes @(@{Name='SERVER01'},@{Name='SERVER02'})
 		 Causes the LCMs on computers SERVER01 and SERVER02 to repull DSC Configuration MOF files from the DSC Pull server.
  #>
     [CmdletBinding()]
@@ -244,31 +244,45 @@ Function Invoke-DSCCheck {
             Foreach ($Node In $Nodes) {
                 # For some reason using the Invoke-CimMethod cmdlet with the -ComputerName parameter doesn't work
                 # So the Invoke-Command is used instead to execute the command on the destination computer.
-                $ComputerName = $Node.Name
-                If (($ComputerName -eq $null) -or ($ComputerName -eq '')) {
+                $Computer = $Node.Name
+                If (($Computer -eq $null) -or ($Computer -eq '')) {
                     Throw 'Node name is empty.'
                 }
-                Write-Verbose "Invoking Method PerformRequiredConfigurationChecks on node $ComputerName"
-                Invoke-Command -ComputerName $ComputerName { `
-                    Invoke-CimMethod `
-                        -Namespace 'root/Microsoft/Windows/DesiredStateConfiguration' `
-                        -ClassName 'MSFT_DSCLocalConfigurationManager' `
-                        -MethodName 'PerformRequiredConfigurationChecks' `
-                        -Arguments @{ Flags = [uint32]1 }
-                    } # Invoke-Command
+				# If PS5 is installed then the Update-DscConfiguration command can be called -otherwise we need to
+				# use Invoke-CimMethod on the remote host.
+				If ($PSVersion -lt 5) {
+					Write-Verbose "Invoking Method PerformRequiredConfigurationChecks on node $Computer"
+					Invoke-Command -ComputerName $Computer { `
+						Invoke-CimMethod `
+							-Namespace 'root/Microsoft/Windows/DesiredStateConfiguration' `
+							-ClassName 'MSFT_DSCLocalConfigurationManager' `
+							-MethodName 'PerformRequiredConfigurationChecks' `
+							-Arguments @{ Flags = [uint32]1 }
+					} # Invoke-Command
+				} Else {
+					Write-Verbose "Calling Update-DscConfigration on node $Computer"
+					Update-DscConfiguration -ComputerName $Computer
+				} # If
             } # Foreach ($Node In $Nodes)
         } Else {
             Foreach ($Computer In $ComputerName) {
-                # For some reason using the Invoke-CimMethod cmdlet with the -ComputerName parameter doesn't work
-                # So the Invoke-Command is used instead to execute the command on the destination computer.
-                Write-Verbose "Invoking Method PerformRequiredConfigurationChecks on node $ComputerName"
-                Invoke-Command -ComputerName $Computer { `
-                    Invoke-CimMethod `
-                        -Namespace 'root/Microsoft/Windows/DesiredStateConfiguration' `
-                        -ClassName 'MSFT_DSCLocalConfigurationManager' `
-                        -MethodName 'PerformRequiredConfigurationChecks' `
-                        -Arguments @{ Flags = [uint32]1 }
-                    } # Invoke-Command
+				# If PS5 is installed then the Update-DscConfiguration command can be called -otherwise we need to
+				# use Invoke-CimMethod on the remote host.
+				If ($PSVersion -lt 5) {
+					Write-Verbose "Invoking Method PerformRequiredConfigurationChecks on node $Computer"
+					# For some reason using the Invoke-CimMethod cmdlet with the -ComputerName parameter doesn't work
+					# So the Invoke-Command is used instead to execute the command on the destination computer.
+					Invoke-Command -ComputerName $Computer { `
+						Invoke-CimMethod `
+							-Namespace 'root/Microsoft/Windows/DesiredStateConfiguration' `
+							-ClassName 'MSFT_DSCLocalConfigurationManager' `
+							-MethodName 'PerformRequiredConfigurationChecks' `
+							-Arguments @{ Flags = [uint32]1 }
+					} # Invoke-Command
+				} Else {
+					Write-Verbose "Calling Update-DscConfigration on node $Computer"
+					Update-DscConfiguration -ComputerName $Computer
+				} # If
             } # Foreach ($Computer In $ComputerName)
         } # If ($ComputerName -eq $null)
     } # Process
@@ -751,7 +765,7 @@ Function Start-DSCPullMode {
 		5. Create the node LCM configuration MOF file to configure the LCM for pull mode.
 		6. Execute the node LCM configuration MOF on the node. 
      
-		.PARAMETER PullServerURL
+.PARAMETER PullServerURL
 		This is the URL that will be used by the Local Configuration Manager of the Node to pull the configuration files.
 
 		If this parameter is not passed it is generated from the Module Variables:
@@ -771,7 +785,7 @@ Function Start-DSCPullMode {
 
 		c:\program files\windowspowershell\DscService\configuration
 
-		.PARAMETER NodeConfigSourceFolder
+.PARAMETER NodeConfigSourceFolder
 
 		This parameter is used to specify the folder where the node configration files can be found. If it is not passed it will default to the
 		module variable $DSCTools_DefaultNodeConfigSourceFolder.
@@ -1165,6 +1179,6 @@ Function Get-DscConfigurationRemote {
 # Exports
 ##########################################################################################################################################
 Export-ModuleMember `
-    -Function Invoke-DSCPull,Publish-DSCPullResources,Install-DSCResourceKit,Start-DSCPullMode,Start-DSCPushMode,Enable-DSCPullServer,Get-DSCConfigurationRemote `
+    -Function Invoke-DSCCheck,Publish-DSCPullResources,Install-DSCResourceKit,Start-DSCPullMode,Start-DSCPushMode,Enable-DSCPullServer,Get-DSCConfigurationRemote `
     -Variable DSCTools_Default*,DSCTools_PSVersion
 ##########################################################################################################################################

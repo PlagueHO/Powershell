@@ -1,7 +1,7 @@
 ##########################################################################################################################################
 # Self Test functions
 ##########################################################################################################################################
-Function Test-One {
+Function Test-DSCToolsTypeOne {
     # Configure where the pull server is and how it can be connected to.
     $DSCTools_DefaultPullServerName = 'PLAGUE-PDC'
     $DSCTools_DefaultPullServerProtocol = 'HTTPS'  # Pull server has a valid trusted cert installed
@@ -44,18 +44,21 @@ Function Test-One {
     #Start-DSCPullMode -Nodes $Nodes -Verbose
 
     # Force the all the machines to pull thier config from the Pull server (although we could just wait 15 minutes for this to happen automatically)
-    #Invoke-DSCPull -ComputerName PLAGUE-MEMBER -Verbose
-    #Invoke-DSCPull -Nodes @(@{Name='PLAGUE-MEMBER'}) -Verbose
+    #Invoke-DSCCheck -ComputerName PLAGUE-MEMBER -Verbose
+    #Invoke-DSCCheck -Nodes @(@{Name='PLAGUE-MEMBER'}) -Verbose
 
     # Set all the nodes to back to push mode if we don't want to use Pul mode any more.
-    #Start-DSCPushMode -Nodes $Nodes
-} # Function Test-One
+    #Start-DSCPushMode -Nodes $Nodes -Verbose
+
+} # Function Test-DSCToolsTypeOne
 ##########################################################################################################################################
 
 ##########################################################################################################################################
-Function Test-Two {
+Function Test-DSCToolsTypeTwo {
     $PullServer = 'PLAGUE-PDC'
     $Credential = Get-Credential
+
+	# Download the DSC Resource Kit and install it to the local machine and to the DSC Pull Server
     Install-DSCResourceKit `
         -UseCache `
         -Verbose
@@ -63,11 +66,15 @@ Function Test-Two {
         -ModulePath "\\$PullServer\c$\program files\windowspowershell\modules\" `
         -UseCache `
         -Verbose
+
+	# Copy all the resources up to the pull server (zipped and with a checksum file).
     Publish-DSCPullResources `
         -PullServerResourcePath "\\$PullServer\c$\DSC\Resources\" `
         -Verbose
+
+    # Install a DSC Pull Server
     Enable-DSCPullServer `
-        -ComputerName PLAGUE-PDC `
+        -ComputerName $PullServer `
         -CertificateThumbprint '3aaeef3f4b6dad0c8cb59930b48a9ffc25daa7d8' `
         -Credential ($Credential) `
         -PullServerResourcePath "\\$PullServer\c$\DSC\Resources\" `
@@ -75,17 +82,39 @@ Function Test-Two {
         -PullServerPhysicalPath "c:\DSC\PSDSCPullServer\" `
         -ComplianceServerPhysicalPath "c:\DSC\PSDSCComplianceServer\" `
         -Verbose
+
+    # Check the pull server
     Get-DscConfigurationRemote `
-        -ComputerName PLAGUE-PDC `
+        -ComputerName $PullServer `
         -UseSSL `
         -Credential ($Credential) `
         -Verbose
+    
+	# Set all the nodes to pull mode and copy the config files over to the pull server.
+    Start-DSCPullMode `
+		-ComputerName 'PLAGUE-MEMBER' `
+		-Verbose
 
-} # Function Test-Two
+    # Force the all the machines to pull thier config from the Pull server (although we could just wait 15 minutes for this to happen automatically)
+    Invoke-DSCCheck `
+		-ComputerName PLAGUE-MEMBER `
+		-Verbose
+
+	# Set all the nodes to back to push mode if we don't want to use Pul mode any more.
+    Start-DSCPushMode `
+		-ComputerName PLAGUE-MEMBER `
+		-Verbose
+
+} # Function Test-DSCToolsTypeTwo
 ##########################################################################################################################################
 
 ##########################################################################################################################################
-Get-Module DSCTools | Remove-Module
-Import-Module "$PSScriptRoot\DSCTools.psm1"
-#Test-One
-Test-Two
+Function Test-DSCToolsLoadModule {
+	Get-Module DSCTools | Remove-Module
+	Import-Module "$PSScriptRoot\DSCTools.psm1"
+} # Function Test-DSCToolsLoadModule
+##########################################################################################################################################
+
+Test-DSCToolsLoadModule
+#Test-DSCToolsTypeOne
+#Test-DSCToolsTypeTwo
