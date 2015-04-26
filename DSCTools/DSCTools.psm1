@@ -34,13 +34,13 @@
 
 		# These are the nodes that we are going to set up Pull mode for
 		$Nodes = @( `
-			@{Name='PLAGUE-MEMBER';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e7';RebootNodeIfNeeded=$true;MofFile='c:\DSC\Configuration\PLAGUE-MEMBER.MOF'} , `
-			@{Name='PLAGUE-RODC';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e1';RebootNodeIfNeeded=$true;MofFile='c:\DSC\Configuration\PLAGUE-RODC.MOF'} , `
-			@{Name='PLAGUE-SQL2014';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e3';RebootNodeIfNeeded=$true;MofFile='c:\DSC\Configuration\PLAGUE-SQL2014.MOF'} , `
-			@{Name='PLAGUE-PROXY';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e4';RebootNodeIfNeeded=$true;MofFile='c:\DSC\Configuration\PLAGUE-PROXY.MOF'} , `
-			@{Name='PLAGUE-SC2012';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e9';RebootNodeIfNeeded=$true;MofFile='c:\DSC\Configuration\PLAGUE-SC2012.MOF'} , `
-			@{Name='PLAGUE-SP2013';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e8';RebootNodeIfNeeded=$true;MofFile='c:\DSC\Configuration\PLAGUE-SP2013.MOF'} , `
-			@{Name='PLAGUE-IIS01';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e8';RebootNodeIfNeeded=$true;MofFile='c:\DSC\Configuration\PLAGUE-IIS01.MOF'} )
+			@{Name='PLAGUE-MEMBER';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e7';RebootIfNeeded=$true;MofFile='c:\DSC\Configuration\PLAGUE-MEMBER.MOF'} , `
+			@{Name='PLAGUE-RODC';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e1';RebootIfNeeded=$true;MofFile='c:\DSC\Configuration\PLAGUE-RODC.MOF'} , `
+			@{Name='PLAGUE-SQL2014';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e3';RebootIfNeeded=$true;MofFile='c:\DSC\Configuration\PLAGUE-SQL2014.MOF'} , `
+			@{Name='PLAGUE-PROXY';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e4';RebootIfNeeded=$true;MofFile='c:\DSC\Configuration\PLAGUE-PROXY.MOF'} , `
+			@{Name='PLAGUE-SC2012';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e9';RebootIfNeeded=$true;MofFile='c:\DSC\Configuration\PLAGUE-SC2012.MOF'} , `
+			@{Name='PLAGUE-SP2013';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e8';RebootIfNeeded=$true;MofFile='c:\DSC\Configuration\PLAGUE-SP2013.MOF'} , `
+			@{Name='PLAGUE-IIS01';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e8';RebootIfNeeded=$true;MofFile='c:\DSC\Configuration\PLAGUE-IIS01.MOF'} )
 
 		# Download the DSC Resource Kit and install it to the local machine and to the DSC Pull Server
 		Install-DSCResourceKit -UseCache -Verbose
@@ -59,11 +59,13 @@
 		Start-DSCPullMode -Nodes $Nodes -Verbose
 
 		# Force the all the machines to pull thier config from the Pull server (although we could just wait 15 minutes for this to happen automatically)
-		Invoke-DSCPull -ComputerName PLAGUE-MEMBER -Verbose
 		Invoke-DSCPull -Nodes @(@{Name='PLAGUE-MEMBER'}) -Verbose
 
 		# Set all the nodes to back to push mode if we don't want to use Pul mode any more.
 		Start-DSCPushMode -Nodes $Nodes -Verbose
+
+		# Force the all the machines to reapply thier configuration (although we could just wait 15 minutes for this to happen automatically)
+		Invoke-DSCPull -Nodes @(@{Name='PLAGUE-MEMBER'}) -Verbose
 
 .VERSIONS
 		1.2   2015-04-23   Daniel Scott-Raynsford       Added Install-DSCResourceKit CmdLet
@@ -765,6 +767,21 @@ Function Start-DSCPullMode {
 		5. Create the node LCM configuration MOF file to configure the LCM for pull mode.
 		6. Execute the node LCM configuration MOF on the node. 
      
+.PARAMETER ComputerName
+		This is the name of the computer that should be switched into Pull Mode. This parameter should not be set if Nodes are provided.
+
+.PARAMETER Guid
+		This is the GUID that will be used to identify this computers configuration on the DSC Pull sever. This parameter should not be set if Nodes are provided.
+
+.PARAMETER MOFFile
+		This is MOF file that contains the DSC Configuration for this computer. This parameter should not be set if Nodes are provided.
+
+.PARAMETER RebootIfNeeded
+		This parameter controls whether the LCM is allowed to reboot the computer when applying configuration. If this value is also provided in any Nodes then the node value will be used instead.
+
+.PARAMETER ConfigurationMode
+		This parameter specifies the configuration mode for the LCM. If this value is also provided in any Nodes then the node value will be used instead.
+
 .PARAMETER PullServerURL
 		This is the URL that will be used by the Local Configuration Manager of the Node to pull the configuration files.
 
@@ -800,34 +817,51 @@ Function Start-DSCPullMode {
 
 		Each hash entry can also contain the following optional items. If each item is not specified it will default.
 		Guid = If no guid is passed for this node a new one will be created
-		RebootNodeIfNeeded = $false
+		RebootIfNeeded = $false
 		ConfigurationMode = 'ApplyAndAutoCorrect'
 		MofFile = This is the path and filename of the MOF file to use for this node. If not provided the MOF file will be used
 
 		For example:
-		@(@{Name='SERVER01';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e7'},@{Name='SERVER02';Guid='';RebootNodeIfNeeded=$true;MofFile='c:\users\Administrtor\Documents\WindowsPowerShell\DSCConfig\SERVER02.MOF'})
+		@(@{Name='SERVER01';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e7'},@{Name='SERVER02';Guid='';RebootIfNeeded=$true;MofFile='c:\users\Administrtor\Documents\WindowsPowerShell\DSCConfig\SERVER02.MOF'})
 
 .EXAMPLE 
 		 Start-DSCPullMode `
-			-Nodes @(@{Name='SERVER01';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e7'},@{Name='SERVER02';RebootNodeIfNeeded=$true;MofFile='c:\users\Administrtor\Documents\WindowsPowerShell\DSCConfig\SERVER02.MOF'})
+			-Nodes @(@{Name='SERVER01';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e7'},@{Name='SERVER02';RebootIfNeeded=$true;MofFile='c:\users\Administrtor\Documents\WindowsPowerShell\DSCConfig\SERVER02.MOF'})
 		 This command will cause the nodes SERVER01 and SERVER02 to be switched into Pull mode and the appropriate configration files uploaded to the Pull server specified in $DSCTools_DefaultConfigFolder.
 
 .EXAMPLE 
 		 Start-DSCPullMode `
-			-Nodes @(@{Name='SERVER01';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e7'},@{Name='SERVER02';RebootNodeIfNeeded=$true;MofFile='c:\users\Administrtor\Documents\WindowsPowerShell\DSCConfig\SERVER02.MOF'}) `
+			-Nodes @(@{Name='SERVER01';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e7'},@{Name='SERVER02';RebootIfNeeded=$true;MofFile='c:\users\Administrtor\Documents\WindowsPowerShell\DSCConfig\SERVER02.MOF'}) `
 			-PullServerConfigPath '\\MyPullServer\DSCConfiguration'
 		 This command will cause the nodes SERVER01 and SERVER02 to be switched into Pull mode and the appropriate configration files uploaded to the Pull server configration folder '\\MyPullServer\DSCConfiguration'
 #>
     [CmdletBinding()]
     Param (
-        [string]$PullServerURL="$($DSCTools_DefaultPullServerProtocol)://$($DSCTools_DefaultPullServerName):$($DSCTools_DefaultPullServerPort)/$($DSCTools_DefaultPullServerPath)",
+        [Parameter(ParameterSetName='ComputerName')]
+	    [ValidateNotNullOrEmpty()]
+		[string]$ComputerName,
+
+        [Parameter(ParameterSetName='ComputerName')]
+	    [ValidateNotNullOrEmpty()]
+		[guid]$Guid,
+
+        [Parameter(ParameterSetName='ComputerName')]
+	    [ValidateNotNullOrEmpty()]
+	    [string]$MOFFile,
+
+        [Parameter(ParameterSetName='Nodes')]
+        [Array]$Nodes,
+
+	    [switch]$RebootIfNeeded=$false,
+
+	    [ValidateSet('ApplyAndAutoCorrect','ApplyAndMonitor','ApplyOnly')]
+		[String]$ConfigurationMode='ApplyAndAutoCorrect',
+
+		[string]$PullServerURL="$($DSCTools_DefaultPullServerProtocol)://$($DSCTools_DefaultPullServerName):$($DSCTools_DefaultPullServerPort)/$($DSCTools_DefaultPullServerPath)",
 
         [String]$PullServerConfigPath=$DSCTools_DefaultConfigFolder,
 
-        [String]$NodeConfigSourceFolder=$DSCTools_DefaultNodeConfigSourceFolder,
-
-        [Parameter(Mandatory=$true)]
-        [Array]$Nodes
+        [String]$NodeConfigSourceFolder=$DSCTools_DefaultNodeConfigSourceFolder
     )
     
     # Set up a temporary path
@@ -835,34 +869,44 @@ Function Start-DSCPullMode {
     Write-Verbose "Creating temporary folder $TempPath"
     New-Item -Path $TempPath -ItemType 'Directory' -Force | Out-Null
 
-    Foreach ($Node In $Nodes) {
+    If ($ComputerName) {
+		$Nodes = @{
+			Name=$ComputerName;
+			Guid=$Guid;
+			MofFile=$MOFFile;
+		} # $Nodes
+	} # If
+
+	Foreach ($Node In $Nodes) {
         # Clear the node error flag
-        $NodeError = $false
+        [Boolean]$NodeError = $false
         
         # Get the Node parameters into variables and check them
-        $NodeName = $Node.Name
+        [String]$NodeName = $Node.Name
         If ($NodeName -eq '') {
             Throw 'Node name is empty.'
-        }
+        } # If
+        Write-Verbose "Node $NodeName begin setting Pull Mode"
 
-        Write-Verbose "Node $NodeName begin processing"
-        $NodeGuid = $Node.Guid
+        [String]$NodeGuid = $Node.Guid
         If ($NodeGuid -eq '') {
             $NodeGuid = [guid]::NewGuid()
-        }
-        Write-Verbose "Node $NodeName will use GUID $NodeGuid"
-        $RebootNodeIfNeeded = $Node.RebootNodeIfNeeded
-        If ($RebootNodeIfNeeded -eq $null) {
-            $RebootNodeIfNeeded = $false
-        }
-        $ConfigurationMode = $Node.ConfigurationMode
-        If ($ConfigurationMode -eq $null) {
-            $ConfigurationMode = 'ApplyAndAutoCorrect'
-        }
+        } # If
+		Write-Verbose "Node $NodeName will use GUID $NodeGuid"
+		
+		[Switch]$Reboot = $Node.RebootIfNeeded
+        If ($Reboot -eq $null) {
+            $Reboot = $RebootIfNeeded
+		} # If
+
+        [String]$Mode = $Node.ConfigurationMode
+        If ($Mode -eq $null) {
+            $Mode = $ConfigurationMode
+        } # If
 
         # If the node doesn't have a specific MOF path specified then see if we can figure it out
         # Based on other parameters specified - or even create it.
-        $MofFile = $Node.MofFile
+        [String]$MofFile = $Node.MofFile
         If ($MofFile -eq $null) {
             $SourceMof = "$NodeConfigSourceFolder\$NodeName.mof"
         } Else {
@@ -890,8 +934,8 @@ Function Start-DSCPullMode {
             Config_SetLCMPullMode `
                 -NodeName $NodeName `
                 -NodeGuid $NodeGuid `
-                -RebootNodeIfNeeded $RebootNodeIfNeeded `
-                -ConfigurationMode $ConfigurationMode `
+                -RebootNodeIfNeeded $Reboot `
+                -ConfigurationMode $Mode `
                 -PullServerURL $PullServerURL `
                 -Output $TempPath `
                 | Out-Null
@@ -932,6 +976,18 @@ Function Start-DSCPushMode {
 		2. Create the node LCM configuration MOF file to configure the LCM for push mode.
 		3. Execute the node LCM configuration MOF on the node. 
      
+.PARAMETER ComputerName
+		This is the name of the computer that should be switched into Push Mode. This parameter should not be set if Nodes are provided.
+
+.PARAMETER MOFFile
+		This is MOF file that contains the DSC Configuration for this computer. This parameter should not be set if Nodes are provided.
+
+.PARAMETER RebootIfNeeded
+		This parameter controls whether the LCM is allowed to reboot the computer when applying configuration. If this value is also provided in any Nodes then the node value will be used instead.
+
+.PARAMETER ConfigurationMode
+		This parameter specifies the configuration mode for the LCM. If this value is also provided in any Nodes then the node value will be used instead.
+
 .PARAMETER NodeConfigSourceFolder
 		This parameter is used to specify the folder where the node configration files can be found. If it is not passed it will default to the
 		module variable $DSCTools_DefaultNodeConfigSourceFolder.
@@ -945,31 +1001,54 @@ Function Start-DSCPushMode {
 		Name = 
 
 		Each hash entry can also contain the following optional items. If each item is not specified it will default.
-		Guid = This is not required but retained for compatibility with Pull Mode
-		RebootNodeIfNeeded = $false
+		RebootIfNeeded = $false
 		ConfigurationMode = 'ApplyAndAutoCorrect'
 		MofFile = This is the path and filename of the MOF file to use for this node. If not provided the MOF file will be used
 
 		For example:
-		@(@{Name='SERVER01';},@{Name='SERVER02';RebootNodeIfNeeded=$true;MofFile='c:\users\Administrtor\Documents\WindowsPowerShell\DSCConfig\SERVER02.MOF'})
+		@(@{Name='SERVER01';},@{Name='SERVER02';RebootIfNeeded=$true;MofFile='c:\users\Administrtor\Documents\WindowsPowerShell\DSCConfig\SERVER02.MOF'})
 
 .EXAMPLE 
 		 Start-DSCPushlMode `
-			-Nodes @(@{Name='SERVER01'},@{Name='SERVER02';RebootNodeIfNeeded=$true;MofFile='c:\users\Administrtor\Documents\WindowsPowerShell\DSCConfig\SERVER02.MOF'})
+			-Nodes @(@{Name='SERVER01'},@{Name='SERVER02';RebootIfNeeded=$true;MofFile='c:\users\Administrtor\Documents\WindowsPowerShell\DSCConfig\SERVER02.MOF'})
 		 This command will cause the nodes SERVER01 and SERVER02 to be switched into Push mode.
 #>
     [CmdletBinding()]
     Param (
-        [String]$NodeConfigSourceFolder=$DSCTools_DefaultNodeConfigSourceFolder,
+        [Parameter(ParameterSetName='ComputerName')]
+	    [ValidateNotNullOrEmpty()]
+		[string]$ComputerName,
 
-        [Parameter(Mandatory=$true)]
-        [Array]$Nodes
+        [Parameter(ParameterSetName='ComputerName')]
+	    [ValidateNotNullOrEmpty()]
+		[guid]$Guid,
+
+        [Parameter(ParameterSetName='ComputerName')]
+	    [ValidateNotNullOrEmpty()]
+	    [string]$MOFFile,
+
+        [Parameter(ParameterSetName='Nodes')]
+        [Array]$Nodes,
+
+	    [switch]$RebootIfNeeded=$false,
+
+	    [ValidateSet('ApplyAndAutoCorrect','ApplyAndMonitor','ApplyOnly')]
+		[String]$ConfigurationMode='ApplyAndAutoCorrect',
+
+        [String]$NodeConfigSourceFolder=$DSCTools_DefaultNodeConfigSourceFolder
     )
     
     # Set up a temporary path
     $TempPath = "$Env:TEMP\Start-DSCPullMode"
     Write-Verbose "Creating temporary folder $TempPath"
     New-Item -Path $TempPath -ItemType 'Directory' -Force | Out-Null
+
+    If ($ComputerName) {
+		$Nodes = @{
+			Name=$ComputerName;
+			MofFile=$MOFFile;
+		} # $Nodes
+	} # If
 
     Foreach ($Node In $Nodes) {
         # Clear the node error flag
@@ -980,16 +1059,17 @@ Function Start-DSCPushMode {
         If ($NodeName -eq '') {
             Throw 'Node name is empty.'
         }
+        Write-Verbose "Node $NodeName begin setting Push Mode"
 
-        Write-Verbose "Node $NodeName begin processing"
-        $RebootNodeIfNeeded = $Node.RebootNodeIfNeeded
-        If ($RebootNodeIfNeeded -eq $null) {
-            $RebootNodeIfNeeded = $false
-        }
-        $ConfigurationMode = $Node.ConfigurationMode
-        If ($ConfigurationMode -eq $null) {
-            $ConfigurationMode = 'ApplyAndAutoCorrect'
-        }
+		[Switch]$Reboot = $Node.RebootIfNeeded
+        If ($Reboot -eq $null) {
+            $Reboot = $RebootIfNeeded
+		} # If
+
+        [String]$Mode = $Node.ConfigurationMode
+        If ($Mode -eq $null) {
+            $Mode = $ConfigurationMode
+        } # If
 
         # If the node doesn't have a specific MOF path specified then see if we can figure it out
         # Based on other parameters specified - or even create it.
@@ -1013,8 +1093,8 @@ Function Start-DSCPushMode {
 			. "$(Join-Path -Path $PSScriptRoot -ChildPath 'Configuration\Config_SetLCMPushMode.ps1')"
             Config_SetLCMPushMode `
                 -NodeName $NodeName `
-                -RebootNodeIfNeeded $RebootNodeIfNeeded `
-                -ConfigurationMode $ConfigurationMode `
+                -RebootNodeIfNeeded $RebootIfNeeded `
+                -ConfigurationMode $Mode `
                 -Output $TempPath `
                 | Out-Null
 

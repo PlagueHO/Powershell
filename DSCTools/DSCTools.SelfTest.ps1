@@ -19,13 +19,13 @@ Function Test-DSCToolsTypeOne {
 
     # These are the nodes that we are going to set up Pull mode for
     $Nodes = @( `
-	    @{Name='PLAGUE-MEMBER';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e7';RebootNodeIfNeeded=$true;MofFile='c:\DSC\Configuration\PLAGUE-MEMBER.MOF'} , `
-	    @{Name='PLAGUE-RODC';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e1';RebootNodeIfNeeded=$true;MofFile='c:\DSC\Configuration\PLAGUE-RODC.MOF'} , `
-	    @{Name='PLAGUE-SQL2014';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e3';RebootNodeIfNeeded=$true;MofFile='c:\DSC\Configuration\PLAGUE-SQL2014.MOF'} , `
-	    @{Name='PLAGUE-PROXY';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e4';RebootNodeIfNeeded=$true;MofFile='c:\DSC\Configuration\PLAGUE-PROXY.MOF'} , `
-	    @{Name='PLAGUE-SC2012';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e9';RebootNodeIfNeeded=$true;MofFile='c:\DSC\Configuration\PLAGUE-SC2012.MOF'} , `
-	    @{Name='PLAGUE-SP2013';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e8';RebootNodeIfNeeded=$true;MofFile='c:\DSC\Configuration\PLAGUE-SP2013.MOF'} , `
-	    @{Name='PLAGUE-IIS01';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e8';RebootNodeIfNeeded=$true;MofFile='c:\DSC\Configuration\PLAGUE-IIS01.MOF'} )
+	    @{Name='PLAGUE-MEMBER';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e7';RebootIfNeeded=$true;MofFile='c:\DSC\Configuration\PLAGUE-MEMBER.MOF'} , `
+	    @{Name='PLAGUE-RODC';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e1';RebootIfNeeded=$true;MofFile='c:\DSC\Configuration\PLAGUE-RODC.MOF'} , `
+	    @{Name='PLAGUE-SQL2014';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e3';RebootIfNeeded=$true;MofFile='c:\DSC\Configuration\PLAGUE-SQL2014.MOF'} , `
+	    @{Name='PLAGUE-PROXY';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e4';RebootIfNeeded=$true;MofFile='c:\DSC\Configuration\PLAGUE-PROXY.MOF'} , `
+	    @{Name='PLAGUE-SC2012';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e9';RebootIfNeeded=$true;MofFile='c:\DSC\Configuration\PLAGUE-SC2012.MOF'} , `
+	    @{Name='PLAGUE-SP2013';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e8';RebootIfNeeded=$true;MofFile='c:\DSC\Configuration\PLAGUE-SP2013.MOF'} , `
+	    @{Name='PLAGUE-IIS01';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e8';RebootIfNeeded=$true;MofFile='c:\DSC\Configuration\PLAGUE-IIS01.MOF'} )
 
     # Download the DSC Resource Kit and install it to the local machine and to the DSC Pull Server
     Install-DSCResourceKit -UseCache -Verbose
@@ -41,14 +41,16 @@ Function Test-DSCToolsTypeOne {
     Get-DscConfigurationRemote -ComputerName PLAGUE-PDC -UseSSL -Credential ($Credential) -Verbose
 
     # Set all the nodes to pull mode and copy the config files over to the pull server.
-    #Start-DSCPullMode -Nodes $Nodes -Verbose
+    Start-DSCPullMode -Nodes $Nodes -Verbose
 
     # Force the all the machines to pull thier config from the Pull server (although we could just wait 15 minutes for this to happen automatically)
-    #Invoke-DSCCheck -ComputerName PLAGUE-MEMBER -Verbose
-    #Invoke-DSCCheck -Nodes @(@{Name='PLAGUE-MEMBER'}) -Verbose
+    Invoke-DSCCheck -Nodes @(@{Name='PLAGUE-MEMBER'}) -Verbose
 
     # Set all the nodes to back to push mode if we don't want to use Pul mode any more.
-    #Start-DSCPushMode -Nodes $Nodes -Verbose
+    Start-DSCPushMode -Nodes $Nodes -Verbose
+
+    # Force the all the machines to reapply thier configuration (although we could just wait 15 minutes for this to happen automatically)
+    Invoke-DSCCheck -Nodes @(@{Name='PLAGUE-MEMBER'}) -Verbose
 
 } # Function Test-DSCToolsTypeOne
 ##########################################################################################################################################
@@ -93,6 +95,10 @@ Function Test-DSCToolsTypeTwo {
 	# Set all the nodes to pull mode and copy the config files over to the pull server.
     Start-DSCPullMode `
 		-ComputerName 'PLAGUE-MEMBER' `
+		-Guid '115929a0-61e2-41fb-a9ad-0cdcd66fc2e7' `
+		-RebootIfNeeded `
+		-MofFile 'c:\DSC\Configuration\PLAGUE-MEMBER.MOF' `
+		-ConfigurationMode 'ApplyAndAutoCorrect' `
 		-Verbose
 
     # Force the all the machines to pull thier config from the Pull server (although we could just wait 15 minutes for this to happen automatically)
@@ -102,6 +108,14 @@ Function Test-DSCToolsTypeTwo {
 
 	# Set all the nodes to back to push mode if we don't want to use Pul mode any more.
     Start-DSCPushMode `
+		-ComputerName PLAGUE-MEMBER `
+		-RebootIfNeeded `
+		-MofFile 'c:\DSC\Configuration\PLAGUE-MEMBER.MOF' `
+		-ConfigurationMode 'ApplyAndAutoCorrect' `
+		-Verbose
+
+    # Force the all the machines to reapply thier configuration (although we could just wait 15 minutes for this to happen automatically)
+    Invoke-DSCCheck `
 		-ComputerName PLAGUE-MEMBER `
 		-Verbose
 
@@ -117,4 +131,4 @@ Function Test-DSCToolsLoadModule {
 
 Test-DSCToolsLoadModule
 #Test-DSCToolsTypeOne
-#Test-DSCToolsTypeTwo
+Test-DSCToolsTypeTwo

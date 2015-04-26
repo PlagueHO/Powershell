@@ -13,7 +13,7 @@ Configuration Config_SetLCMPullMode {
             )]
         [string]$NodeGuid,
 
-        [ValidateNotNullOrEmpty()]
+		[ValidateSet('ApplyAndAutoCorrect','ApplyAndMonitor','ApplyOnly')]
         [string]$ConfigurationMode = 'ApplyAndAutoCorrect',
 
         [ValidateNotNullOrEmpty()]

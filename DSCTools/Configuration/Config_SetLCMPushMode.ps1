@@ -8,7 +8,7 @@ Configuration Config_SetLCMPushMode {
             )]
         [string]$NodeName,
 
-        [ValidateNotNullOrEmpty()]
+		[ValidateSet('ApplyAndAutoCorrect','ApplyAndMonitor','ApplyOnly')]
         [string]$ConfigurationMode = 'ApplyAndAutoCorrect',
 
         [ValidateNotNullOrEmpty()]
