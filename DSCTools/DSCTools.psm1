@@ -58,13 +58,13 @@
 		# Set all the nodes to pull mode and copy the config files over to the pull server.
 		Start-DSCPullMode -Nodes $Nodes -Verbose
 
-		# Force the all the machines to pull thier config from the Pull server (although we could just wait 15 minutes for this to happen automatically)
+		# Force the all the machines to pull thier config from the Pull server (although we could just wait 30 minutes for this to happen automatically)
 		Invoke-DSCPull -Nodes @(@{Name='PLAGUE-MEMBER'}) -Verbose
 
 		# Set all the nodes to back to push mode if we don't want to use Pul mode any more.
 		Start-DSCPushMode -Nodes $Nodes -Verbose
 
-		# Force the all the machines to reapply thier configuration (although we could just wait 15 minutes for this to happen automatically)
+		# Force the all the machines to reapply thier configuration (although we could just wait 30 minutes for this to happen automatically)
 		Invoke-DSCPull -Nodes @(@{Name='PLAGUE-MEMBER'}) -Verbose
 
 .VERSIONS
@@ -897,7 +897,6 @@ Function Start-DSCPullMode {
         If ($NodeGuid -eq '') {
             $NodeGuid = [guid]::NewGuid()
         } # If
-		Write-Verbose "Node $NodeName will use GUID $NodeGuid"
 		
 		[Switch]$Reboot = $Node.RebootIfNeeded
         If ($Reboot -eq $null) {
@@ -905,9 +904,10 @@ Function Start-DSCPullMode {
 		} # If
 
         [String]$Mode = $Node.ConfigurationMode
-        If ($Mode -eq $null) {
+        If (($Mode -eq $null) -or ($Mode -eq '')) {
             $Mode = $ConfigurationMode
         } # If
+		Write-Verbose "Node $NodeName will use GUID $NodeGuid with mode $Mode and reboot if needed is $Reboot"
 
         # If the node doesn't have a specific MOF path specified then see if we can figure it out
         # Based on other parameters specified - or even create it.
@@ -1072,9 +1072,10 @@ Function Start-DSCPushMode {
 		} # If
 
         [String]$Mode = $Node.ConfigurationMode
-        If ($Mode -eq $null) {
+        If (($Mode -eq $null) -or ($Mode -eq '')) {
             $Mode = $ConfigurationMode
         } # If
+		Write-Verbose "Node $NodeName mode $Mode and reboot if needed is $Reboot"
 
         # If the node doesn't have a specific MOF path specified then see if we can figure it out
         # Based on other parameters specified - or even create it.

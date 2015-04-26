@@ -1,7 +1,7 @@
 ##########################################################################################################################################
 # Self Test functions
 ##########################################################################################################################################
-Function Test-DSCToolsTypeOne {
+Function Test-DSCToolsMulti {
     # Configure where the pull server is and how it can be connected to.
     $DSCTools_DefaultPullServerName = 'PLAGUE-PDC'
     $DSCTools_DefaultPullServerProtocol = 'HTTPS'  # Pull server has a valid trusted cert installed
@@ -19,13 +19,13 @@ Function Test-DSCToolsTypeOne {
 
     # These are the nodes that we are going to set up Pull mode for
     $Nodes = @( `
-	    @{Name='PLAGUE-MEMBER';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e7';RebootIfNeeded=$true;MofFile='c:\DSC\Configuration\PLAGUE-MEMBER.MOF'} , `
-	    @{Name='PLAGUE-RODC';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e1';RebootIfNeeded=$true;MofFile='c:\DSC\Configuration\PLAGUE-RODC.MOF'} , `
-	    @{Name='PLAGUE-SQL2014';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e3';RebootIfNeeded=$true;MofFile='c:\DSC\Configuration\PLAGUE-SQL2014.MOF'} , `
-	    @{Name='PLAGUE-PROXY';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e4';RebootIfNeeded=$true;MofFile='c:\DSC\Configuration\PLAGUE-PROXY.MOF'} , `
-	    @{Name='PLAGUE-SC2012';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e9';RebootIfNeeded=$true;MofFile='c:\DSC\Configuration\PLAGUE-SC2012.MOF'} , `
-	    @{Name='PLAGUE-SP2013';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e8';RebootIfNeeded=$true;MofFile='c:\DSC\Configuration\PLAGUE-SP2013.MOF'} , `
-	    @{Name='PLAGUE-IIS01';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e8';RebootIfNeeded=$true;MofFile='c:\DSC\Configuration\PLAGUE-IIS01.MOF'} )
+	    @{Name='PLAGUE-MEMBER';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e7';RebootIfNeeded=$true;MofFile="$PSScriptRoot\Configuration\Config_Test\PLAGUE-MEMBER.MOF"} , `
+	    @{Name='PLAGUE-RODC';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e1';RebootIfNeeded=$true;MofFile="$PSScriptRoot\Configuration\Config_Test\PLAGUE-RODC.MOF"} , `
+	    @{Name='PLAGUE-SQL2014';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e3';RebootIfNeeded=$true;MofFile="$PSScriptRoot\Configuration\Config_Test\PLAGUE-SQL2014.MOF"} , `
+	    @{Name='PLAGUE-PROXY';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e4';RebootIfNeeded=$true;MofFile="$PSScriptRoot\Configuration\Config_Test\PLAGUE-PROXY.MOF"} , `
+	    @{Name='PLAGUE-SC2012';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e9';RebootIfNeeded=$true;MofFile="$PSScriptRoot\Configuration\Config_Test\PLAGUE-SC2012.MOF"} , `
+	    @{Name='PLAGUE-SP2013';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e8';RebootIfNeeded=$true;MofFile="$PSScriptRoot\Configuration\Config_Test\PLAGUE-SP2013.MOF"} , `
+	    @{Name='PLAGUE-IIS01';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e8';RebootIfNeeded=$true;MofFile="$PSScriptRoot\Configuration\Config_Test\PLAGUE-IIS01.MOF"} )
 
     # Download the DSC Resource Kit and install it to the local machine and to the DSC Pull Server
     Install-DSCResourceKit -UseCache -Verbose
@@ -52,11 +52,11 @@ Function Test-DSCToolsTypeOne {
     # Force the all the machines to reapply thier configuration (although we could just wait 15 minutes for this to happen automatically)
     Invoke-DSCCheck -Nodes @(@{Name='PLAGUE-MEMBER'}) -Verbose
 
-} # Function Test-DSCToolsTypeOne
+} # Function Test-DSCToolsMulti
 ##########################################################################################################################################
 
 ##########################################################################################################################################
-Function Test-DSCToolsTypeTwo {
+Function Test-DSCToolsSingle {
     $PullServer = 'PLAGUE-PDC'
     $Credential = Get-Credential
 
@@ -97,7 +97,7 @@ Function Test-DSCToolsTypeTwo {
 		-ComputerName 'PLAGUE-MEMBER' `
 		-Guid '115929a0-61e2-41fb-a9ad-0cdcd66fc2e7' `
 		-RebootIfNeeded `
-		-MofFile 'c:\DSC\Configuration\PLAGUE-MEMBER.MOF' `
+		-MofFile "$PSScriptRoot\Configuration\Config_Test\PLAGUE-MEMBER.MOF" `
 		-ConfigurationMode 'ApplyAndAutoCorrect' `
 		-Verbose
 
@@ -110,7 +110,7 @@ Function Test-DSCToolsTypeTwo {
     Start-DSCPushMode `
 		-ComputerName PLAGUE-MEMBER `
 		-RebootIfNeeded `
-		-MofFile 'c:\DSC\Configuration\PLAGUE-MEMBER.MOF' `
+		-MofFile "$PSScriptRoot\Configuration\Config_Test\PLAGUE-MEMBER.MOF" `
 		-ConfigurationMode 'ApplyAndAutoCorrect' `
 		-Verbose
 
@@ -119,7 +119,7 @@ Function Test-DSCToolsTypeTwo {
 		-ComputerName PLAGUE-MEMBER `
 		-Verbose
 
-} # Function Test-DSCToolsTypeTwo
+} # Function Test-DSCToolsSingle
 ##########################################################################################################################################
 
 ##########################################################################################################################################
@@ -135,6 +135,6 @@ Function Test-DSCCreateTestConfig {
 } # Function Test-DSCCreateTestConfig
 ##########################################################################################################################################
 Test-DSCToolsLoadModule
-Test-DSCCreateTestConfig
-#Test-DSCToolsTypeOne
-#Test-DSCToolsTypeTwo
+#Test-DSCCreateTestConfig
+Test-DSCToolsSingle
+#Test-DSCToolsMulti

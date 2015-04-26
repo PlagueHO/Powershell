@@ -58,7 +58,7 @@ Configuration Config_SetLCMPullMode {
             RebootNodeIfNeeded = $RebootNodeIfNeeded
 			DownloadManagerName = $DownloadManagerName
 			DownloadManagerCustomData = $DownloadManagerCustomData
-            RefreshFrequencyMins = 15
+            RefreshFrequencyMins = 30
 		} # LocalConfigurationManager
 	} # Node $NodeName
 } # Configuration Config_SetLCMPullMode
