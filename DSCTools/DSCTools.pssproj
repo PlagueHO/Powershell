@@ -28,11 +28,20 @@
   </PropertyGroup>
   <ItemGroup>
     <Folder Include="Configuration\" />
+    <Folder Include="Configuration\Config_Test\" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Configuration\Config_SetLCMPullMode.ps1" />
     <Compile Include="Configuration\Config_SetLCMPushMode.ps1" />
     <Compile Include="Configuration\Config_EnablePullServer.ps1" />
+    <Compile Include="Configuration\Config_Test.ps1" />
+    <Compile Include="Configuration\Config_Test\PLAGUE-IIS01.mof" />
+    <Compile Include="Configuration\Config_Test\PLAGUE-MEMBER.mof" />
+    <Compile Include="Configuration\Config_Test\PLAGUE-PROXY.mof" />
+    <Compile Include="Configuration\Config_Test\PLAGUE-RODC.mof" />
+    <Compile Include="Configuration\Config_Test\PLAGUE-SC0212.mof" />
+    <Compile Include="Configuration\Config_Test\PLAGUE-SP2013.mof" />
+    <Compile Include="Configuration\Config_Test\PLAGUE-SQL2014.mof" />
     <Compile Include="DSCTools.psd1" />
     <Compile Include="DSCTools.psm1" />
     <Compile Include="DSCTools.SelfTest.ps1" />

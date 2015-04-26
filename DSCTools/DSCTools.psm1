@@ -79,6 +79,11 @@
 .TODO
 		Add ability to build the DSC configuration files if the MOF can't be found but the PS1 file can be found.
 		Force rebuild MOF if the PS1 file is newer.
+		Add function for enabling DSC Logging when LCM pull mode enabled:
+		Update-xDscEventLogStatus -ComputerName $ComputerName -Channel Analytic -Status Enabled
+		Update-xDscEventLogStatus -ComputerName $ComputerName -Channel Debug -Status Enabled
+		Update-xDscEventLogStatus -ComputerName $ComputerName -Channel Operational -Status Enabled
+
 #>
 
 

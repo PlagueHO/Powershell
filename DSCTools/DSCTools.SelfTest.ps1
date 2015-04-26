@@ -129,6 +129,12 @@ Function Test-DSCToolsLoadModule {
 } # Function Test-DSCToolsLoadModule
 ##########################################################################################################################################
 
+##########################################################################################################################################
+Function Test-DSCCreateTestConfig {
+	& "$PSScriptRoot\Configuration\Config_Test.ps1"
+} # Function Test-DSCCreateTestConfig
+##########################################################################################################################################
 Test-DSCToolsLoadModule
+Test-DSCCreateTestConfig
 #Test-DSCToolsTypeOne
-Test-DSCToolsTypeTwo
+#Test-DSCToolsTypeTwo
