@@ -99,7 +99,7 @@ Function Test-DSCToolsSingle {
 		-RebootIfNeeded `
 		-MofFile "$PSScriptRoot\Configuration\Config_Test\PLAGUE-MEMBER.MOF" `
 		-ConfigurationMode 'ApplyAndAutoCorrect' `
-        -PullServerConfigurationPath "\\$DSCTools_DefaultPullServerName\c$\DSC\Configuration\" `
+        -PullServerConfigurationPath "\\$PullServer\c$\DSC\Configuration\" `
 		-Verbose
 
     # Force the all the machines to pull thier config from the Pull server (although we could just wait 15 minutes for this to happen automatically)
