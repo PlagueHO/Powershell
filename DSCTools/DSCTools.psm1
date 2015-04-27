@@ -23,7 +23,6 @@
 		$DSCTools_DefaultResourcePath = "c:\program files\windowspowershel\DscService\Modules\All Resources\"  # This is where the DSC resource module files are usually located.
 		$DSCTools_DefaultPullServerResourcePath = "\\$DSCTools_DefaultPullServerName\c$\DSC\Resources\"  # This is the path where a DSC Pull Server will look for Resources.
 		$DSCTools_DefaultPullServerConfigurationPath = "\\$DSCTools_DefaultPullServerName\c$\DSC\Configuration\"   # This is the path where a DSC Pull Server will look for MOF Files.
-		$DSCTools_DefaultNodeConfigurationSourceFolder = "$HOME\Documents\WindowsPowerShell\Configuration\" # Where to find source configuration files.
 		$DSCTools_DefaultPullServerPhysicalPath = "c:\DSC\PSDSCPullServer\" # The location a Pull Server web site will be installed to.
 		$DSCTools_DefaultComplianceServerPhysicalPath = "c:\DSC\PSDSCComplianceServer\" # The location a Pull Server compliance site will be installed to.
 		$Credential = Get-Credential
@@ -120,9 +119,6 @@
 # This is the default folder where a DSC Pull Server will try and locate node configuraiton files.
 # This should usually be a local path accessebile by the DSC Pull Server.
 [String]$DSCTools_DefaultPullServerConfigurationPath = "$($ENV:PROGRAMFILES)\WindowsPowerShell\DscService\Configuration\"
-
-# This is the default folder where the DSC configuration MOF files will be found.
-[String]$DSCTools_DefaultNodeConfigurationSourcePath = "$HOME\Documents\WindowsPowerShell\Configuration\"
 
 # This is the path and svc name component of the uRL used to access the Pull server.
 [String]$DSCTools_DefaultPullServerPath = 'PSDSCPullServer.svc'
@@ -801,7 +797,7 @@ Function Start-DSCPullMode {
 .PARAMETER PullServerConfigurationPath
 		This optional parameter contains the full path to where the Pull Server DSC Node configuration files should be written to.
 
-		If this parameter is not passed it will be set to $DSCTools_DefaultConfigFolder
+		If this parameter is not passed it will be set to $DSCTools_DefaultPullServerConfigurationPath
 
 		For example:
 
@@ -832,7 +828,7 @@ Function Start-DSCPullMode {
 .EXAMPLE 
 		 Start-DSCPullMode `
 			-Nodes @(@{Name='SERVER01';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e7'},@{Name='SERVER02';RebootIfNeeded=$true;MofFile='c:\users\Administrtor\Documents\WindowsPowerShell\DSCConfig\SERVER02.MOF'})
-		 This command will cause the nodes SERVER01 and SERVER02 to be switched into Pull mode and the appropriate configration files uploaded to the Pull server specified in $DSCTools_DefaultConfigFolder.
+		 This command will cause the nodes SERVER01 and SERVER02 to be switched into Pull mode and the appropriate configration files uploaded to the Pull server specified in $DSCTools_DefaultPullServerConfigurationPath.
 
 .EXAMPLE 
 		 Start-DSCPullMode `
@@ -864,7 +860,7 @@ Function Start-DSCPullMode {
 
 		[string]$PullServerURL="$($DSCTools_DefaultPullServerProtocol)://$($DSCTools_DefaultPullServerName):$($DSCTools_DefaultPullServerPort)/$($DSCTools_DefaultPullServerPath)",
 
-        [String]$PullServerConfigPath=$DSCTools_DefaultConfigFolder,
+        [String]$PullServerConfigPath=$DSCTools_DefaultPullServerConfigurationPath,
 
         [String]$NodeConfigSourceFolder=$DSCTools_DefaultNodeConfigSourceFolder
     )
