@@ -18,18 +18,18 @@
 		An example of how this module can be used:
 
 		# Configure where the pull server is and how it can be connected to.
-		$DSCTools_DefaultPullServerName = 'PLAGUE-PDC'
-		$DSCTools_DefaultPullServerProtocol = 'HTTPS'  # Pull server has a valid trusted cert installed
-		$DSCTools_DefaultResourcePath = "c:\program files\windowspowershel\DscService\Modules\All Resources\"  # This is where the DSC resource module files are usually located.
-		$DSCTools_DefaultPullServerResourcePath = "\\$DSCTools_DefaultPullServerName\c$\DSC\Resources\"  # This is the path where a DSC Pull Server will look for Resources.
-		$DSCTools_DefaultPullServerConfigurationPath = "\\$DSCTools_DefaultPullServerName\c$\DSC\Configuration\"   # This is the path where a DSC Pull Server will look for MOF Files.
-		$DSCTools_DefaultPullServerPhysicalPath = "c:\DSC\PSDSCPullServer\" # The location a Pull Server web site will be installed to.
-		$DSCTools_DefaultComplianceServerPhysicalPath = "c:\DSC\PSDSCComplianceServer\" # The location a Pull Server compliance site will be installed to.
+		$Script:DSCTools_DefaultPullServerName = 'PLAGUE-PDC'
+		$Script:DSCTools_DefaultPullServerProtocol = 'HTTPS'  # Pull server has a valid trusted cert installed
+		$Script:DSCTools_DefaultResourcePath = "c:\program files\windowspowershel\DscService\Modules\All Resources\"  # This is where the DSC resource module files are usually located.
+		$Script:DSCTools_DefaultPullServerResourcePath = "\\$Script:DSCTools_DefaultPullServerName\c$\DSC\Resources\"  # This is the path where a DSC Pull Server will look for Resources.
+		$Script:DSCTools_DefaultPullServerConfigurationPath = "\\$Script:DSCTools_DefaultPullServerName\c$\DSC\Configuration\"   # This is the path where a DSC Pull Server will look for MOF Files.
+		$Script:DSCTools_DefaultPullServerPhysicalPath = "c:\DSC\PSDSCPullServer\" # The location a Pull Server web site will be installed to.
+		$Script:DSCTools_DefaultComplianceServerPhysicalPath = "c:\DSC\PSDSCComplianceServer\" # The location a Pull Server compliance site will be installed to.
 		$Credential = Get-Credential
 
 		# These are the nodes that will become DSC Pull Servers
 		$PullServers = @( `
-			@{Name=$DSCTools_DefaultPullServerName;CertificateThumbprint='3aaeef3f4b6dad0c8cb59930b48a9ffc25daa7d8';Credential=$Credential;} )
+			@{Name=$Script:DSCTools_DefaultPullServerName;CertificateThumbprint='3aaeef3f4b6dad0c8cb59930b48a9ffc25daa7d8';Credential=$Credential;} )
 
 		# These are the nodes that we are going to set up Pull mode for
 		$Nodes = @( `
@@ -43,7 +43,7 @@
 
 		# Download the DSC Resource Kit and install it to the local machine and to the DSC Pull Server
 		Install-DSCResourceKit -UseCache -Verbose
-		Install-DSCResourceKit -ModulePath "\\$DSCTools_DefaultPullServerName\c$\program files\windowspowershell\modules\" -UseCache -Verbose
+		Install-DSCResourceKit -ModulePath "\\$Script:DSCTools_DefaultPullServerName\c$\program files\windowspowershell\modules\" -UseCache -Verbose
 
 		# Copy all the resources up to the pull server (zipped and with a checksum file).
 		Publish-DSCPullResources -Verbose
@@ -95,59 +95,59 @@
 # This is the name of the pull server that will be used if no pull server parameter is passed to functions
 # Setting this value is a lazy way of using a different pull server (rather than passing the pullserver parameter)
 # to each function that needs it.
-[String]$DSCTools_DefaultPullServerName = 'Localhost'
+[String]$Script:DSCTools_DefaultPullServerName = 'Localhost'
 
 # This is the protocol that will be used by the DSC machines to connect to the pull server. This must be HTTP or HTTPS.
 # If HTTPS is used then the HTTPS certificate on your Pull server must be trusted by all DSC Machines.
-[String]$DSCTools_DefaultPullServerProtocol = 'HTTP'
+[String]$Script:DSCTools_DefaultPullServerProtocol = 'HTTP'
 
 # This is the default endpoint name a Pull server will be created as when it is installed by Enable-DSCPullServer.
-[String]$DSCTools_DefaultPullServerEndpointName = 'PSDSCPullServer'
+[String]$Script:DSCTools_DefaultPullServerEndpointName = 'PSDSCPullServer'
 
 # This is the default endpoint name a Compliance server will be created as when it is installed by Enable-DSCPullServer.
-[String]$DSCTools_DefaultComplianceServerEndpointName = 'PSDSCComplianceServer'
+[String]$Script:DSCTools_DefaultComplianceServerEndpointName = 'PSDSCComplianceServer'
 
 # This is the location of the powershell modules folder where all the resources can be found that will be
 # Installed into the pull server by the Publish-DSCPullResources function.
-[String]$DSCTools_DefaultResourcePath = "$($ENV:PROGRAMFILES)\WindowsPowerShell\Modules\All Resources\"
+[String]$Script:DSCTools_DefaultResourcePath = "$($ENV:PROGRAMFILES)\WindowsPowerShell\Modules\All Resources\"
 
 # This is the default folder on your pull server where any resources will get copied to by the
 # Publish-DSCPullResources function. This can be a UNC path to a network share if required.
 # This path may also be used by the Enable-DSCPullServer cmdlet as well.
-[String]$DSCTools_DefaultPullServerResourcePath = "$($ENV:PROGRAMFILES)\WindowsPowerShell\DscService\Modules\"
+[String]$Script:DSCTools_DefaultPullServerResourcePath = "$($ENV:PROGRAMFILES)\WindowsPowerShell\DscService\Modules\"
 
 # This is the default folder where a DSC Pull Server will try and locate node configuraiton files.
 # This should usually be a local path accessebile by the DSC Pull Server.
-[String]$DSCTools_DefaultPullServerConfigurationPath = "$($ENV:PROGRAMFILES)\WindowsPowerShell\DscService\Configuration\"
+[String]$Script:DSCTools_DefaultPullServerConfigurationPath = "$($ENV:PROGRAMFILES)\WindowsPowerShell\DscService\Configuration\"
 
 # This is the path and svc name component of the uRL used to access the Pull server.
-[String]$DSCTools_DefaultPullServerPath = 'PSDSCPullServer.svc'
+[String]$Script:DSCTools_DefaultPullServerPath = 'PSDSCPullServer.svc'
 
 # This is the default folder where a new DSC Pull Server IIS Web Site will be installed.
 # This should always be a folder on the local DSC Pull Server.
-[String]$DSCTools_DefaultPullServerPhysicalPath = "$($ENV:SystemDrive)\inetpub\wwwroot\PSDSCPullServer\"
+[String]$Script:DSCTools_DefaultPullServerPhysicalPath = "$($ENV:SystemDrive)\inetpub\wwwroot\PSDSCPullServer\"
 
 # This is the port the Pull server is running on.
-[Int]$DSCTools_DefaultPullServerPort = 8080
+[Int]$Script:DSCTools_DefaultPullServerPort = 8080
 
 # This is the default folder where a new DSC Compliance Server IIS Web Site will be installed.
 # This should always be a folder on the local DSC Pull Server.
-[String]$DSCTools_DefaultComplianceServerPhysicalPath = "$($ENV:SystemDrive)\inetpub\wwwroot\PSDSCComplianceServer\"
+[String]$Script:DSCTools_DefaultComplianceServerPhysicalPath = "$($ENV:SystemDrive)\inetpub\wwwroot\PSDSCComplianceServer\"
 
 # This is the port the Compliance server is running on.
-[Int]$DSCTools_DefaultComplianceServerPort = 8090
+[Int]$Script:DSCTools_DefaultComplianceServerPort = 8090
 
 # This is the URL to download the current version of the DSC Resource Kit.
 # It may change when newer versions of the resource kit are released.
-[String]$DSCTools_ResourceKitURL = "https://gallery.technet.microsoft.com/scriptcenter/DSC-Resource-Kit-All-c449312d/file/131371/4/DSC%20Resource%20Kit%20Wave%2010%2004012015.zip"
+[String]$Script:DSCTools_ResourceKitURL = "https://gallery.technet.microsoft.com/scriptcenter/DSC-Resource-Kit-All-c449312d/file/131371/4/DSC%20Resource%20Kit%20Wave%2010%2004012015.zip"
 
 # This is the version of PowerShell that the Configuration files should be built to use.
 # This is for future use when WMF 5.0 is available the LCM configuration files can be
 # written in a more elegant fashion. Currently this should always be set to 4.0
-[Float]$DSCTools_PSVersion = 4.0
+[Float]$Script:DSCTools_PSVersion = 4.0
 
 # Get the PS Version to a variable for easier access.
-[Int]$PSVersion = $PSVersionTable.PSVersion.Major
+[Int]$Script:PSVersion = $Script:PSVersionTable.PSVersion.Major
 ##########################################################################################################################################
 
 ##########################################################################################################################################
@@ -156,7 +156,7 @@
 Function InitZip
 {
 	# If PS is version 4 or less then we require the PSCX Module to unzip/zip files
-	If ($PSVersion -lt 5) {
+	If ($Script:PSVersion -lt 5) {
 		# Is the PSCX Module Available? 
         If ( (Get-Module -ListAvailable PSCX | Measure-Object).Count -eq 0) {
             Throw "PSCX Module is not available. Please download it from http://pscx.codeplex.com/"
@@ -169,7 +169,7 @@ Function InitZip
 ##########################################################################################################################################
 Function UnzipFile ([String]$ZipFileName,[String]$DestinationPath)
 {
-	If ($PSVersion -lt 5) {
+	If ($Script:PSVersion -lt 5) {
 		Expand-Archive -Path $ZipFileName -OutputPath $DestinationPath
 	} Else {
 		Expand-Archive -Path $ZipFileName -DestinationPath $DestinationPath -Force
@@ -180,7 +180,7 @@ Function UnzipFile ([String]$ZipFileName,[String]$DestinationPath)
 ##########################################################################################################################################
 Function ZipFolder ([String]$ZipFileName,[String]$SourcePath)
 {
-	If ($PSVersion -lt 5) {
+	If ($Script:PSVersion -lt 5) {
         Get-ChildItem -Path $ResourcePath -Recurse | Write-Zip -IncludeEmptyDirectories -OutputPath $ZipFileName -EntryPathRoot $SourcePath -Level 9
 	} Else {
 		Compress-Archive -DestinationPath $ZipFileName -Path $SourcePath -CompressionLevel Optimal
@@ -253,8 +253,8 @@ Function Invoke-DSCCheck {
                 }
 				# If PS5 is installed then the Update-DscConfiguration command can be called -otherwise we need to
 				# use Invoke-CimMethod on the remote host.
-				If ($PSVersion -lt 5) {
-					Write-Verbose "Invoking Method PerformRequiredConfigurationChecks on node $Computer"
+				If ($Script:PSVersion -lt 5) {
+					Write-Verbose "Invoke-DSCCheck: Invoking Method PerformRequiredConfigurationChecks on node $Computer"
 					Invoke-Command -ComputerName $Computer { `
 						Invoke-CimMethod `
 							-Namespace 'root/Microsoft/Windows/DesiredStateConfiguration' `
@@ -263,7 +263,7 @@ Function Invoke-DSCCheck {
 							-Arguments @{ Flags = [uint32]1 }
 					} # Invoke-Command
 				} Else {
-					Write-Verbose "Calling Update-DscConfigration on node $Computer"
+					Write-Verbose "Invoke-DSCCheck: Calling Update-DscConfigration on node $Computer"
 					Update-DscConfiguration -ComputerName $Computer
 				} # If
             } # Foreach ($Node In $Nodes)
@@ -271,8 +271,8 @@ Function Invoke-DSCCheck {
             Foreach ($Computer In $ComputerName) {
 				# If PS5 is installed then the Update-DscConfiguration command can be called -otherwise we need to
 				# use Invoke-CimMethod on the remote host.
-				If ($PSVersion -lt 5) {
-					Write-Verbose "Invoking Method PerformRequiredConfigurationChecks on node $Computer"
+				If ($Script:PSVersion -lt 5) {
+					Write-Verbose "Invoke-DSCCheck: Invoking Method PerformRequiredConfigurationChecks on node $Computer"
 					# For some reason using the Invoke-CimMethod cmdlet with the -ComputerName parameter doesn't work
 					# So the Invoke-Command is used instead to execute the command on the destination computer.
 					Invoke-Command -ComputerName $Computer { `
@@ -283,7 +283,7 @@ Function Invoke-DSCCheck {
 							-Arguments @{ Flags = [uint32]1 }
 					} # Invoke-Command
 				} Else {
-					Write-Verbose "Calling Update-DscConfigration on node $Computer"
+					Write-Verbose "Invoke-DSCCheck: Calling Update-DscConfigration on node $Computer"
 					Update-DscConfiguration -ComputerName $Computer
 				} # If
             } # Foreach ($Computer In $ComputerName)
@@ -334,7 +334,7 @@ Function Publish-DSCPullResources {
 .EXAMPLE 
 		 Publish-DSCPullResources -ModulePath 'c:\program files\windowspowershell\modules\all resources\*'
 		 This will cause all resources found in the c:\program files\windowspowershell\modules\all resources\ folder
-		 to be zipped up and copied into the folder found in the default variable $DSCTools_DefaultPullServerResourcePath.
+		 to be zipped up and copied into the folder found in the default variable $Script:DSCTools_DefaultPullServerResourcePath.
 		 A checksum file will also be created for each zipped resource.
 
 .EXAMPLE 
@@ -354,10 +354,10 @@ Function Publish-DSCPullResources {
             ValueFromPipeline = $true
             )]
         [Alias('FullName')]
-        [String[]]$ModulePath = $DSCTools_DefaultResourcePath,
+        [String[]]$ModulePath = $Script:DSCTools_DefaultResourcePath,
 
         [ValidateNotNullOrEmpty()]
-        [String]$PullServerResourcePath = $DSCTools_DefaultPullServerResourcePath
+        [String]$PullServerResourcePath = $Script:DSCTools_DefaultPullServerResourcePath
     ) # Param
 
     Begin {
@@ -371,47 +371,47 @@ Function Publish-DSCPullResources {
 
     Process {
         Foreach ($Path in $ModulePath) {
-            Write-Verbose "Examining $Path for Resource Folders"
+            Write-Verbose "Publish-DSCPullResources: Examining $Path for Resource Folders"
             If ((Test-Path -Path $Path -PathType Container) -eq $true) {
                 # This path in the source path array is a folder
-                Write-Verbose "Folder $Path Found"        
+                Write-Verbose "Publish-DSCPullResources: Folder $Path Found"        
 
 				# Get all the subfolders
                 $Resources = Get-ChildItem -Path $Path -Attributes Directory
                 Foreach ($Resource in $Resources) {
-                    Write-Verbose "Folder $Resource Found"
+                    Write-Verbose "Publish-DSCPullResources: Possible Resource Folder $Resource Found"
 
                     # A folder was found inside the source path - does it contain a resource?
                     $ResourcePath = Join-Path -Path $Path -ChildPath $Resource
                     $Manifest = Join-Path -Path $ResourcePath -ChildPath "$Resource.psd1"
                     $DSCResourcesFolder = Join-Path -Path $ResourcePath -ChildPath DSCResources
                     If ((Test-Path -Path $Manifest -PathType Leaf) -and (Test-Path -Path $DSCResourcesFolder -PathType Container)) {
-                        Write-Verbose "Resource $Resource in $ResourcePath Found"
+                        Write-Verbose "Publish-DSCPullResources: Resource $Resource in Resource Folder $ResourcePath Found"
 
                         # This folder appears to contain a valid DSC Resource
                         # Get the version number out of the manifest file
                         $ManifestContent = Invoke-Expression -Command (Get-Content -Path $Manifest -Raw)
                         $ModuleVersion = $ManifestContent.ModuleVersion
-                        Write-Verbose "Resource $Resource is version $ModuleVersion"
+                        Write-Verbose "Publish-DSCPullResources: Resource $Resource is Version $ModuleVersion"
 
                         # Generate the Zip file name (including the destination to the pull server folder)
                         $ZipFileName = Join-Path -Path $PullServerResourcePath -ChildPath "$($Resource)_$($ModuleVersion).zip"
 
                         # Zip up the resource straight into the pull server resources path
 						If (Test-Path -Path $ZipFileName) {
-	                        Write-Verbose "Deleting existing resource file $ZipFileName" 
+	                        Write-Verbose "Publish-DSCPullResources: Deleting Existing Resource File $ZipFileName" 
 							Remove-Item -Path $ZipFileName
 						}
-                        Write-Verbose "Zipping $ResourcePath to $ZipFileName" 
+                        Write-Verbose "Publish-DSCPullResources: Zipping $ResourcePath to $ZipFileName" 
 						ZipFolder -ZipFileName $ZipFileName -SourcePath $ResourcePath
 
                         # Generate the checksum for the zip file
                         New-DSCCheckSum -ConfigurationPath $ZipFileName -Force | Out-Null
-                        Write-Verbose "Checksum for $ZipFileName created"
+                        Write-Verbose "Publish-DSCPullResources: Checksum for Resource File $ZipFileName Created"
                     } # If
                 } # Foreach ($Resource in $Resources)
             } Else {
-                Write-Verbose "File $Path Is Ignored"
+                Write-Verbose "Publish-DSCPullResources: File $Path Is Ignored"
             }# If
         } # Foreach ($Path in $ModulePath)
     } # Process
@@ -437,7 +437,7 @@ Function Install-DSCResourceKit {
 		PSCX Module can be downloaded from http://pscx.codeplex.com/
      
 .PARAMETER ResourceKitURL
-This is the URL to use to download the DSC Resource Kit from. It defaults to the URL contained in $DSCTools_ResourceKitURL.
+This is the URL to use to download the DSC Resource Kit from. It defaults to the URL contained in $Script:DSCTools_ResourceKitURL.
 
 .PARAMETER ModulePath
 		This optional parameter allows an alternate folder to install the DSC Resource Kit into. By default it will be installed into
@@ -465,7 +465,7 @@ This is the URL to use to download the DSC Resource Kit from. It defaults to the
     [CmdletBinding()]
     Param (
         [ValidateNotNullOrEmpty()]
-        [String]$ResourceKitURL=$DSCTools_ResourceKitURL,
+        [String]$ResourceKitURL=$Script:DSCTools_ResourceKitURL,
 
 		[ValidateNotNullOrEmpty()]
         [String]$ModulePath="$($ENV:PROGRAMFILES)\windowspowershell\modules",
@@ -475,7 +475,7 @@ This is the URL to use to download the DSC Resource Kit from. It defaults to the
 		[Switch]$UseCache = $false,
 
         [ValidateNotNullOrEmpty()]
-        [String]$PullServerResourcePath=$DSCTools_DefaultPullServerResourcePath
+        [String]$PullServerResourcePath=$Script:DSCTools_DefaultPullServerResourcePath
     ) # Param
 	InitZip
 
@@ -489,9 +489,9 @@ This is the URL to use to download the DSC Resource Kit from. It defaults to the
 	# Attempt to download the Resource kit file to the temp folder.
 	$TempPath = "$Env:TEMP\DSCResourceKit.zip"
 	If ((Test-Path -Path $TempPath) -and ($UseCache)) {
-		Write-Verbose "Using cached Resource Kit File in $TempPath"
+		Write-Verbose "Install-DSCResourceKit: Using Cached Resource Kit File $TempPath"
 	} Else {
-		Write-Verbose "Downloading $ResourceKitURL to $TempPath"
+		Write-Verbose "Install-DSCResourceKit: Downloading $ResourceKitURL to $TempPath"
 		Try {
 			Invoke-WebRequest $ResourceKitURL -OutFile $TempPath	    
 		} Catch {
@@ -500,7 +500,7 @@ This is the URL to use to download the DSC Resource Kit from. It defaults to the
 	}
 
 	# Unzip the Resouce Kit File
-	Write-Verbose "Extracting $TempPath to $ModulePath"
+	Write-Verbose "Install-DSCResourceKit: Extracting $TempPath to $ModulePath"
 	Try {
 		UnzipFile -ZipFileName $TempPath -DestinationPath $ModulePath
 		#Expand-Archive -Path $TempPath -OutputPath $ModulePath
@@ -512,11 +512,12 @@ This is the URL to use to download the DSC Resource Kit from. It defaults to the
 	{ 
 		# Publish the Resources from the Resource Kit
 	
-		Write-Verbose "Publishing Resources from $ModulePath to $PullServerResourcePath"
+		Write-Verbose "Install-DSCResourceKit: Publishing Resources from $ModulePath to $PullServerResourcePath"
 		Publish-DSCPullResources -ModulePath (Join-Path -Path $ModulePath -ChildPath "All Resources") -PullServerResourcePath $PullServerResourcePath
 	} # If
 
 	If ($UseCache -eq $false) {
+		Write-Verbose "Install-DSCResourceKit: Deleting Resource Kit File $TempPath"
 		Remove-Item -Path $TempPath
 	} # If
 } # Function Install-DSCResourceKit
@@ -546,15 +547,15 @@ Function Enable-DSCPullServer {
 		Name = Name of the computer to install as a DSC Pull Server.
 
 		Each hash entry can also contain the following optional items. If each item is not specified it will default.
-		PullServerPort = The port the Pull Server will run on. Defaults to $DSCTools_DefaultPullServerPort.
-		ComplianceServerPort = The port the Complaince Server will run on. Defaults to $DSCTools_DefaultComplianceServerPort.
+		PullServerPort = The port the Pull Server will run on. Defaults to $Script:DSCTools_DefaultPullServerPort.
+		ComplianceServerPort = The port the Complaince Server will run on. Defaults to $Script:DSCTools_DefaultComplianceServerPort.
 		CertificateThumbprint = The certificate thumbprint to use if HTTPS should be used. Defaults to using HTTP.
-		PullServerEndpointName = The endpoint name to use when creating the Pull Server web site. Defaults to $DSCTools_DefaultPullServerEndpointName.
-		PullServerResourcePath = The path the DSC Pull Server will look for resource files in. Defaults to $DSCTools_DefaultPullServerResourcePath.
-		PullServerConfigurationPath = The path the DSC Pull Server will use look for configuration (MOF) files in. Defaults to $DSCTools_DefaultPullServerConfigurationPath.
-		PullServerPhysicalPath = The local path to where the DSC Pull Server web site will be created. Defaults to $DSCTools_DefaultPullServerPhysicalPath.
-		ComplianceServerEndpointName = The endpoint name to use when creating the Compliance Server web site. Defaults to $DSCTools_DefaultComplianceServerEndpointName.
-		ComplianceServerPhysicalPath = The local path to where the DSC Compliance Server web site will be created. Defaults to $DSCTools_DefaultComplianceServerPhysicalPath.
+		PullServerEndpointName = The endpoint name to use when creating the Pull Server web site. Defaults to $Script:DSCTools_DefaultPullServerEndpointName.
+		PullServerResourcePath = The path the DSC Pull Server will look for resource files in. Defaults to $Script:DSCTools_DefaultPullServerResourcePath.
+		PullServerConfigurationPath = The path the DSC Pull Server will use look for configuration (MOF) files in. Defaults to $Script:DSCTools_DefaultPullServerConfigurationPath.
+		PullServerPhysicalPath = The local path to where the DSC Pull Server web site will be created. Defaults to $Script:DSCTools_DefaultPullServerPhysicalPath.
+		ComplianceServerEndpointName = The endpoint name to use when creating the Compliance Server web site. Defaults to $Script:DSCTools_DefaultComplianceServerEndpointName.
+		ComplianceServerPhysicalPath = The local path to where the DSC Compliance Server web site will be created. Defaults to $Script:DSCTools_DefaultComplianceServerPhysicalPath.
 		Credential = Credentials to use to configure the DSC Pull Server using. Defaults to none.
 
 		For example:
@@ -564,31 +565,31 @@ Function Enable-DSCPullServer {
 		Name of the computer to install as a DSC Pull Server.
 
 .PARAMETER PullServerPort
-		The port the Pull Server will run on. Defaults to $DSCTools_DefaultPullServerPort.
+		The port the Pull Server will run on. Defaults to $Script:DSCTools_DefaultPullServerPort.
 
 .PARAMETER ComplianceServerPort
-		The port the Complaince Server will run on. Defaults to $DSCTools_DefaultComplianceServerPort.
+		The port the Complaince Server will run on. Defaults to $Script:DSCTools_DefaultComplianceServerPort.
 
 .PARAMETER CertificateThumbprint
 		The certificate thumbprint to use if HTTPS should be used. Defaults to using HTTP.
 
 .PARAMETER PullServerEndpointName
-		The endpoint name to use when creating the Pull Server web site. Defaults to $DSCTools_DefaultPullServerEndpointName.
+		The endpoint name to use when creating the Pull Server web site. Defaults to $Script:DSCTools_DefaultPullServerEndpointName.
 
 .PARAMETER PullServerResourcePath
-		The path the DSC Pull Server will look for resource files in. Defaults to $DSCTools_DefaultPullServerResourcePath.
+		The path the DSC Pull Server will look for resource files in. Defaults to $Script:DSCTools_DefaultPullServerResourcePath.
 
 .PARAMETER PullServerConfigurationPath
-		The path the DSC Pull Server will use look for configuration (MOF) files in. Defaults to $DSCTools_DefaultPullServerConfigurationPath.
+		The path the DSC Pull Server will use look for configuration (MOF) files in. Defaults to $Script:DSCTools_DefaultPullServerConfigurationPath.
 
 .PARAMETER PullServerPhysicalPath
-		The local path to where the DSC Pull Server web site will be created. Defaults to $DSCTools_DefaultPullServerPhysicalPath.
+		The local path to where the DSC Pull Server web site will be created. Defaults to $Script:DSCTools_DefaultPullServerPhysicalPath.
 
 .PARAMETER ComplianceServerEndpointName
-		The endpoint name to use when creating the Compliance Server web site. Defaults to $DSCTools_DefaultComplianceServerEndpointName.
+		The endpoint name to use when creating the Compliance Server web site. Defaults to $Script:DSCTools_DefaultComplianceServerEndpointName.
 
 .PARAMETER ComplianceServerPhysicalPath
-		The local path to where the DSC Compliance Server web site will be created. Defaults to $DSCTools_DefaultComplianceServerPhysicalPath.
+		The local path to where the DSC Compliance Server web site will be created. Defaults to $Script:DSCTools_DefaultComplianceServerPhysicalPath.
 
 .PARAMETER Credential
 		Credentials to use to configure the DSC Pull Server using. Defaults to none.
@@ -647,15 +648,13 @@ Function Enable-DSCPullServer {
 		[ValidateNotNullOrEmpty()]
 	    [PSCredential]$Credential,
 
-        [Parameter(
-            ParameterSetName='Nodes'
-            )]
+        [Parameter(ParameterSetName='Nodes')]
         [Array]$Nodes
     )
     
 	# Set up a temporary path
 	$TempPath = "$Env:TEMP\Enable-DSCPullServer"
-	Write-Verbose "Creating temporary folder $TempPath."
+	Write-Verbose "Enable-DSCPullServer: Creating Temporary Folder $TempPath."
 	New-Item -Path $TempPath -ItemType 'Directory' -Force | Out-Null
 
 	If ($ComputerName) {
@@ -680,32 +679,32 @@ Function Enable-DSCPullServer {
 			Throw 'Node name is empty.'
 		} # If
 
-        Write-Verbose "Node $NodeName begin processing."
+        Write-Verbose "Enable-DSCPullServer: Enabling Pull Server $NodeName"
 		# Get all the Pull Server properties from the node or use defaults.
 		[Int]$PullServerPort = $Node.PullServerPort
-		If (($PullServerPort -eq 0) -or ($PullServerPort -eq $null)) { $PullServerPort = $DSCTools_DefaultPullServerPort }
+		If (($PullServerPort -eq 0) -or ($PullServerPort -eq $null)) { $PullServerPort = $Script:DSCTools_DefaultPullServerPort }
 		[Int]$ComplianceServerPort = $Node.ComplianceServerPort
-		If (($ComplianceServerPort -eq 0) -or ($ComplianceServerPort -eq $null)) { $ComplianceServerPort = $DSCTools_DefaultComplianceServerPort }
+		If (($ComplianceServerPort -eq 0) -or ($ComplianceServerPort -eq $null)) { $ComplianceServerPort = $Script:DSCTools_DefaultComplianceServerPort }
 		[String]$CertificateThumbprint = $Node.CertificateThumbprint
 		If (($CertificateThumbprint -eq '') -or ($CertificateThumbprint -eq $null)) { $CertificateThumbprint = 'AllowUnencryptedTraffic' }
 		[String]$PullServerEndpointName = $Node.PullServerEndpointName
-		If (($PullServerEndpointName -eq '') -or ($PullServerEndpointName -eq $null)) { $PullServerEndpointName = $DSCTools_DefaultPullServerEndpointName }
+		If (($PullServerEndpointName -eq '') -or ($PullServerEndpointName -eq $null)) { $PullServerEndpointName = $Script:DSCTools_DefaultPullServerEndpointName }
 		[String]$PullServerResourcePath = $Node.PullServerResourcePath
-		If (($PullServerResourcePath -eq '') -or ($PullServerResourcePath -eq $null)) { $PullServerResourcePath = $DSCTools_DefaultPullServerResourcePath }
+		If (($PullServerResourcePath -eq '') -or ($PullServerResourcePath -eq $null)) { $PullServerResourcePath = $Script:DSCTools_DefaultPullServerResourcePath }
 	    [String]$PullServerConfigurationPath = $Node.PullServerConfigurationPath
-		If (($PullServerConfigurationPath -eq '') -or ($PullServerConfigurationPath -eq $null)) { $PullServerConfigurationPath = $DSCTools_DefaultPullServerConfigurationPath }
+		If (($PullServerConfigurationPath -eq '') -or ($PullServerConfigurationPath -eq $null)) { $PullServerConfigurationPath = $Script:DSCTools_DefaultPullServerConfigurationPath }
 	    [String]$PullServerPhysicalPath = $Node.PullServerPhysicalPath
-		If (($PullServerPhysicalPath -eq '') -or ($PullServerPhysicalPath -eq $null)) { $PullServerPhysicalPath = $DSCTools_DefaultPullServerPhysicalPath }
+		If (($PullServerPhysicalPath -eq '') -or ($PullServerPhysicalPath -eq $null)) { $PullServerPhysicalPath = $Script:DSCTools_DefaultPullServerPhysicalPath }
 	    [String]$ComplianceServerEndpointName = $Node.ComplianceServerEndpointName
-		If (($ComplianceServerEndpointName -eq '') -or ($ComplianceServerEndpointName -eq $null)) { $ComplianceServerEndpointName = $DSCTools_DefaultComplianceServerEndpointName }
+		If (($ComplianceServerEndpointName -eq '') -or ($ComplianceServerEndpointName -eq $null)) { $ComplianceServerEndpointName = $Script:DSCTools_DefaultComplianceServerEndpointName }
 	    [String]$ComplianceServerPhysicalPath = $Node.ComplianceServerPhysicalPath
-		If (($ComplianceServerPhysicalPath -eq '') -or ($ComplianceServerPhysicalPath -eq $null)) { $ComplianceServerPhysicalPath = $DSCTools_DefaultComplianceServerPhysicalPath }
+		If (($ComplianceServerPhysicalPath -eq '') -or ($ComplianceServerPhysicalPath -eq $null)) { $ComplianceServerPhysicalPath = $Script:DSCTools_DefaultComplianceServerPhysicalPath }
 	    [PSCredential]$Credential = $Node.Credential
 		Try {
-			Write-Verbose "Begin Creating $NodeName Pull Server MOF $TempPath\$NodeName.MOF."
+			Write-Verbose "Enable-DSCPullServer: Pull Server MOF $TempPath\$NodeName.MOF for $NodeName Begin Creation"
 
 			# Load the CreatePullServer Configuration into memory (dot source it)
-			# The file should be in the same folder as the Module.
+			# The file should be in Configuration folder beneath the folder the module is in.
 			. "$(Join-Path -Path $PSScriptRoot -ChildPath 'Configuration\Config_EnablePullServer.ps1')"
 			Config_EnablePullServer `
 				-NodeName $NodeName `
@@ -723,29 +722,29 @@ Function Enable-DSCPullServer {
 		} Catch {
 			Throw
 		}
-		Write-Verbose "Finished Creating $NodeName Pull Server MOF $TempPath\$NodeName.MOF."
+		Write-Verbose "Enable-DSCPullServer: Pull Server MOF $TempPath\$NodeName.MOF for $NodeName Created Successfully"
         
 		# Apply the Pull Server MOF File to the Server
 		Try {
 			If ($Credential -eq $null) {
-				Write-Verbose "Begin Applying MOF $TempPath\$NodeName.MOF to $NodeName Pull Server."
+				Write-Verbose "Enable-DSCPullServer: Applying MOF $TempPath\$NodeName.MOF to $NodeName Pull Server"
 				Start-DSCConfiguration -ComputerName $NodeName -Path $TempPath -Wait -Force
 			} Else {
-				Write-Verbose "Begin Applying MOF $TempPath\$NodeName.MOF to $NodeName Pull Server using Credential."
+				Write-Verbose "Enable-DSCPullServer: Applying MOF $TempPath\$NodeName.MOF to $NodeName Pull Server using Credentials"
 				Start-DSCConfiguration -ComputerName $NodeName -Path $TempPath -Wait -Force -Credential $Credential
 			}
 		} Catch {
 			Throw
 		}
-		Write-Verbose "Finished Applying MOF $TempPath\$NodeName.MOF to $NodeName Pull Server."
+		Write-Verbose "Enable-DSCPullServer: MOF $TempPath\$NodeName.MOF Applied to $NodeName Successfully"
 
 		# Reove the LCM MOF File
 		Remove-Item -Path "$TempPath\$NodeName.MOF"
-		Write-Verbose "MOF $TempPath\$NodeName.MOF for $NodeName removed."
+		Write-Verbose "Enable-DSCPullServer: MOF $TempPath\$NodeName.MOF for $NodeName Deleted"
 	} # Foreach
 	
 	Remove-Item -Path $TempPath -Recurse -Force
-	Write-Verbose "Temporary folder $TempPath deleted."
+	Write-Verbose "Enable-DSCPullServer: Temporary Folder $TempPath Deleted"
 } # Enable-DSCPullServer
 ##########################################################################################################################################
 
@@ -788,7 +787,7 @@ Function Start-DSCPullMode {
 
 		If this parameter is not passed it is generated from the Module Variables:
 
-		$($DSCTools_DefaultPullServerProtocol)://$($DSCTools_DefaultPullServerName):$($DSCTools_DefaultPullServerPort)/$($DSCTools_DefaultPullServerPath)
+		$($Script:DSCTools_DefaultPullServerProtocol)://$($Script:DSCTools_DefaultPullServerName):$($Script:DSCTools_DefaultPullServerPort)/$($Script:DSCTools_DefaultPullServerPath)
 
 		For example:
 
@@ -797,7 +796,7 @@ Function Start-DSCPullMode {
 .PARAMETER PullServerConfigurationPath
 		This optional parameter contains the full path to where the Pull Server DSC Node configuration files should be written to.
 
-		If this parameter is not passed it will be set to $DSCTools_DefaultPullServerConfigurationPath
+		If this parameter is not passed it will be set to $Script:DSCTools_DefaultPullServerConfigurationPath
 
 		For example:
 
@@ -806,7 +805,7 @@ Function Start-DSCPullMode {
 .PARAMETER NodeConfigSourceFolder
 
 		This parameter is used to specify the folder where the node configration files can be found. If it is not passed it will default to the
-		module variable $DSCTools_DefaultNodeConfigSourceFolder.
+		module variable $Script:DSCTools_DefaultNodeConfigSourceFolder.
 
 		This value will be ignored for any node that has a MOFFile key value set.
 
@@ -828,7 +827,7 @@ Function Start-DSCPullMode {
 .EXAMPLE 
 		 Start-DSCPullMode `
 			-Nodes @(@{Name='SERVER01';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e7'},@{Name='SERVER02';RebootIfNeeded=$true;MofFile='c:\users\Administrtor\Documents\WindowsPowerShell\DSCConfig\SERVER02.MOF'})
-		 This command will cause the nodes SERVER01 and SERVER02 to be switched into Pull mode and the appropriate configration files uploaded to the Pull server specified in $DSCTools_DefaultPullServerConfigurationPath.
+		 This command will cause the nodes SERVER01 and SERVER02 to be switched into Pull mode and the appropriate configration files uploaded to the Pull server specified in $Script:DSCTools_DefaultPullServerConfigurationPath.
 
 .EXAMPLE 
 		 Start-DSCPullMode `
@@ -858,16 +857,16 @@ Function Start-DSCPullMode {
 	    [ValidateSet('ApplyAndAutoCorrect','ApplyAndMonitor','ApplyOnly')]
 		[String]$ConfigurationMode='ApplyAndAutoCorrect',
 
-		[string]$PullServerURL="$($DSCTools_DefaultPullServerProtocol)://$($DSCTools_DefaultPullServerName):$($DSCTools_DefaultPullServerPort)/$($DSCTools_DefaultPullServerPath)",
+		[string]$PullServerURL="$($Script:DSCTools_DefaultPullServerProtocol)://$($Script:DSCTools_DefaultPullServerName):$($Script:DSCTools_DefaultPullServerPort)/$($Script:DSCTools_DefaultPullServerPath)",
 
-        [String]$PullServerConfigurationPath=$DSCTools_DefaultPullServerConfigurationPath,
+        [String]$PullServerConfigurationPath=$Script:DSCTools_DefaultPullServerConfigurationPath,
 
-        [String]$NodeConfigSourceFolder=$DSCTools_DefaultNodeConfigSourceFolder
+        [String]$NodeConfigSourceFolder=$Script:DSCTools_DefaultNodeConfigSourceFolder
     )
     
     # Set up a temporary path
     $TempPath = "$Env:TEMP\Start-DSCPullMode"
-    Write-Verbose "Creating temporary folder $TempPath"
+    Write-Verbose "Start-DSCPullMode: Creating Temporary Folder $TempPath"
     New-Item -Path $TempPath -ItemType 'Directory' -Force | Out-Null
 
     If ($ComputerName) {
@@ -887,7 +886,7 @@ Function Start-DSCPullMode {
         If ($NodeName -eq '') {
             Throw 'Node name is empty.'
         } # If
-        Write-Verbose "Node $NodeName begin setting Pull Mode"
+        Write-Verbose "Start-DSCPullMode: Configuring $NodeName for Pull Mode"
 
         [String]$NodeGuid = $Node.Guid
         If ($NodeGuid -eq '') {
@@ -903,7 +902,7 @@ Function Start-DSCPullMode {
         If (($Mode -eq $null) -or ($Mode -eq '')) {
             $Mode = $ConfigurationMode
         } # If
-		Write-Verbose "Node $NodeName will use GUID $NodeGuid with mode $Mode and reboot if needed is $Reboot"
+		Write-Verbose "Start-DSCPullMode: $NodeName Will Use GUID $NodeGuid with Configuration Mode $Mode $(@{$true='and will Reboot If Needed';$false=''}[$RebootIfNeeded])"
 
         # If the node doesn't have a specific MOF path specified then see if we can figure it out
         # Based on other parameters specified - or even create it.
@@ -913,12 +912,12 @@ Function Start-DSCPullMode {
         } Else {
             $SourceMof = $MofFile
         }
-        Write-Verbose "Node $NodeName will use configuration MOF $SourceMof"
+        Write-Verbose "Start-DSCPullMode: $NodeName Will Use Configuration MOF $SourceMof"
 
         # If the MOF doesn't throw an error?
         If (-not (Test-Path -PathType Leaf -Path $SourceMof)) {
             #TODO: Can we try to create the MOF file from the configuration?
-            Write-Error "The node configuration MOF file $SourceMof could not be found for node $NodeName"
+            Write-Error "Start-DSCPullMode: Node $NodeName Configuration MOF $SourceMof Could Not Be Found"
             $NodeError = $true
         }
 
@@ -926,9 +925,9 @@ Function Start-DSCPullMode {
             # Create and/or Move the Node Configuration file to the Pull server
             $DestMof = Join-Path -Path $PullServerConfigurationPath -ChildPath "$NodeGuid.mof"
             Copy-Item -Path $SourceMof -Destination $DestMof -Force
-            Write-Verbose "Node $NodeName configuration MOF $SourceMof copied to $DestMof"
+            Write-Verbose "Start-DSCPullMode: Node $NodeName Configuration MOF $SourceMof Copied to $DestMof"
             New-DSCChecksum -ConfigurationPath $DestMof -Force
-            Write-Verbose "Node $NodeName configuration MOF checksum created $DestMof"
+            Write-Verbose "Start-DSCPullMode: Node $NodeName Configuration MOF Checksum Created for $DestMof"
 
             # Create the LCM MOF File to set the nodes LCM to pull mode
 			. "$(Join-Path -Path $PSScriptRoot -ChildPath 'Configuration\Config_SetLCMPullMode.ps1')"
@@ -941,23 +940,23 @@ Function Start-DSCPullMode {
                 -Output $TempPath `
                 | Out-Null
 
-            Write-Verbose "Node $NodeName LCM MOF $TempPath\$NodeName.MOF created"
+            Write-Verbose "Start-DSCPullMode: Node $NodeName LCM MOF $TempPath\$NodeName.MOF Created"
         
             # Apply the LCM MOF File to the node
             Set-DSCLocalConfigurationManager -Computer $NodeName -Path $TempPath
 
-            Write-Verbose "Node $NodeName set to use LCM MOF $TempPath"
+            Write-Verbose "Start-DSCPullMode: Node $NodeName set to use LCM MOF $TempPath"
 
             # Reove the LCM MOF File
             Remove-Item -Path "$TempPath\$NodeName.meta.MOF"
-            Write-Verbose "Node $NodeName LCM MOF $TempPath\$NodeName.meta.MOF removed"
+            Write-Verbose "Start-DSCPullMode: Node $NodeName LCM MOF $TempPath\$NodeName.meta.MOF Removed"
         } # If
 
-    Write-Verbose "Node $NodeName processing complete"
+    Write-Verbose "Start-DSCPullMode: Node $NodeName Processing Complete"
     } # Foreach
 
     Remove-Item -Path $TempPath -Recurse -Force
-    Write-Verbose "Temporary folder $TempPath deleted"
+    Write-Verbose "Start-DSCPullMode: Temporary Folder $TempPath Deleted"
 } # Start-DSCPullMode
 ##########################################################################################################################################
 
@@ -991,7 +990,7 @@ Function Start-DSCPushMode {
 
 .PARAMETER NodeConfigSourceFolder
 		This parameter is used to specify the folder where the node configration files can be found. If it is not passed it will default to the
-		module variable $DSCTools_DefaultNodeConfigSourceFolder.
+		module variable $Script:DSCTools_DefaultNodeConfigSourceFolder.
 
 		This value will be ignored for any node that has a MOFFile key value set.
 
@@ -1036,12 +1035,12 @@ Function Start-DSCPushMode {
 	    [ValidateSet('ApplyAndAutoCorrect','ApplyAndMonitor','ApplyOnly')]
 		[String]$ConfigurationMode='ApplyAndAutoCorrect',
 
-        [String]$NodeConfigSourceFolder=$DSCTools_DefaultNodeConfigSourceFolder
+        [String]$NodeConfigSourceFolder=$Script:DSCTools_DefaultNodeConfigSourceFolder
     )
     
     # Set up a temporary path
     $TempPath = "$Env:TEMP\Start-DSCPullMode"
-    Write-Verbose "Creating temporary folder $TempPath"
+    Write-Verbose "Start-DSCPushMode: Creating Temporary Folder $TempPath"
     New-Item -Path $TempPath -ItemType 'Directory' -Force | Out-Null
 
     If ($ComputerName) {
@@ -1060,7 +1059,7 @@ Function Start-DSCPushMode {
         If ($NodeName -eq '') {
             Throw 'Node name is empty.'
         }
-        Write-Verbose "Node $NodeName begin setting Push Mode"
+        Write-Verbose "Start-DSCPushMode: Configuring $NodeName for Push Mode"
 
 		[Switch]$Reboot = $Node.RebootIfNeeded
         If ($Reboot -eq $null) {
@@ -1071,7 +1070,7 @@ Function Start-DSCPushMode {
         If (($Mode -eq $null) -or ($Mode -eq '')) {
             $Mode = $ConfigurationMode
         } # If
-		Write-Verbose "Node $NodeName mode $Mode and reboot if needed is $Reboot"
+		Write-Verbose "Start-DSCPushMode: $NodeName set to Configuration Mode $Mode $(@{$true='and will Reboot If Needed';$false=''}[$RebootIfNeeded])"
 
         # If the node doesn't have a specific MOF path specified then see if we can figure it out
         # Based on other parameters specified - or even create it.
@@ -1081,12 +1080,12 @@ Function Start-DSCPushMode {
         } Else {
             $SourceMof = $MofFile
         }
-        Write-Verbose "Node $NodeName will use configuration MOF $SourceMof"
+        Write-Verbose "Start-DSCPushMode:Node $NodeName Will Use Configuration MOF $SourceMof"
 
         # If the MOF doesn't throw an error?
         If (-not (Test-Path -PathType Leaf -Path $SourceMof)) {
             #TODO: Can we try to create the MOF file from the configuration?
-            Write-Error "The node configuration MOF file $SourceMof could not be found for node $NodeName"
+            Write-Error "Start-DSCPushMode: Node $NodeName Configuration MOF $SourceMof Could Not Be Found"
             $NodeError = $true
         }
 
@@ -1100,23 +1099,23 @@ Function Start-DSCPushMode {
                 -Output $TempPath `
                 | Out-Null
 
-            Write-Verbose "Node $NodeName LCM MOF $TempPath\$NodeName.MOF created"
+            Write-Verbose "Start-DSCPushMode: Node $NodeName LCM MOF $TempPath\$NodeName.MOF Created"
         
             # Apply the LCM MOF File to the node
             Set-DSCLocalConfigurationManager -Computer $NodeName -Path $TempPath
 
-            Write-Verbose "Node $NodeName set to use LCM MOF $TempPath"
+            Write-Verbose "Start-DSCPushMode: Node $NodeName set to use LCM MOF $TempPath"
 
             # Reove the LCM MOF File
             Remove-Item -Path "$TempPath\$NodeName.meta.MOF"
-            Write-Verbose "Node $NodeName LCM MOF $TempPath\$NodeName.meta.MOF removed"
+            Write-Verbose "Start-DSCPushMode: Node $NodeName LCM MOF $TempPath\$NodeName.meta.MOF Removed"
         } # If
 
-    Write-Verbose "Node $NodeName processing complete"
+    Write-Verbose "Start-DSCPushMode: Node $NodeName Processing Complete"
     } # Foreach
 
     Remove-Item -Path $TempPath -Recurse -Force
-    Write-Verbose "Temporary folder $TempPath deleted"
+    Write-Verbose "Start-DSCPushMode: Temporary folder $TempPath deleted"
 } # Start-DSCPushMode
 ##########################################################################################################################################
 
