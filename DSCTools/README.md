@@ -155,6 +155,7 @@ limitations under the License.
 
 ### Example Usage - Installing a Pull Server with a single Node
 This example would be run either on the Pull Server or on another computer using a user account that has administrator privileges to the Pull Server. This example will perform the following operations:
+
 1. Create a basic folder structure on the DSCPULLSVR01 Pull Server where the DSC resources and configuratins will be stored.
 2. Download and install the DSC Resource Kit onto this computer and the DSCPULLSVR01 Pull Server.
 3. Publish the DSC Resources from the DSC resource kit onto the DSCPULLSVR01 Pull Server.
@@ -239,6 +240,7 @@ This example would be run either on the Pull Server or on another computer using
 
 ### Example Usage - Installing a Pull Server with multiple Nodes
 This example would be run either on the Pull Server or on another computer using a user account that has administrator privileges to the Pull Server. This example will perform the following operations:
+
 1. Create a basic folder structure on the DSCPULLSVR01 Pull Server where the DSC resources and configuratins will be stored.
 2. Download and install the DSC Resource Kit onto this computer and the DSCPULLSVR01 Pull Server.
 3. Publish the DSC Resources from the DSC resource kit onto the DSCPULLSVR01 Pull Server.
