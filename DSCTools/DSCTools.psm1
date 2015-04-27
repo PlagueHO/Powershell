@@ -41,6 +41,12 @@
 			@{Name='PLAGUE-SP2013';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e6';RebootIfNeeded=$true;MofFile='c:\DSC\Configuration\PLAGUE-SP2013.MOF'} , `
 			@{Name='PLAGUE-IIS01';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e7';RebootIfNeeded=$true;MofFile='c:\DSC\Configuration\PLAGUE-IIS01.MOF'} )
 
+		# Create the folder structure on the Pull Server where the DSC files will be installed to
+		# If the default paths are used then this wouldn't need to be done as these paths usually already exist
+		New-Item -Path \\$DSCTools_DefaultPullServerName\c$\DSC\ -ItemType Directory
+		New-Item -Path $Script:DSCTools_DefaultPullServerResourcePath -ItemType Directory
+		New-Item -Path $Script:DSCTools_DefaultPullServerConfigurationPath -ItemType Directory
+	
 		# Download the DSC Resource Kit and install it to the local machine and to the DSC Pull Server
 		Install-DSCResourceKit -UseCache -Verbose
 		Install-DSCResourceKit -ModulePath "\\$Script:DSCTools_DefaultPullServerName\c$\program files\windowspowershell\modules\" -UseCache -Verbose
@@ -423,7 +429,7 @@ Function Publish-DSCPullResources {
 Function Install-DSCResourceKit {
 <#
 .SYNOPSIS
-		Downlaods and installs the DSC Resource Kit.
+		Downloads and installs the DSC Resource Kit. It can also optionally publish the Resources to a pull server.
 
 .DESCRIPTION 
 		The DSC Resource Kit is a set of DSC Resources and other tools that are commonly used by DSC servers and nodes. It can be downloaded
@@ -527,7 +533,7 @@ This is the URL to use to download the DSC Resource Kit from. It defaults to the
 Function Enable-DSCPullServer {
 <#
 .SYNOPSIS
-		Installs and configures a server as a DSC Pull Server.
+		Installs and configures one or more servers as a DSC Pull Servers.
 
 .DESCRIPTION 
 		This function will create a MOF file for configuring a Windows Server computer to be a DSC Pull Server and then force DSC to apply the MOF to the server.
@@ -599,7 +605,7 @@ Function Enable-DSCPullServer {
 		 This command will install and configure a DSC Pull Server onto machines DSCPULLSRV01 and DSCPULLSRV02.
 
 .EXAMPLE 
-		 Enable-DSCPullServer -ComputerName 'DSCPULLSRV01'
+		 Enable-DSCPullServer -ComputerName DSCPULLSRV01
 		 This command will install and configure a DSC Pull Server onto machine DSCPULLSRV01
 #>
     [CmdletBinding()]
@@ -1123,7 +1129,7 @@ Function Start-DSCPushMode {
 Function Get-DscConfigurationRemote {
 <#
 .SYNOPSIS
-        Gets the current configuration of a remote node.
+        Gets the current DSC configuration of a remote node.
 
 .DESCRIPTION
         The Get-DscConfiguration cmdlet gets the current configuration of the node, if configuration exists. Specify computers by using Common Information Model (CIM) sessions. If you do not specify a target computer, the cmdlet gets the configuration from the local computer.

@@ -46,6 +46,7 @@
     <Compile Include="DSCTools.psm1" />
     <Compile Include="DSCTools.SelfTest.ps1" />
     <Compile Include="DSCTools.test.ps1" />
+    <Compile Include="README.md" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <Target Name="Build" />

@@ -2,19 +2,19 @@
 # Self Test functions
 ##########################################################################################################################################
 Function Test-DSCToolsMulti {
-    # Configure where the pull server is and how it can be connected to.
+	# Configure where the pull server is and how it can be connected to.
     $Script:DSCTools_DefaultPullServerName = 'PLAGUE-PDC'
     $Script:DSCTools_DefaultPullServerProtocol = 'HTTPS'  # Pull server has a valid trusted cert installed
     $Script:DSCTools_DefaultResourcePath = "c:\program files\windowspowershell\Modules\All Resources\"  # This is where the DSC resource module files are usually located.
-    $Script:DSCTools_DefaultPullServerResourcePath = "\\$DSCTools_DefaultPullServerName\c$\DSC\Resources\"  # This is the path where a DSC Pull Server will look for Resources.
-    $Script:DSCTools_DefaultPullServerConfigurationPath = "\\$DSCTools_DefaultPullServerName\c$\DSC\Configuration\"   # This is the path where a DSC Pull Server will look for MOF Files.
+    $Script:DSCTools_DefaultPullServerResourcePath = "\\$Script:DSCTools_DefaultPullServerName\c$\DSC\Resources\"  # This is the path where a DSC Pull Server will look for Resources.
+    $Script:DSCTools_DefaultPullServerConfigurationPath = "\\$Script:DSCTools_DefaultPullServerName\c$\DSC\Configuration\"   # This is the path where a DSC Pull Server will look for MOF Files.
     $Script:DSCTools_DefaultPullServerPhysicalPath = "c:\DSC\PSDSCPullServer\" # The location a Pull Server web site will be installed to.
     $Script:DSCTools_DefaultComplianceServerPhysicalPath = "c:\DSC\PSDSCComplianceServer\" # The location a Pull Server compliance site will be installed to.
     $Credential = Get-Credential
 
     # These are the nodes that will become DSC Pull Servers
     $PullServers = @( `
-	    @{Name=$DSCTools_DefaultPullServerName;CertificateThumbprint='3aaeef3f4b6dad0c8cb59930b48a9ffc25daa7d8';Credential=$Credential;} )
+	    @{Name=$Script:DSCTools_DefaultPullServerName;CertificateThumbprint='3aaeef3f4b6dad0c8cb59930b48a9ffc25daa7d8';Credential=$Credential;} )
 
     # These are the nodes that we are going to set up Pull mode for
     $Nodes = @( `
@@ -26,9 +26,15 @@ Function Test-DSCToolsMulti {
 	    @{Name='PLAGUE-SP2013';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e6';RebootIfNeeded=$true;MofFile="$PSScriptRoot\Configuration\Config_Test\PLAGUE-SP2013.MOF"} , `
 	    @{Name='PLAGUE-IIS01';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e7';RebootIfNeeded=$true;MofFile="$PSScriptRoot\Configuration\Config_Test\PLAGUE-IIS01.MOF"} )
 
+	# Create the folder structure on the Pull Server where the DSC files will be installed to
+	# If the default paths are used then this wouldn't need to be done as these paths usually already exist
+    New-Item -Path \\$Script:DSCTools_DefaultPullServerName\c$\DSC\ -ItemType Directory
+    New-Item -Path $Script:DSCTools_DefaultPullServerResourcePath -ItemType Directory
+    New-Item -Path $Script:DSCTools_DefaultPullServerConfigurationPath -ItemType Directory
+
     # Download the DSC Resource Kit and install it to the local machine and to the DSC Pull Server
     Install-DSCResourceKit -UseCache -Verbose
-    Install-DSCResourceKit -ModulePath "\\$DSCTools_DefaultPullServerName\c$\program files\windowspowershell\modules\" -UseCache -Verbose
+    Install-DSCResourceKit -ModulePath "\\$Script:DSCTools_DefaultPullServerName\c$\program files\windowspowershell\modules\" -UseCache -Verbose
 
     # Copy all the resources up to the pull server (zipped and with a checksum file).
     Publish-DSCPullResources -Verbose
@@ -37,7 +43,7 @@ Function Test-DSCToolsMulti {
     Enable-DSCPullServer -Nodes $PullServers -Verbose
 
     # Check the pull server
-    Get-DscConfigurationRemote -ComputerName PLAGUE-PDC -UseSSL -Credential ($Credential) -Verbose
+    Get-DscConfigurationRemote -ComputerName $Script:DSCTools_DefaultPullServerName -UseSSL -Credential ($Credential) -Verbose
 
     # Set all the nodes to pull mode and copy the config files over to the pull server.
     Start-DSCPullMode -Nodes $Nodes -Verbose
@@ -45,7 +51,7 @@ Function Test-DSCToolsMulti {
     # Force the all the machines to pull thier config from the Pull server (although we could just wait 15 minutes for this to happen automatically)
     Invoke-DSCCheck -Nodes $Nodes -Verbose
 
-    # Set all the nodes to back to push mode if we don't want to use Pul mode any more.
+    # Set all the nodes to back to push mode if we don't want to use Pull mode any more.
     Start-DSCPushMode -Nodes $Nodes -Verbose
 
     # Force the all the machines to reapply thier configuration (although we could just wait 15 minutes for this to happen automatically)
@@ -58,6 +64,10 @@ Function Test-DSCToolsMulti {
 Function Test-DSCToolsSingle {
     $PullServer = 'PLAGUE-PDC'
     $Credential = Get-Credential
+
+    New-Item -Path "\\$Script:DSCTools_DefaultPullServerName\c$\DSC\" -ItemType Directory
+    New-Item -Path $Script:DSCTools_DefaultPullServerResourcePath -ItemType Directory
+    New-Item -Path $Script:DSCTools_DefaultPullServerConfigurationPath -ItemType Directory
 
 	# Download the DSC Resource Kit and install it to the local machine and to the DSC Pull Server
     Install-DSCResourceKit `
@@ -106,7 +116,7 @@ Function Test-DSCToolsSingle {
 		-ComputerName PLAGUE-MEMBER `
 		-Verbose
 
-	# Set all the nodes to back to push mode if we don't want to use Pul mode any more.
+	# Set all the nodes to back to push mode if we don't want to use Pull mode any more.
     Start-DSCPushMode `
 		-ComputerName PLAGUE-MEMBER `
 		-RebootIfNeeded `
