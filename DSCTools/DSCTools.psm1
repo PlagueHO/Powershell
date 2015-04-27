@@ -833,7 +833,7 @@ Function Start-DSCPullMode {
 .EXAMPLE 
 		 Start-DSCPullMode `
 			-Nodes @(@{Name='SERVER01';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e7'},@{Name='SERVER02';RebootIfNeeded=$true;MofFile='c:\users\Administrtor\Documents\WindowsPowerShell\DSCConfig\SERVER02.MOF'}) `
-			-PullServerConfigPath '\\MyPullServer\DSCConfiguration'
+			-PullServerConfigurationPath '\\MyPullServer\DSCConfiguration'
 		 This command will cause the nodes SERVER01 and SERVER02 to be switched into Pull mode and the appropriate configration files uploaded to the Pull server configration folder '\\MyPullServer\DSCConfiguration'
 #>
     [CmdletBinding()]
@@ -860,7 +860,7 @@ Function Start-DSCPullMode {
 
 		[string]$PullServerURL="$($DSCTools_DefaultPullServerProtocol)://$($DSCTools_DefaultPullServerName):$($DSCTools_DefaultPullServerPort)/$($DSCTools_DefaultPullServerPath)",
 
-        [String]$PullServerConfigPath=$DSCTools_DefaultPullServerConfigurationPath,
+        [String]$PullServerConfigurationPath=$DSCTools_DefaultPullServerConfigurationPath,
 
         [String]$NodeConfigSourceFolder=$DSCTools_DefaultNodeConfigSourceFolder
     )
@@ -924,7 +924,7 @@ Function Start-DSCPullMode {
 
         If (-not $NodeError) {
             # Create and/or Move the Node Configuration file to the Pull server
-            $DestMof = "$PullServerConfigPath\$NodeGuid.mof"
+            $DestMof = Join-Path -Path $PullServerConfigurationPath -ChildPath "$NodeGuid.mof"
             Copy-Item -Path $SourceMof -Destination $DestMof -Force
             Write-Verbose "Node $NodeName configuration MOF $SourceMof copied to $DestMof"
             New-DSCChecksum -ConfigurationPath $DestMof -Force

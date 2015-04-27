@@ -8,6 +8,7 @@ Function Test-DSCToolsMulti {
     $DSCTools_DefaultResourcePath = "c:\program files\windowspowershel\DscService\Modules\All Resources\"  # This is where the DSC resource module files are usually located.
     $DSCTools_DefaultPullServerResourcePath = "\\$DSCTools_DefaultPullServerName\c$\DSC\Resources\"  # This is the path where a DSC Pull Server will look for Resources.
     $DSCTools_DefaultPullServerConfigurationPath = "\\$DSCTools_DefaultPullServerName\c$\DSC\Configuration\"   # This is the path where a DSC Pull Server will look for MOF Files.
+    $DSCTools_DefaultNodeConfigurationSourceFolder = "$HOME\Documents\WindowsPowerShell\Configuration\" # Where to find source configuration files.
     $DSCTools_DefaultPullServerPhysicalPath = "c:\DSC\PSDSCPullServer\" # The location a Pull Server web site will be installed to.
     $DSCTools_DefaultComplianceServerPhysicalPath = "c:\DSC\PSDSCComplianceServer\" # The location a Pull Server compliance site will be installed to.
     $Credential = Get-Credential
@@ -98,6 +99,7 @@ Function Test-DSCToolsSingle {
 		-RebootIfNeeded `
 		-MofFile "$PSScriptRoot\Configuration\Config_Test\PLAGUE-MEMBER.MOF" `
 		-ConfigurationMode 'ApplyAndAutoCorrect' `
+        -PullServerConfigurationPath "\\$DSCTools_DefaultPullServerName\c$\DSC\Configuration\" `
 		-Verbose
 
     # Force the all the machines to pull thier config from the Pull server (although we could just wait 15 minutes for this to happen automatically)
