@@ -6,7 +6,7 @@ $ConfigurationData = @{
         @{NodeName = 'PLAGUE-RODC';Role=@('Web')};
         @{NodeName = 'PLAGUE-IIS01';Role=@('Web')};
         @{NodeName = 'PLAGUE-SQL2014';Role=@('Web')};
-        @{NodeName = 'PLAGUE-SC0212';Role=@('Web')};
+        @{NodeName = 'PLAGUE-SC2012';Role=@('Web')};
         @{NodeName = 'PLAGUE-SP2013';Role=@('Web')};
         @{NodeName = 'PLAGUE-PROXY';Role=@('Web')};
     );

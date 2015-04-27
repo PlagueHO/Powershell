@@ -39,7 +39,7 @@
     <Compile Include="Configuration\Config_Test\PLAGUE-MEMBER.mof" />
     <Compile Include="Configuration\Config_Test\PLAGUE-PROXY.mof" />
     <Compile Include="Configuration\Config_Test\PLAGUE-RODC.mof" />
-    <Compile Include="Configuration\Config_Test\PLAGUE-SC0212.mof" />
+    <Compile Include="Configuration\Config_Test\PLAGUE-SC2012.mof" />
     <Compile Include="Configuration\Config_Test\PLAGUE-SP2013.mof" />
     <Compile Include="Configuration\Config_Test\PLAGUE-SQL2014.mof" />
     <Compile Include="DSCTools.psd1" />
