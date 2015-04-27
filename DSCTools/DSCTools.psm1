@@ -367,12 +367,12 @@ Function Publish-DSCPullResources {
         If ((Test-Path -Path $PullServerResourcePath -PathType Container) -eq $false) {
             Throw "Folder $PullServerResourcePath could not be found."
         }
-    }
+    } # Begin
 
     Process {
         Foreach ($Path in $ModulePath) {
             Write-Verbose "Publish-DSCPullResources: Examining $Path for Resource Folders"
-            If ((Test-Path -Path $Path -PathType Container) -eq $true) {
+            If (Test-Path -Path $Path -PathType Container) {
                 # This path in the source path array is a folder
                 Write-Verbose "Publish-DSCPullResources: Folder $Path Found"        
 
@@ -412,7 +412,7 @@ Function Publish-DSCPullResources {
                 } # Foreach ($Resource in $Resources)
             } Else {
                 Write-Verbose "Publish-DSCPullResources: File $Path Is Ignored"
-            }# If
+            } # If
         } # Foreach ($Path in $ModulePath)
     } # Process
     End {}

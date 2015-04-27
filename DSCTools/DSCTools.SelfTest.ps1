@@ -5,7 +5,7 @@ Function Test-DSCToolsMulti {
     # Configure where the pull server is and how it can be connected to.
     $Script:DSCTools_DefaultPullServerName = 'PLAGUE-PDC'
     $Script:DSCTools_DefaultPullServerProtocol = 'HTTPS'  # Pull server has a valid trusted cert installed
-    $Script:DSCTools_DefaultResourcePath = "c:\program files\windowspowershel\Modules\All Resources\"  # This is where the DSC resource module files are usually located.
+    $Script:DSCTools_DefaultResourcePath = "c:\program files\windowspowershell\Modules\All Resources\"  # This is where the DSC resource module files are usually located.
     $Script:DSCTools_DefaultPullServerResourcePath = "\\$DSCTools_DefaultPullServerName\c$\DSC\Resources\"  # This is the path where a DSC Pull Server will look for Resources.
     $Script:DSCTools_DefaultPullServerConfigurationPath = "\\$DSCTools_DefaultPullServerName\c$\DSC\Configuration\"   # This is the path where a DSC Pull Server will look for MOF Files.
     $Script:DSCTools_DefaultPullServerPhysicalPath = "c:\DSC\PSDSCPullServer\" # The location a Pull Server web site will be installed to.
@@ -43,13 +43,13 @@ Function Test-DSCToolsMulti {
     Start-DSCPullMode -Nodes $Nodes -Verbose
 
     # Force the all the machines to pull thier config from the Pull server (although we could just wait 15 minutes for this to happen automatically)
-#    Invoke-DSCCheck -Nodes $Nodes -Verbose
+    Invoke-DSCCheck -Nodes $Nodes -Verbose
 
     # Set all the nodes to back to push mode if we don't want to use Pul mode any more.
-#    Start-DSCPushMode -Nodes $Nodes -Verbose
+    Start-DSCPushMode -Nodes $Nodes -Verbose
 
     # Force the all the machines to reapply thier configuration (although we could just wait 15 minutes for this to happen automatically)
-#    Invoke-DSCCheck -Nodes $Nodes -Verbose
+    Invoke-DSCCheck -Nodes $Nodes -Verbose
 
 } # Function Test-DSCToolsMulti
 ##########################################################################################################################################
