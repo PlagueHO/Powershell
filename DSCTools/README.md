@@ -169,11 +169,11 @@ This example would be run either on the Pull Server or on another computer using
     $PullServer = 'DSCPULLSVR01'
     $Credential = Get-Credential
     
-    # Create the folder structure on the Pull Server where the DSC files will be installed to
+	# Create the folder structure on the Pull Server where the DSC files will be installed to
 	# If the default paths are used then this wouldn't need to be done as these paths usually already exist
-    New-Item -Path "\\$Script:DSCTools_DefaultPullServerName\c$\DSC\" -ItemType Directory
-    New-Item -Path $Script:DSCTools_DefaultPullServerResourcePath -ItemType Directory
-    New-Item -Path $Script:DSCTools_DefaultPullServerConfigurationPath -ItemType Directory
+    New-Item -Path "\\$PullServer\c$\DSC\" -ItemType Directory
+    New-Item -Path "\\$PullServer\c$\DSC\Resources\" -ItemType Directory
+    New-Item -Path "\\$PullServer\c$\DSC\Configuration\" -ItemType Directory
     
     # Download the DSC Resource Kit and install it to the local machine and to the DSC Pull Server
     Install-DSCResourceKit `

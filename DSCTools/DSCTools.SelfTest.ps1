@@ -65,9 +65,11 @@ Function Test-DSCToolsSingle {
     $PullServer = 'PLAGUE-PDC'
     $Credential = Get-Credential
 
-    New-Item -Path "\\$Script:DSCTools_DefaultPullServerName\c$\DSC\" -ItemType Directory
-    New-Item -Path $Script:DSCTools_DefaultPullServerResourcePath -ItemType Directory
-    New-Item -Path $Script:DSCTools_DefaultPullServerConfigurationPath -ItemType Directory
+	# Create the folder structure on the Pull Server where the DSC files will be installed to
+	# If the default paths are used then this wouldn't need to be done as these paths usually already exist
+    New-Item -Path "\\$PullServer\c$\DSC\" -ItemType Directory
+    New-Item -Path "\\$PullServer\c$\DSC\Resources\" -ItemType Directory
+    New-Item -Path "\\$PullServer\c$\DSC\Configuration\" -ItemType Directory
 
 	# Download the DSC Resource Kit and install it to the local machine and to the DSC Pull Server
     Install-DSCResourceKit `
@@ -145,6 +147,6 @@ Function Test-DSCCreateTestConfig {
 } # Function Test-DSCCreateTestConfig
 ##########################################################################################################################################
 Test-DSCToolsLoadModule
-Test-DSCCreateTestConfig
-#Test-DSCToolsSingle
-Test-DSCToolsMulti
+#Test-DSCCreateTestConfig
+Test-DSCToolsSingle
+#Test-DSCToolsMulti
