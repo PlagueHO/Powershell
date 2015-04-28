@@ -12,33 +12,8 @@ $ConfigurationData = @{
     );
 } # $ConfigurationData
 
-configuration Config_Roles
-{
-	Param (
-        $Roles
-    ) # Param
-
-    WindowsFeature FileSharing
-    {
-        Ensure = If ('FS' -in $Roles) {'Present'} Else {'Absent'}
-        Name = 'FS-FileServer'
-    } 
-    WindowsFeature Web
-    {
-        Ensure = If ('Web' -in $Roles) {'Present'} Else {'Absent'}
-        Name = 'web-Server'
-    } 
-    WindowsFeature App
-    {
-        Ensure = If('App' -in $Roles) {'Present'} Else {'Absent'}
-        Name = 'Application-Server'
-    }
-} # configuration RoleConfiguration
-
 configuration Config_Test 
 {
-    Import-DscResource -Module xPendingReboot
-
     node $allnodes.NodeName
     {
 
