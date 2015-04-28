@@ -45,7 +45,8 @@
     <Compile Include="Configuration\Config_Test\NODE07.mof" />
     <Compile Include="DSCTools.psd1" />
     <Compile Include="DSCTools.psm1" />
-    <Compile Include="DSCTools.Test.PlagueHO.ps1" />
+    <Compile Include="DSCTools.Test.PlagueHO.LocalHost.ps1" />
+    <Compile Include="DSCTools.Test.PlagueHO.Remote.ps1" />
     <Compile Include="DSCTools.Test.Nodes.ps1" />
     <Compile Include="DSCTools.Test.ps1" />
     <Compile Include="README.md" />
