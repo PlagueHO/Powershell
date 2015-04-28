@@ -3,7 +3,7 @@
 ##########################################################################################################################################
 Function Test-DSCToolsMulti {
 	# Configure where the pull server is and how it can be connected to.
-    $Script:DSCTools_DefaultPullServerName = 'PLAGUE-PDC'
+    $Script:DSCTools_DefaultPullServerName = 'DSCPULLSVR01'
     $Script:DSCTools_DefaultPullServerProtocol = 'HTTPS'  # Pull server has a valid trusted cert installed
     $Script:DSCTools_DefaultResourcePath = "c:\program files\windowspowershell\Modules\All Resources\"  # This is where the DSC resource module files are usually located.
     $Script:DSCTools_DefaultPullServerResourcePath = "\\$Script:DSCTools_DefaultPullServerName\c$\DSC\Resources\"  # This is the path where a DSC Pull Server will look for Resources.
@@ -18,13 +18,13 @@ Function Test-DSCToolsMulti {
 
     # These are the nodes that we are going to set up Pull mode for
     $Nodes = @( `
-	    @{Name='PLAGUE-MEMBER';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e1';RebootIfNeeded=$true;MofFile="$PSScriptRoot\Configuration\Config_Test\PLAGUE-MEMBER.MOF"} , `
-	    @{Name='PLAGUE-RODC';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e2';RebootIfNeeded=$true;MofFile="$PSScriptRoot\Configuration\Config_Test\PLAGUE-RODC.MOF"} , `
-	    @{Name='PLAGUE-SQL2014';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e3';RebootIfNeeded=$true;MofFile="$PSScriptRoot\Configuration\Config_Test\PLAGUE-SQL2014.MOF"} , `
-	    @{Name='PLAGUE-PROXY';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e4';RebootIfNeeded=$true;MofFile="$PSScriptRoot\Configuration\Config_Test\PLAGUE-PROXY.MOF"} , `
-	    @{Name='PLAGUE-SC2012';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e5';RebootIfNeeded=$true;MofFile="$PSScriptRoot\Configuration\Config_Test\PLAGUE-SC2012.MOF"} , `
-	    @{Name='PLAGUE-SP2013';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e6';RebootIfNeeded=$true;MofFile="$PSScriptRoot\Configuration\Config_Test\PLAGUE-SP2013.MOF"} , `
-	    @{Name='PLAGUE-IIS01';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e7';RebootIfNeeded=$true;MofFile="$PSScriptRoot\Configuration\Config_Test\PLAGUE-IIS01.MOF"} )
+	    @{Name='NODE01';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e1';RebootIfNeeded=$true;MofFile="$PSScriptRoot\Configuration\Config_Test\NODE01.MOF"} , `
+	    @{Name='NODE02';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e2';RebootIfNeeded=$true;MofFile="$PSScriptRoot\Configuration\Config_Test\NODE02.MOF"} , `
+	    @{Name='NODE03';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e3';RebootIfNeeded=$true;MofFile="$PSScriptRoot\Configuration\Config_Test\NODE03.MOF"} , `
+	    @{Name='NODE04';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e4';RebootIfNeeded=$true;MofFile="$PSScriptRoot\Configuration\Config_Test\NODE04.MOF"} , `
+	    @{Name='NODE05';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e5';RebootIfNeeded=$true;MofFile="$PSScriptRoot\Configuration\Config_Test\NODE05.MOF"} , `
+	    @{Name='NODE06';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e6';RebootIfNeeded=$true;MofFile="$PSScriptRoot\Configuration\Config_Test\NODE06.MOF"} , `
+	    @{Name='NODE07';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e7';RebootIfNeeded=$true;MofFile="$PSScriptRoot\Configuration\Config_Test\NODE07.MOF"} )
 
 	# Create the folder structure on the Pull Server where the DSC files will be installed to
 	# If the default paths are used then this wouldn't need to be done as these paths usually already exist
@@ -62,7 +62,7 @@ Function Test-DSCToolsMulti {
 
 ##########################################################################################################################################
 Function Test-DSCToolsSingle {
-    $PullServer = 'PLAGUE-PDC'
+    $PullServer = 'DSCPULLSVR02'
     $Credential = Get-Credential
 
 	# Create the folder structure on the Pull Server where the DSC files will be installed to
@@ -105,7 +105,7 @@ Function Test-DSCToolsSingle {
     
 	# Set all the nodes to pull mode and copy the config files over to the pull server.
     Start-DSCPullMode `
-		-ComputerName 'PLAGUE-MEMBER' `
+		-ComputerName 'NODE01' `
 		-Guid '115929a0-61e2-41fb-a9ad-0cdcd66fc2e7' `
 		-RebootIfNeeded `
 		-MofFile "$PSScriptRoot\Configuration\Config_Test\PLAGUE-MEMBER.MOF" `
@@ -116,12 +116,12 @@ Function Test-DSCToolsSingle {
 
     # Force the all the machines to pull thier config from the Pull server (although we could just wait 15 minutes for this to happen automatically)
     # Invoke-DSCCheck `
-	# 	-ComputerName PLAGUE-MEMBER `
+	# 	-ComputerName NODE01 `
 	# 	-Verbose
 
 	# Set all the nodes to back to push mode if we don't want to use Pull mode any more.
     # Start-DSCPushMode `
-	# 	-ComputerName PLAGUE-MEMBER `
+	# 	-ComputerName NODE01 `
 	#	-RebootIfNeeded `
 	#	-MofFile "$PSScriptRoot\Configuration\Config_Test\PLAGUE-MEMBER.MOF" `
 	#	-ConfigurationMode 'ApplyAndAutoCorrect' `
@@ -129,7 +129,7 @@ Function Test-DSCToolsSingle {
 
     # Force the all the machines to reapply thier configuration (although we could just wait 15 minutes for this to happen automatically)
     # Invoke-DSCCheck `
-	#	-ComputerName PLAGUE-MEMBER `
+	#	-ComputerName NODE01 `
 	#	-Verbose
 
 } # Function Test-DSCToolsSingle
