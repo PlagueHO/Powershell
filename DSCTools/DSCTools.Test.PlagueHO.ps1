@@ -3,7 +3,7 @@
 ##########################################################################################################################################
 Function Test-DSCToolsMulti {
 	# Configure where the pull server is and how it can be connected to.
-    $Script:DSCTools_DefaultPullServerName = 'PLAGUE-PDC'
+    $Script:DSCTools_DefaultPullServerName = 'PLAGUE-PDC.PLAGUEHO.COM'
     $Script:DSCTools_DefaultPullServerProtocol = 'HTTPS'  # Pull server has a valid trusted cert installed
     $Script:DSCTools_DefaultResourcePath = "c:\program files\windowspowershell\Modules\All Resources\"  # This is where the DSC resource module files are usually located.
     $Script:DSCTools_DefaultPullServerResourcePath = "\\$Script:DSCTools_DefaultPullServerName\c$\DSC\Resources\"  # This is the path where a DSC Pull Server will look for Resources.
@@ -18,13 +18,13 @@ Function Test-DSCToolsMulti {
 
     # These are the nodes that we are going to set up Pull mode for
     $Nodes = @( `
-	    @{Name='PLAGUE-MEMBER';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e1';RebootIfNeeded=$true;MofFile="$PSScriptRoot\Configuration\Config_Test\PLAGUE-MEMBER.MOF"} , `
-	    @{Name='PLAGUE-RODC';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e2';RebootIfNeeded=$true;MofFile="$PSScriptRoot\Configuration\Config_Test\PLAGUE-RODC.MOF"} , `
-	    @{Name='PLAGUE-SQL2014';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e3';RebootIfNeeded=$true;MofFile="$PSScriptRoot\Configuration\Config_Test\PLAGUE-SQL2014.MOF"} , `
-	    @{Name='PLAGUE-PROXY';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e4';RebootIfNeeded=$true;MofFile="$PSScriptRoot\Configuration\Config_Test\PLAGUE-PROXY.MOF"} , `
-	    @{Name='PLAGUE-SC2012';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e5';RebootIfNeeded=$true;MofFile="$PSScriptRoot\Configuration\Config_Test\PLAGUE-SC2012.MOF"} , `
-	    @{Name='PLAGUE-SP2013';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e6';RebootIfNeeded=$true;MofFile="$PSScriptRoot\Configuration\Config_Test\PLAGUE-SP2013.MOF"} , `
-	    @{Name='PLAGUE-IIS01';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e7';RebootIfNeeded=$true;MofFile="$PSScriptRoot\Configuration\Config_Test\PLAGUE-IIS01.MOF"} )
+	    @{Name='PLAGUE-MEMBER.PLAGUEHO.COM';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e1';RebootIfNeeded=$true;MofFile="$PSScriptRoot\Configuration\Config_Test\PLAGUE-MEMBER.PLAGUEHO.COM.MOF"} , `
+	    @{Name='PLAGUE-RODC.PLAGUEHO.COM';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e2';RebootIfNeeded=$true;MofFile="$PSScriptRoot\Configuration\Config_Test\PLAGUE-RODC.PLAGUEHO.COM.MOF"} , `
+	    @{Name='PLAGUE-SQL2014.PLAGUEHO.COM';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e3';RebootIfNeeded=$true;MofFile="$PSScriptRoot\Configuration\Config_Test\PLAGUE-SQL2014.PLAGUEHO.COM.MOF"} , `
+	    @{Name='PLAGUE-PROXY.PLAGUEHO.COM';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e4';RebootIfNeeded=$true;MofFile="$PSScriptRoot\Configuration\Config_Test\PLAGUE-PROXY.PLAGUEHO.COM.MOF"} , `
+	    @{Name='PLAGUE-SC2012.PLAGUEHO.COM';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e5';RebootIfNeeded=$true;MofFile="$PSScriptRoot\Configuration\Config_Test\PLAGUE-SC2012.PLAGUEHO.COM.MOF"} , `
+	    @{Name='PLAGUE-SP2013.PLAGUEHO.COM';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e6';RebootIfNeeded=$true;MofFile="$PSScriptRoot\Configuration\Config_Test\PLAGUE-SP2013.PLAGUEHO.COM.MOF"} , `
+	    @{Name='PLAGUE-IIS01.PLAGUEHO.COM';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e7';RebootIfNeeded=$true;MofFile="$PSScriptRoot\Configuration\Config_Test\PLAGUE-IIS01.PLAGUEHO.COM.MOF"} )
 
 	# Create the folder structure on the Pull Server where the DSC files will be installed to
 	# If the default paths are used then this wouldn't need to be done as these paths usually already exist
@@ -62,7 +62,7 @@ Function Test-DSCToolsMulti {
 
 ##########################################################################################################################################
 Function Test-DSCToolsSingle {
-    $PullServer = 'PLAGUE-PDC'
+    $PullServer = 'PLAGUE-PDC.PLAGUEHO.COM'
     $Credential = Get-Credential
 
 	# Create the folder structure on the Pull Server where the DSC files will be installed to
@@ -105,7 +105,7 @@ Function Test-DSCToolsSingle {
     
 	# Set all the nodes to pull mode and copy the config files over to the pull server.
     Start-DSCPullMode `
-		-ComputerName 'PLAGUE-MEMBER' `
+		-ComputerName 'PLAGUE-MEMBER.PLAGUEHO.COM' `
 		-Guid '115929a0-61e2-41fb-a9ad-0cdcd66fc2e7' `
 		-RebootIfNeeded `
 		-MofFile "$PSScriptRoot\Configuration\Config_Test\PLAGUE-MEMBER.MOF" `
@@ -116,20 +116,20 @@ Function Test-DSCToolsSingle {
 
     # Force the all the machines to pull thier config from the Pull server (although we could just wait 15 minutes for this to happen automatically)
     # Invoke-DSCCheck `
-	# 	-ComputerName PLAGUE-MEMBER `
+	# 	-ComputerName PLAGUE-MEMBER.PLAGUEHO.COM `
 	# 	-Verbose
 
 	# Set all the nodes to back to push mode if we don't want to use Pull mode any more.
     # Start-DSCPushMode `
-	# 	-ComputerName PLAGUE-MEMBER `
+	# 	-ComputerName PLAGUE-MEMBER.PLAGUEHO.COM `
 	#	-RebootIfNeeded `
-	#	-MofFile "$PSScriptRoot\Configuration\Config_Test\PLAGUE-MEMBER.MOF" `
+	#	-MofFile "$PSScriptRoot\Configuration\Config_Test\PLAGUE-MEMBER.PLAGUEHO.COM.MOF" `
 	#	-ConfigurationMode 'ApplyAndAutoCorrect' `
 	#	-Verbose
 
     # Force the all the machines to reapply thier configuration (although we could just wait 15 minutes for this to happen automatically)
     # Invoke-DSCCheck `
-	#	-ComputerName PLAGUE-MEMBER `
+	#	-ComputerName PLAGUE-MEMBER.PLAGUEHO.COM `
 	#	-Verbose
 
 } # Function Test-DSCToolsSingle
@@ -144,10 +144,10 @@ Function Test-DSCToolsLoadModule {
 
 ##########################################################################################################################################
 Function Test-DSCCreateTestConfig {
-	& "$PSScriptRoot\Configuration\Config_Test.ps1"
+	& "$PSScriptRoot\Configuration\Config_PlagueHO.ps1"
 } # Function Test-DSCCreateTestConfig
 ##########################################################################################################################################
 Test-DSCToolsLoadModule
-#Test-DSCCreateTestConfig
-Test-DSCToolsSingle
+Test-DSCCreateTestConfig
+#Test-DSCToolsSingle
 #Test-DSCToolsMulti

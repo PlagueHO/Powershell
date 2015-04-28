@@ -1,14 +1,14 @@
-﻿# Set up the Configuration data obejct we'll pass to our config
+﻿# Sample configuration for Node01-Node07
 $ConfigurationData = @{
     AllNodes = @(
         @{NodeName = '*';PSDscAllowPlainTextPassword = $true};
-        @{NodeName = 'PLAGUE-MEMBER';Role=@('Web')};
-        @{NodeName = 'PLAGUE-RODC';Role=@('Web')};
-        @{NodeName = 'PLAGUE-IIS01';Role=@('Web')};
-        @{NodeName = 'PLAGUE-SQL2014';Role=@('Web')};
-        @{NodeName = 'PLAGUE-SC2012';Role=@('Web')};
-        @{NodeName = 'PLAGUE-SP2013';Role=@('Web')};
-        @{NodeName = 'PLAGUE-PROXY';Role=@('Web')};
+        @{NodeName = 'NODE01';Role=@('Web')};
+        @{NodeName = 'NODE02';Role=@('Web')};
+        @{NodeName = 'NODE03';Role=@('Web')};
+        @{NodeName = 'NODE04';Role=@('Web')};
+        @{NodeName = 'NODE05';Role=@('Web')};
+        @{NodeName = 'NODE06';Role=@('Web')};
+        @{NodeName = 'NODE07';Role=@('Web')};
     );
 } # $ConfigurationData
 
