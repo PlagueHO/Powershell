@@ -149,5 +149,5 @@ Function Test-DSCCreateTestConfig {
 ##########################################################################################################################################
 Test-DSCToolsLoadModule
 Test-DSCCreateTestConfig
-#Test-DSCToolsSingle
+Test-DSCToolsSingle
 #Test-DSCToolsMulti
