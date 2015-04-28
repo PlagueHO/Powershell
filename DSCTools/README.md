@@ -66,6 +66,22 @@ Get-Help -Name Enable-DSCPullServer -Full
 For more information.
 
 
+#### Function Set-DSCPullServerLogging
+
+Enable/Disable DSC pull server logging on one or more DSC Pull Servers.
+
+For example:
+```powershell
+Set-DSCPullServerLogging -ComputerName DSCPULLSRV01 -AnalyticLog $True -OperationalLog $True
+```
+
+See:
+```powershell
+Get-Help -Name Set-DSCPullServerLogging -Full
+```
+For more information.
+
+
 #### Function Start-DSCPullMode
 Configures one or mode nodes for Pull Mode.
 
@@ -104,17 +120,32 @@ Get-Help -Name Start-DSCPushMode -Full
 For more information.
 
 
-#### Function Get-DscConfigurationRemote
-Gets the current DSC configuration of a remote node.
+#### Function Get-xDscConfiguration
+Returns the DSC configuration for this machine or for a remote node.
 
 For example:
 ```powershell
-Get-DscConfigurationRemote -ComputerName DSCSVR01 -Credential (Get-Credential) -UseSSL
+Get-xDscConfiguration -ComputerName DSCSVR01 -Credential (Get-Credential) -UseSSL
 ```
 
 See:
 ```powershell
-Get-Help -Name Get-DscConfigurationRemote -Full
+Get-Help -Name Get-xDscConfiguration -Full
+```
+For more information.
+
+
+#### Function Get-xDscLocalConfigurationManager
+Returns the DSC Local Configuration Manager configuration for this machine or for a remote node.
+
+For example:
+```powershell
+Get-xDscLocalConfigurationManager -ComputerName DSCSVR01 -Credential (Get-Credential) -UseSSL
+```
+
+See:
+```powershell
+Get-Help -Name Get-xDscLocalConfigurationManager -Full
 ```
 For more information.
 

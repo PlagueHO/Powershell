@@ -13,66 +13,26 @@
 		There were many manual steps that could all go wrong. So I attempted to try and automate some of the steps involved with setting up
 		Pull servers and installing resource files onto them as well as configuring the LCM on the machines being configured.
 
-		The functions in this module should all multiple machines to be switched to pull mode (or back to push mode) with a single command.
+		The functions in this module are:
+		Invoke-DSCCheck - Forces the LCM on the specified nodes to trigger a DSC check.
+		Publish-DSCPullResources - Publishes DSC Resources to a DSC pull server.
+		Install-DSCResourceKit - Downloads and installs the DSC Resource Kit. It can also optionally publish the Resources to a pull server.
+		Enable-DSCPullServer - Installs and configures one or more servers as a DSC Pull Servers.
+		Set-DSCPullServerLogging - Enable/Disable DSC pull server logging on one or more DSC Pull Servers.
+		Start-DSCPullMode - Configures one or mode nodes for Pull Mode.
+		Start-DSCPushMode - Configures one or mode nodes for Push Mode.
+		Get-xDscConfiguration - Returns the DSC configuration for this machine or for a remote node.
+		Get-xDscLocalConfigurationManager - Returns the DSC Local Configuration Manager configuration for this machine or for a remote node.
 
-		An example of how this module can be used:
+		Example usage can be found in the file README.md.
 
-		# Configure where the pull server is and how it can be connected to.
-		$Script:DSCTools_DefaultPullServerName = 'DSCPULLSVR01'
-		$Script:DSCTools_DefaultPullServerProtocol = 'HTTPS'  # Pull server has a valid trusted cert installed
-		$Script:DSCTools_DefaultResourcePath = "c:\program files\windowspowershel\Modules\All Resources\"  # This is where the DSC resource module files are usually located.
-		$Script:DSCTools_DefaultPullServerResourcePath = "\\$Script:DSCTools_DefaultPullServerName\c$\DSC\Resources\"  # This is the path where a DSC Pull Server will look for Resources.
-		$Script:DSCTools_DefaultPullServerConfigurationPath = "\\$Script:DSCTools_DefaultPullServerName\c$\DSC\Configuration\"   # This is the path where a DSC Pull Server will look for MOF Files.
-		$Script:DSCTools_DefaultPullServerPhysicalPath = "c:\DSC\PSDSCPullServer\" # The location a Pull Server web site will be installed to.
-		$Script:DSCTools_DefaultComplianceServerPhysicalPath = "c:\DSC\PSDSCComplianceServer\" # The location a Pull Server compliance site will be installed to.
-		$Credential = Get-Credential
-
-		# These are the nodes that will become DSC Pull Servers
-		$PullServers = @( `
-			@{Name=$Script:DSCTools_DefaultPullServerName;CertificateThumbprint='3aaeef3f4b6dad0c8cb59930b48a9ffc25daa7d8';Credential=$Credential;} )
-
-		# These are the nodes that we are going to set up Pull mode for
-		$Nodes = @( `
-			@{Name='NODE01';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e1';RebootIfNeeded=$true;MofFile='c:\DSC\Configuration\NODE01.MOF'} , `
-			@{Name='NODE02';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e2';RebootIfNeeded=$true;MofFile='c:\DSC\Configuration\NODE02.MOF'} , `
-			@{Name='NODE03';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e3';RebootIfNeeded=$true;MofFile='c:\DSC\Configuration\NODE03.MOF'} , `
-			@{Name='NODE04';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e4';RebootIfNeeded=$true;MofFile='c:\DSC\Configuration\NODE04.MOF'} , `
-			@{Name='NODE05';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e5';RebootIfNeeded=$true;MofFile='c:\DSC\Configuration\NODE05.MOF'} , `
-			@{Name='NODE06';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e6';RebootIfNeeded=$true;MofFile='c:\DSC\Configuration\NODE06.MOF'} , `
-			@{Name='NODE07';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e7';RebootIfNeeded=$true;MofFile='c:\DSC\Configuration\NODE07.MOF'} )
-
-		# Create the folder structure on the Pull Server where the DSC files will be installed to
-		# If the default paths are used then this wouldn't need to be done as these paths usually already exist
-		New-Item -Path \\$DSCTools_DefaultPullServerName\c$\DSC\ -ItemType Directory
-		New-Item -Path $Script:DSCTools_DefaultPullServerResourcePath -ItemType Directory
-		New-Item -Path $Script:DSCTools_DefaultPullServerConfigurationPath -ItemType Directory
-	
-		# Download the DSC Resource Kit and install it to the local machine and to the DSC Pull Server
-		Install-DSCResourceKit -UseCache -Verbose
-		Install-DSCResourceKit -ModulePath "\\$Script:DSCTools_DefaultPullServerName\c$\program files\windowspowershell\modules\" -UseCache -Verbose
-
-		# Copy all the resources up to the pull server (zipped and with a checksum file).
-		Publish-DSCPullResources -Verbose
-
-		# Install a DSC Pull Server
-		Enable-DSCPullServer -Nodes $PullServers -Verbose
-
-		# Check the pull server
-		Get-DscConfigurationRemote -ComputerName $Script:DSCTools_DefaultPullServerName -UseSSL -Credential ($Credential) -Verbose
-
-		# Set all the nodes to pull mode and copy the config files over to the pull server.
-		Start-DSCPullMode -Nodes $Nodes -Verbose
-
-		# Force the all the machines to pull thier config from the Pull server (although we could just wait 30 minutes for this to happen automatically)
-		Invoke-DSCPull -Nodes $Nodes -Verbose
-
-		# Set all the nodes to back to push mode if we don't want to use Pul mode any more.
-		Start-DSCPushMode -Nodes $Nodes -Verbose
-
-		# Force the all the machines to reapply thier configuration (although we could just wait 30 minutes for this to happen automatically)
-		Invoke-DSCPull -Nodes $Nodes -Verbose
+.LINK
+		README.md
 
 .VERSIONS
+		1.3   2015-04-28   Daniel Scott-Raynsford       Added DSCTools.Package.ps1 Script
+														Added Get-xDSCLocalConfigurationManager CmdLet
+														Added Set-DSCPullServerLogging Cmdlet
 		1.2   2015-04-23   Daniel Scott-Raynsford       Added Install-DSCResourceKit CmdLet
 														Added Enable-DSCPullServer CmdLet
 		1.1   2014-11-22   Daniel Scott-Raynsford       Alowed Invoke-DSCPull to use a Nodes param
@@ -85,11 +45,6 @@
 		Add ability to build the DSC configuration files if the MOF can't be found but the PS1 file can be found.
 		Add support for passing credentials to Start-DSCPushMode
 		Force rebuild MOF if the PS1 file is newer.
-		Add function for enabling DSC Logging when LCM pull mode enabled:
-		Update-xDscEventLogStatus -ComputerName $ComputerName -Channel Analytic -Status Enabled
-		Update-xDscEventLogStatus -ComputerName $ComputerName -Channel Debug -Status Enabled
-		Update-xDscEventLogStatus -ComputerName $ComputerName -Channel Operational -Status Enabled
-
 #>
 
 
@@ -756,6 +711,124 @@ Function Enable-DSCPullServer {
 ##########################################################################################################################################
 
 ##########################################################################################################################################
+Function Set-DSCPullServerLogging {
+<#
+.SYNOPSIS
+		Enable/Disable DSC pull server logging on one or more DSC Pull Servers.
+
+.DESCRIPTION 
+     
+.PARAMETER Nodes
+		Must contain an array of hash tables. Each hash table will represent a pull server node that should be configured with logging.
+		
+		The hash table must contain the following entries:
+		Name = Name of the DSC Pull Server 
+
+		Each hash entry can also contain the following optional items. If each item is not specified it will default.
+		AnalyticLog = a boolean value used to enable/disable Analytic logging.
+		DebugLog = a boolean value used to enable/disable Debug logging.
+		OperationalLog = a boolean value used to enable/disable Operational logging.
+
+		For example:
+		@(@{Name='DSCPULLSRV01';Analytic=$True;Debug=$False;Operational=$True;},@{Name='DSCPULLSRV01';Analytic=$True;Debug=$False;Operational=$True;})
+
+.PARAMETER ComputerName
+		Name of the computer to configure the DSC Pull Server logging on.
+
+.PARAMETER AnalyticLog
+		A boolean value used to enable/disable Analytic logging.
+
+.PARAMETER DebugLog
+		A boolean value used to enable/disable Debug logging.
+
+.PARAMETER OperationaLog
+		A boolean value used to enable/disable Operational logging.
+
+.PARAMETER Credential
+		Credentials to use to configure the DSC Pull Server using. Defaults to none.
+
+.EXAMPLE 
+		 Set-DSCPullServerLogging -Nodes @(@{Name='DSCPULLSRV01';Analytic=$True;Debug=$False;Operational=$True;},@{Name='DSCPULLSRV01';Analytic=$True;Debug=$False;Operational=$True;})
+		 This command will enable Analytic and Operational logging for DSC Pull Servers DSCPULLSRV01 and DSCPULLSRV02.
+
+.EXAMPLE 
+		 Set-DSCPullServerLogging -ComputerName DSCPULLSRV01 -Analytic $True -Debug $False -Operational $True
+		 This command will enable Analytic and Operational logging for DSC Pull Server DSCPULLSRV01.
+#>
+    [CmdletBinding()]
+    Param (
+        [Parameter(ParameterSetName='ComputerName')]
+		[ValidateNotNullOrEmpty()]
+		[String]$ComputerName,
+
+        [Parameter(ParameterSetName='ComputerName')]
+		[ValidateNotNullOrEmpty()]
+	    [PSCredential]$Credential,
+
+		[Boolean]$AnalyticLog=$false,
+
+		[Boolean]$DebugLog=$false,
+
+		[Boolean]$OperationalLog=$false,
+
+        [Parameter(ParameterSetName='Nodes')]
+        [Array]$Nodes
+    )
+    
+	If ($ComputerName) {
+		$Nodes = @{
+			Name=$ComputerName;
+			Credential=$Credential;
+		}
+	} # If
+	Foreach ($Node In $Nodes) {
+		# Create an array of additional parameters that will be added to the end of the command to set the log
+		$Parameters = @()
+
+		# Was a computer name provided?
+		[String]$NodeName = $Node.Name
+		If (-not (($NodeName -eq '') -or ($NodeName -eq $null))) {
+			$Parameters +- @{ComputerName=$NodeName}
+		} # If
+
+		# Were credentials provided
+	    If ($Node.Credential) {
+			$Parameters +- @{Credential=$Node.Credential;}
+		} Elseif ($Credential) {
+			$Parameters +- @{Credential=$Credential;}			
+		}
+
+		# Enable/Disable the Analytic Log
+		If (($Node.AnalyticLog) -or ($AnalyticLog)) {
+			Write-Verbose "Set-DSCPullServerLogging: Pull Server $NodeName Analytic Logging Enabled"
+			Update-xDscEventLogStatus -Channel Analytic -Status Enabled @Parameters
+		} Else {
+			Write-Verbose "Set-DSCPullServerLogging: Pull Server $NodeName Analytic Logging Disabled"
+			Update-xDscEventLogStatus -Channel Analytic -Status Disabled @Parameters
+		} # If
+
+		# Enable/Disable the Debug Log
+		If (($Node.DebugLog) -or ($DebugLog)) {
+			Write-Verbose "Set-DSCPullServerLogging: Pull Server $NodeName Debug Logging Enabled"
+			Update-xDscEventLogStatus -Channel Debug -Status Enabled @Parameters
+		} Else {
+			Write-Verbose "Set-DSCPullServerLogging: Pull Server $NodeName Debug Logging Disabled"
+			Update-xDscEventLogStatus -Channel Debug -Status Disabled @Parameters
+		} # If
+
+		# Enable/Disable the Operational Log
+		If (($Node.OperationalLog) -or ($OperationalLog)) {
+			Write-Verbose "Set-DSCPullServerLogging: Pull Server $NodeName Operational Logging Enabled"
+			Update-xDscEventLogStatus -Channel Operational -Status Enabled @Parameters
+		} Else {
+			Write-Verbose "Set-DSCPullServerLogging: Pull Server $NodeName Operational Logging Disabled"
+			Update-xDscEventLogStatus -Channel Operational -Status Disabled @Parameters 
+		} # If
+	} # Foreach
+} # Set-DSCPullServerLogging
+##########################################################################################################################################
+
+##########################################################################################################################################
 Function Start-DSCPullMode {
 <#
 .SYNOPSIS
@@ -1134,13 +1207,13 @@ Function Start-DSCPushMode {
 ##########################################################################################################################################
 
 ##########################################################################################################################################
-Function Get-DscConfigurationRemote {
+Function Get-xDscConfiguration {
 <#
 .SYNOPSIS
-        Gets the current DSC configuration of a remote node.
+        Returns the DSC configuration for this machine or for a remote node.
 
 .DESCRIPTION
-        The Get-DscConfiguration cmdlet gets the current configuration of the node, if configuration exists. Specify computers by using Common Information Model (CIM) sessions. If you do not specify a target computer, the cmdlet gets the configuration from the local computer.
+        The Get-xDscConfiguration cmdlet gets the current configuration of the node, if configuration exists. Specify computers by using CIM sessions or the ComputerName parameter. If you do not specify a target computer, the cmdlet gets the configuration from the local computer.
 
 .PARAMETER AsJob
         Runs the cmdlet as a background job. Use this parameter to run commands that take a long time to complete.
@@ -1163,11 +1236,11 @@ Function Get-DscConfigurationRemote {
         Specifies the maximum number of concurrent operations that can be established to run the cmdlet. If this parameter is omitted or a value of 0 is entered, then Windows PowerShell® calculates an optimum throttle limit for the cmdlet based on the number of CIM cmdlets that are running on the computer. The throttle limit applies only to the current cmdlet, not to the session or to the computer.
 
 .EXAMPLE
-        PS C:\> Get-DscConfigurationRemote
+        PS C:\> Get-xDscConfiguration
         This command gets the current configuration for the local computer.
 
 .EXAMPLE
-        PS C:\> Get-DscConfigurationRemote -ComputerName DSCSVR01 -Credential (Get-Credential) -UseSSL
+        PS C:\> Get-xDscConfiguration -ComputerName DSCSVR01 -Credential (Get-Credential) -UseSSL
         This example gets the current configuration from computer DSCSVR01, connecting to it via SSL and the credentials supplied.
 
 .INPUTS
@@ -1177,8 +1250,6 @@ Function Get-DscConfigurationRemote {
 #>
     [CmdletBinding(PositionalBinding=$false)]
     param(
-        [Parameter(
-			ParameterSetName='CimSession')]
         [Alias('Session')]
         [ValidateNotNullOrEmpty()]
         [Microsoft.Management.Infrastructure.CimSession[]]
@@ -1254,8 +1325,131 @@ Function Get-DscConfigurationRemote {
             throw
         } # try
     } # end
-} # Function Get-DscConfigurationRemote
+} # Function Get-xDscConfiguration
 ##########################################################################################################################################
+
+##########################################################################################################################################
+Function Get-xDscLocalConfigurationManager {
+<#
+.SYNOPSIS
+        Returns the DSC Local Configuration Manager configuration for this machine or for a remote node.
+
+.DESCRIPTION
+        The Get-xDscLocalConfigurationManager cmdlet gets the current LCM configuration of the node, if configuration exists. Specify computers by using CIM sessions or the ComputerName parameter. If you do not specify a target computer, the cmdlet gets the configuration from the local computer.
+
+.PARAMETER AsJob
+        Runs the cmdlet as a background job. Use this parameter to run commands that take a long time to complete.
+        The cmdlet immediately returns an object that represents the job and then displays the command prompt. You can continue to work in the session while the job completes. To manage the job, use the *-Job cmdlets. To get the job results, use the Receive-Job cmdlet.
+        For more information about Windows PowerShell® background jobs, see about_Jobs.
+
+.PARAMETER CimSession
+        Runs the cmdlet in a remote session or on a remote computer. Enter a computer name or a session object, such as the output of a New-CimSession or Get-CimSession cmdlet. The default is the current session on the local computer.
+
+.PARAMETER ComputerName
+        Runs the cmdlet on a remote computer, forming a CIM session connection and then closing it after getting the configuration.
+
+.PARAMETER UseSSL
+        Runs the cmdlet on a remote computer connecting with SSL.
+
+.PARAMETER Credemtial
+        Uses these credentials to connect to the remote computer.
+
+.PARAMETER ThrottleLimit
+        Specifies the maximum number of concurrent operations that can be established to run the cmdlet. If this parameter is omitted or a value of 0 is entered, then Windows PowerShell® calculates an optimum throttle limit for the cmdlet based on the number of CIM cmdlets that are running on the computer. The throttle limit applies only to the current cmdlet, not to the session or to the computer.
+
+.EXAMPLE
+        PS C:\> Get-xDscLocalConfigurationManager
+        This command gets the current configuration for the local computer.
+
+.EXAMPLE
+        PS C:\> Get-xDscLocalConfigurationManager -ComputerName DSCSVR01 -Credential (Get-Credential) -UseSSL
+        This example gets the current configuration from computer DSCSVR01, connecting to it via SSL and the credentials supplied.
+
+.INPUTS
+.OUTPUTS
+.LINK
+        http://go.microsoft.com/fwlink/?LinkID=288760
+#>
+    [CmdletBinding(PositionalBinding=$false)]
+    param(
+        [Alias('Session')]
+        [ValidateNotNullOrEmpty()]
+        [Microsoft.Management.Infrastructure.CimSession[]]
+        ${CimSession},
+
+        [int]
+        ${ThrottleLimit},
+
+        [switch]
+        ${AsJob},
+
+        [Parameter(ParameterSetName='ComputerName')]
+        [ValidateNotNullOrEmpty()]
+		[String]
+		${ComputerName},
+
+        [Parameter(ParameterSetName='ComputerName')]
+        [PSCredential]
+		${Credential},
+
+        [Parameter(ParameterSetName='ComputerName')]
+        [switch]
+		${UseSSL}
+		)
+
+    begin {
+        try {
+            $outBuffer = $null
+            if ($PSBoundParameters.TryGetValue('OutBuffer', [ref]$outBuffer)) {
+                $PSBoundParameters['OutBuffer'] = 1
+            } # if
+
+            $wrappedCmd = $ExecutionContext.InvokeCommand.GetCommand('Get-xDscLocalConfigurationManager', [System.Management.Automation.CommandTypes]::Function)
+			if ($ComputerName) {
+				$cimSessionParameters = @{}
+				[Void]$PSBoundParameters.Remove('ComputerName')
+				if ($UseSSL) {
+					[Void]$PSBoundParameters.Remove('UseSSL')
+					$cimSessionOption = New-CimSessionOption -SkipCACheck -SkipCNCheck -SkipRevocationCheck -UseSsl
+					$cimSessionParameters += @{SessionOption=$cimSessionOption}
+				} # if
+				if ($Credential) {
+					[Void]$PSBoundParameters.Remove('Credential')
+					$cimSessionParameters += @{Credential=$Credential}
+				} # if
+				$cimSession = New-CimSession -ComputerName $ComputerName @CimSessionParameters
+				$scriptCmd = {& $wrappedCmd @PSBoundParameters -CimSession $cimSession }
+			} else {
+				$scriptCmd = {& $wrappedCmd @PSBoundParameters }
+			} # if
+            $steppablePipeline = $scriptCmd.GetSteppablePipeline($myInvocation.CommandOrigin)
+            $steppablePipeline.Begin($PSCmdlet)
+        } catch {
+            throw
+        } # try
+    } # begin
+
+    process {
+        try {
+            $steppablePipeline.Process($_)
+        } catch {
+            throw
+        } # try
+    } # process
+
+    end {
+        try {
+            $steppablePipeline.End()
+			if ($ComputerName) {
+				Remove-CimSession -CimSession $cimSession
+			} # if
+        } catch {
+            throw
+        } # try
+    } # end
+} # Function Get-xDscLocalConfigurationManager
+##########################################################################################################################################
+
 
 ##########################################################################################################################################
 # DSC Configurations for configuring DSC Pull Server and LCM
@@ -1274,6 +1468,6 @@ Function Get-DscConfigurationRemote {
 # Exports
 ##########################################################################################################################################
 Export-ModuleMember `
-    -Function Invoke-DSCCheck,Publish-DSCPullResources,Install-DSCResourceKit,Start-DSCPullMode,Start-DSCPushMode,Enable-DSCPullServer,Get-DSCConfigurationRemote `
+    -Function Invoke-DSCCheck,Publish-DSCPullResources,Install-DSCResourceKit,Start-DSCPullMode,Start-DSCPushMode,Enable-DSCPullServer,Set-DSCPullServerLogging,Get-xDSCConfiguration,Get-xDscLocalConfigurationManager `
     -Variable DSCTools_Default*,DSCTools_PSVersion
 ##########################################################################################################################################

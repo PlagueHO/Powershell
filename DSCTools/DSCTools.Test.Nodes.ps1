@@ -42,8 +42,12 @@ Function Test-DSCToolsMulti {
     # Install a DSC Pull Server
     Enable-DSCPullServer -Nodes $PullServers -Verbose
 
+    # Set DSC Pull Server Logging Mode
+    Set-DSCPullServerLogging -Nodes $PullServers -AnalyticLog $True -OperationalLog $True -Verbose
+
     # Check the pull server
-    Get-DscConfigurationRemote -ComputerName $Script:DSCTools_DefaultPullServerName -UseSSL -Credential ($Credential) -Verbose
+    Get-xDscConfiguration -ComputerName $Script:DSCTools_DefaultPullServerName -UseSSL -Credential ($Credential) -Verbose
+    Get-xDscLocalConfigurationManager -ComputerName $Script:DSCTools_DefaultPullServerName -UseSSL -Credential ($Credential) -Verbose
 
     # Set all the nodes to pull mode and copy the config files over to the pull server.
     Start-DSCPullMode -Nodes $Nodes -Verbose
@@ -96,8 +100,20 @@ Function Test-DSCToolsSingle {
         -ComplianceServerPhysicalPath "c:\DSC\PSDSCComplianceServer\" `
         -Verbose
 
+    # Set DSC Pull Server Logging Mode
+   Set-DSCPullServerLogging `
+		-ComputerName $PullServer `
+		-AnalyticLog $True `
+		-OperationalLog $True `
+		-Verbose
+
     # Check the pull server
-    Get-DscConfigurationRemote `
+    Get-xDscConfiguration `
+        -ComputerName $PullServer `
+        -UseSSL `
+        -Credential ($Credential) `
+        -Verbose
+    Get-xDscLocalConfigurationManager `
         -ComputerName $PullServer `
         -UseSSL `
         -Credential ($Credential) `
