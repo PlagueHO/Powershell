@@ -49,13 +49,13 @@ Function Test-DSCToolsMulti {
     Start-DSCPullMode -Nodes $Nodes -Verbose
 
     # Force the all the machines to pull thier config from the Pull server (although we could just wait 15 minutes for this to happen automatically)
-    Invoke-DSCCheck -Nodes $Nodes -Verbose
+    # Invoke-DSCCheck -Nodes $Nodes -Verbose
 
     # Set all the nodes to back to push mode if we don't want to use Pull mode any more.
-    Start-DSCPushMode -Nodes $Nodes -Verbose
+    # Start-DSCPushMode -Nodes $Nodes -Verbose
 
     # Force the all the machines to reapply thier configuration (although we could just wait 15 minutes for this to happen automatically)
-    Invoke-DSCCheck -Nodes $Nodes -Verbose
+    # Invoke-DSCCheck -Nodes $Nodes -Verbose
 
 } # Function Test-DSCToolsMulti
 ##########################################################################################################################################
@@ -114,22 +114,22 @@ Function Test-DSCToolsSingle {
 		-Verbose
 
     # Force the all the machines to pull thier config from the Pull server (although we could just wait 15 minutes for this to happen automatically)
-    Invoke-DSCCheck `
-		-ComputerName PLAGUE-MEMBER `
-		-Verbose
+    # Invoke-DSCCheck `
+	# 	-ComputerName PLAGUE-MEMBER `
+	# 	-Verbose
 
 	# Set all the nodes to back to push mode if we don't want to use Pull mode any more.
-    Start-DSCPushMode `
-		-ComputerName PLAGUE-MEMBER `
-		-RebootIfNeeded `
-		-MofFile "$PSScriptRoot\Configuration\Config_Test\PLAGUE-MEMBER.MOF" `
-		-ConfigurationMode 'ApplyAndAutoCorrect' `
-		-Verbose
+    # Start-DSCPushMode `
+	# 	-ComputerName PLAGUE-MEMBER `
+	#	-RebootIfNeeded `
+	#	-MofFile "$PSScriptRoot\Configuration\Config_Test\PLAGUE-MEMBER.MOF" `
+	#	-ConfigurationMode 'ApplyAndAutoCorrect' `
+	#	-Verbose
 
     # Force the all the machines to reapply thier configuration (although we could just wait 15 minutes for this to happen automatically)
-    Invoke-DSCCheck `
-		-ComputerName PLAGUE-MEMBER `
-		-Verbose
+    # Invoke-DSCCheck `
+	#	-ComputerName PLAGUE-MEMBER `
+	#	-Verbose
 
 } # Function Test-DSCToolsSingle
 ##########################################################################################################################################

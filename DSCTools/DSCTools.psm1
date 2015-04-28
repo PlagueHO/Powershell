@@ -83,6 +83,7 @@
 
 .TODO
 		Add ability to build the DSC configuration files if the MOF can't be found but the PS1 file can be found.
+		Add support for passing credentials to Start-DSCPushMode
 		Force rebuild MOF if the PS1 file is newer.
 		Add function for enabling DSC Logging when LCM pull mode enabled:
 		Update-xDscEventLogStatus -ComputerName $ComputerName -Channel Analytic -Status Enabled
@@ -1045,7 +1046,7 @@ Function Start-DSCPushMode {
     )
     
     # Set up a temporary path
-    $TempPath = "$Env:TEMP\Start-DSCPullMode"
+    $TempPath = "$Env:TEMP\Start-DSCPushMode"
     Write-Verbose "Start-DSCPushMode: Creating Temporary Folder $TempPath"
     New-Item -Path $TempPath -ItemType 'Directory' -Force | Out-Null
 
@@ -1086,7 +1087,7 @@ Function Start-DSCPushMode {
         } Else {
             $SourceMof = $MofFile
         }
-        Write-Verbose "Start-DSCPushMode:Node $NodeName Will Use Configuration MOF $SourceMof"
+        Write-Verbose "Start-DSCPushMode: Node $NodeName Will Use Configuration MOF $SourceMof"
 
         # If the MOF doesn't throw an error?
         If (-not (Test-Path -PathType Leaf -Path $SourceMof)) {
@@ -1095,8 +1096,15 @@ Function Start-DSCPushMode {
             $NodeError = $true
         }
 
-        If (-not $NodeError) {
-            # Create the LCM MOF File to set the nodes LCM to pull mode
+		Try {
+			Start-DscConfiguration -ComputerName $NodeName -Path (Split-Path -Path $SourceMof)
+		} Catch {
+            Write-Error "Start-DSCPushMode: Node $NodeName Configuration MOF $SourceMof Could Not Be Applied because an Error Occurred"
+            $NodeError = $true
+		}
+
+		If (-not $NodeError) {
+            # Create the LCM MOF File to set the nodes LCM to push mode
 			. "$(Join-Path -Path $PSScriptRoot -ChildPath 'Configuration\Config_SetLCMPushMode.ps1')"
             Config_SetLCMPushMode `
                 -NodeName $NodeName `

@@ -5,8 +5,7 @@ Powershell
 This module provides helper functions for setting up and using Desired State Configration.
 
 ### Overview
-Anyone who has attempted to install and use DSC and DSC pull servers knows that it can be a little bit of a tricky process. This module attempts to simplify the process by putting all the pieces together in simple functions.
-
+Anyone who has attempted to install and use DSC and DSC pull servers knows that it can be a bit of a complicated process. This module attempts to simplify the process by putting all the pieces together in simple functions.
 #### Function Invoke-DSCCheck
 Forces the LCM on the specified nodes to trigger a DSC check.
 
@@ -162,9 +161,9 @@ This example should be run under a user account that has administrator privilege
 4. Install DSCPULLSVR01 as a DSC Pull Server.
 5. Pull the LCM DSC Configuration from the DSCPULLSVR01 Pull Server to confirm it has been configured as a Pull Server.
 6. Set NODE01 node to use the DSCPULLSVR01 Pull Server and load the configuration files for it onto the DSCPULLSVR01 Pull Server.
-7. Force NODE01 node to pull DSC configuration from the DSCPULLSVR01 Pull Server.
-8. Set NODE01 to use Push Mode and apply the DSC configration files.
-9. Force NODE01 to apply the loaded Push Mode DSC configuration files.
+7. Force NODE01 node to pull DSC configuration from the DSCPULLSVR01 Pull Server (commended out).
+8. Set NODE01 to use Push Mode and apply the DSC configration files (commented out).
+9. Force NODE01 to apply the loaded Push Mode DSC configuration files (commented out).
 ```powershell
     $PullServer = 'DSCPULLSVR01'
     $Credential = Get-Credential
@@ -218,22 +217,22 @@ This example should be run under a user account that has administrator privilege
 		-Verbose
 
     # Force the all the machines to pull thier config from the Pull server (although we could just wait 15 minutes for this to happen automatically)
-    Invoke-DSCCheck `
-		-ComputerName NODE01 `
-		-Verbose
+    # Invoke-DSCCheck `
+	#	-ComputerName NODE01 `
+	#	-Verbose
 
 	# Set all the nodes to back to push mode if we don't want to use Pull mode any more.
-    Start-DSCPushMode `
-		-ComputerName NODE01 `
-		-RebootIfNeeded `
-		-MofFile "$PSScriptRoot\Configuration\Config_Test\NODE01.MOF" `
-		-ConfigurationMode 'ApplyAndAutoCorrect' `
-		-Verbose
+    # Start-DSCPushMode `
+	#	-ComputerName NODE01 `
+	#	-RebootIfNeeded `
+	#	-MofFile "$PSScriptRoot\Configuration\Config_Test\NODE01.MOF" `
+	#	-ConfigurationMode 'ApplyAndAutoCorrect' `
+	#	-Verbose
 
     # Force the all the machines to reapply thier configuration (although we could just wait 15 minutes for this to happen automatically)
-    Invoke-DSCCheck `
-		-ComputerName NODE01 `
-		-Verbose
+    # Invoke-DSCCheck `
+	#	-ComputerName NODE01 `
+	#	-Verbose
 ```
 
 
@@ -247,9 +246,9 @@ This example should be run under a user account that has administrator privilege
 4. Install DSCPULLSVR01 as a DSC Pull Server.
 5. Pull the LCM DSC Configuration from the DSCPULLSVR01 Pull Server to confirm it has been configured as a Pull Server.
 6. Set the Nodes defined in the Nodes array to use the DSC Pull Server and load the configuration files for them onto the Pull Server.
-7. Force the Nodes to pull DSC configuration from the Pull Server.
-8. Set the Nodes defined in the Nodes array to use Push Mode and apply the DSC configration files.
-9. Force the Nodes to apply the loaded Push Mode DSC configuration files.
+7. Force the Nodes to pull DSC configuration from the Pull Server (commented out).
+8. Set the Nodes defined in the Nodes array to use Push Mode and apply the DSC configration files (commented out).
+9. Force the Nodes to apply the loaded Push Mode DSC configuration files (commented out).
 ```powershell    
     # Configure where the pull server is and how it can be connected to.
     $Script:DSCTools_DefaultPullServerName = 'DSCPULLSVR02'
@@ -298,11 +297,11 @@ This example should be run under a user account that has administrator privilege
     Start-DSCPullMode -Nodes $Nodes -Verbose
 
     # Force the all the machines to pull thier config from the Pull server (although we could just wait 15 minutes for this to happen automatically)
-    Invoke-DSCCheck -Nodes $Nodes -Verbose
+    # Invoke-DSCCheck -Nodes $Nodes -Verbose
 
     # Set all the nodes to back to push mode if we don't want to use Pul mode any more.
-    Start-DSCPushMode -Nodes $Nodes -Verbose
+    # Start-DSCPushMode -Nodes $Nodes -Verbose
 
     # Force the all the machines to reapply thier configuration (although we could just wait 15 minutes for this to happen automatically)
-    Invoke-DSCCheck -Nodes $Nodes -Verbose
+    # Invoke-DSCCheck -Nodes $Nodes -Verbose
 ```
