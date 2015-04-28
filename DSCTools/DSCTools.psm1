@@ -154,7 +154,7 @@
 [Float]$Script:DSCTools_PSVersion = 4.0
 
 # Get the PS Version to a variable for easier access.
-[Int]$Script:PSVersion = $Script:PSVersionTable.PSVersion.Major
+[Int]$Script:PSVersion = $PSVersionTable.PSVersion.Major
 ##########################################################################################################################################
 
 ##########################################################################################################################################
@@ -188,9 +188,9 @@ Function UnzipFile ([String]$ZipFileName,[String]$DestinationPath)
 Function ZipFolder ([String]$ZipFileName,[String]$SourcePath)
 {
 	If ($Script:PSVersion -lt 5) {
-        Get-ChildItem -Path $ResourcePath -Recurse | Write-Zip -IncludeEmptyDirectories -OutputPath $ZipFileName -EntryPathRoot $SourcePath -Level 9
+        Get-ChildItem -Path $SourcePath -Recurse | Write-Zip -IncludeEmptyDirectories -OutputPath $ZipFileName -EntryPathRoot $SourcePath -Level 9
 	} Else {
-		Compress-Archive -DestinationPath $ZipFileName -Path $SourcePath -CompressionLevel Optimal
+		Compress-Archive -DestinationPath $ZipFileName -Path "$SourcePath\*" -CompressionLevel Optimal
 	} # If
 } # Function ZipFolder
 ##########################################################################################################################################
