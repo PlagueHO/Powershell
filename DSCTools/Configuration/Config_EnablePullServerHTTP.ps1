@@ -1,7 +1,7 @@
 ##########################################################################################################################################
-# Configuration Config_EnablePullServer
+# Configuration Config_EnablePullServerHTTP
 ##########################################################################################################################################
-Configuration Config_EnablePullServer {
+Configuration Config_EnablePullServerHTTP {
     Param (
         [Parameter(
             Mandatory=$true
@@ -39,42 +39,43 @@ Configuration Config_EnablePullServer {
 	Import-DSCResource -ModuleName xPSDesiredStateConfiguration
 
 	Node $NodeName {
-        WindowsFeature WebServer
-        {
-          Ensure = "Present"
-          Name  = "Web-Server"
-        }
+		WindowsFeature WebServer
+		{
+			Ensure = "Present"
+			Name  = "Web-Server"
+		}
 
-        WindowsFeature DSCServiceFeature
-        {
-          Ensure = "Present"
-          Name  = "DSC-Service"
-        }
+		WindowsFeature DSCServiceFeature
+		{
+			Ensure = "Present"
+			Name  = "DSC-Service"
+		}
 
-        xDscWebService PSDSCPullServer
-        {
-          Ensure = "Present"
-          EndpointName = "PSDSCPullServer"
-          Port = $PullServerPort
-          PhysicalPath = $PullServerPhysicalPath
-          CertificateThumbPrint = $CertificateThumbprint
-          ModulePath = $PullServerResourcePath
-          ConfigurationPath = $PullServerConfigurationPath
-          State = "Started"
-          DependsOn = "[WindowsFeature]DSCServiceFeature"
-        }
+		xDscWebService PSDSCPullServer
+		{
+			Ensure = "Present"
+			EndpointName = "PSDSCPullServer"
+			Port = $PullServerPort
+			PhysicalPath = $PullServerPhysicalPath
+			CertificateThumbPrint = $CertificateThumbprint
+			ModulePath = $PullServerResourcePath
+			ConfigurationPath = $PullServerConfigurationPath
+			State = "Started"
+			IsComplianceServer = $false
+			DependsOn = "[WindowsFeature]DSCServiceFeature"
+		}
 
-        xDscWebService PSDSCComplianceServer
-        {
-          Ensure  = "Present"
-          EndpointName = $ComplianceServerEndpointName
-          Port = $ComplianceServerPort
-          PhysicalPath = $ComplianceServerPhysicalPath
-          CertificateThumbPrint = $CertificateThumbprint
-          State = "Started"
-          IsComplianceServer = $true
-          DependsOn        = ("[WindowsFeature]DSCServiceFeature","[xDSCWebService]PSDSCPullServer")
-        }
+		xDscWebService PSDSCComplianceServer
+		{
+			Ensure  = "Present"
+			EndpointName = $ComplianceServerEndpointName
+			Port = $ComplianceServerPort
+			PhysicalPath = $ComplianceServerPhysicalPath
+			CertificateThumbPrint = $CertificateThumbprint
+			State = "Started"
+			IsComplianceServer = $true
+			DependsOn = ("[WindowsFeature]DSCServiceFeature","[xDSCWebService]PSDSCPullServer")
+		}
 	} # Node $NodeName
-} # Configuration Config_EnablePullServer
+} # Configuration Config_EnablePullServerHTTP
 ##########################################################################################################################################

@@ -3,14 +3,10 @@
 ##########################################################################################################################################
 Configuration Config_SetLCMPullMode {
     Param (
-        [Parameter(
-            Mandatory=$true
-            )]
+        [Parameter(Mandatory=$true)]
         [string]$NodeName,
 
-        [Parameter(
-            Mandatory=$true
-            )]
+        [Parameter(Mandatory=$true)]
         [string]$NodeGuid,
 
 		[ValidateSet('ApplyAndAutoCorrect','ApplyAndMonitor','ApplyOnly')]
@@ -19,10 +15,14 @@ Configuration Config_SetLCMPullMode {
         [ValidateNotNullOrEmpty()]
         [boolean]$RebootNodeIfNeeded = $false,
 
-        [Parameter(
-            Mandatory=$true
-            )]
-        [string]$PullServerURL
+        [Parameter(Mandatory=$true)]
+        [string]$PullServerURL,
+
+        [ValidateNotNullOrEmpty()]
+        [PSCredential]$Credential,
+
+        [ValidateNotNullOrEmpty()]
+        [String]$CertificateId
     ) # Param
 
     If ($ConfigurationMode -notin ('ApplyAndAutoCorrect','ApplyAndMonitor','ApplyOnly')) {
@@ -59,6 +59,8 @@ Configuration Config_SetLCMPullMode {
 			DownloadManagerName = $DownloadManagerName
 			DownloadManagerCustomData = $DownloadManagerCustomData
             RefreshFrequencyMins = 30
+			Credential = $Credential
+			CertificateId = $CertificateId
 		} # LocalConfigurationManager
 	} # Node $NodeName
 } # Configuration Config_SetLCMPullMode

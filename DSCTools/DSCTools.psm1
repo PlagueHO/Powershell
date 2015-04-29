@@ -45,6 +45,7 @@
 		Add ability to build the DSC configuration files if the MOF can't be found but the PS1 file can be found.
 		Add support for passing credentials to Start-DSCPushMode
 		Force rebuild MOF if the PS1 file is newer.
+		Add support for Nodes to provide credentials to connect to a Pull Server.
 #>
 
 
@@ -61,6 +62,7 @@
 
 # This is the protocol that will be used by the DSC machines to connect to the pull server. This must be HTTP or HTTPS.
 # If HTTPS is used then the HTTPS certificate on your Pull server must be trusted by all DSC Machines.
+# This can also be set to SMB to use a pull server SMB share.
 [String]$Script:DSCTools_DefaultPullServerProtocol = 'HTTP'
 
 # This is the default endpoint name a Pull server will be created as when it is installed by Enable-DSCPullServer.
@@ -500,7 +502,9 @@ Function Enable-DSCPullServer {
 
 		The function will:
 		1. Create the node DSC Pull Server configuration MOF file for the server.
-		2. Execute the node DSC Pull Server configuration MOF on the server. 
+		2. Execute the node DSC Pull Server configuration MOF on the server.
+
+		If the Pull Server Protocol is set to SMB then the Ports, Endpoint, 
      
 .PARAMETER Nodes
 		Must contain an array of hash tables. Each hash table will represent a node that should be configured as a DSC Pull Server.
@@ -509,6 +513,7 @@ Function Enable-DSCPullServer {
 		Name = Name of the computer to install as a DSC Pull Server.
 
 		Each hash entry can also contain the following optional items. If each item is not specified it will default.
+		PullServerProtocol = The protocol the Pull Server will use. Defaults to $Script:DSCTools_DefaultPullServerProtocol.
 		PullServerPort = The port the Pull Server will run on. Defaults to $Script:DSCTools_DefaultPullServerPort.
 		ComplianceServerPort = The port the Complaince Server will run on. Defaults to $Script:DSCTools_DefaultComplianceServerPort.
 		CertificateThumbprint = The certificate thumbprint to use if HTTPS should be used. Defaults to using HTTP.
@@ -525,6 +530,9 @@ Function Enable-DSCPullServer {
 
 .PARAMETER ComputerName
 		Name of the computer to install as a DSC Pull Server.
+
+.PARAMETER PullServerProtocol
+		The protocol the Pull Server will use. Defaults to $Script:DSCTools_DefaultPullServerProtocol.
 
 .PARAMETER PullServerPort
 		The port the Pull Server will run on. Defaults to $Script:DSCTools_DefaultPullServerPort.
@@ -569,6 +577,10 @@ Function Enable-DSCPullServer {
         [Parameter(ParameterSetName='ComputerName')]
 		[ValidateNotNullOrEmpty()]
 		[String]$ComputerName,
+
+        [Parameter(ParameterSetName='ComputerName')]
+		[ValidateSet('HTTP','HTTPS','SMB')]
+		[String]$PullServerProtocol,
 
         [Parameter(ParameterSetName='ComputerName')]
 		[ValidateNotNullOrEmpty()]
@@ -622,6 +634,7 @@ Function Enable-DSCPullServer {
 	If ($ComputerName) {
 		$Nodes = @{
 			Name=$ComputerName;
+			PullServerProtocol = $PullServerProtocol;
 			PullServerPort = $PullServerPort;
 			ComplianceServerPort = $ComplianceServerPort;
 			CertificateThumbprint = $CertificateThumbprint;
@@ -641,64 +654,103 @@ Function Enable-DSCPullServer {
 			Throw 'Node name is empty.'
 		} # If
 
-        Write-Verbose "Enable-DSCPullServer: Enabling Pull Server $NodeName"
-		# Get all the Pull Server properties from the node or use defaults.
-		[Int]$PullServerPort = $Node.PullServerPort
-		If (($PullServerPort -eq 0) -or ($PullServerPort -eq $null)) { $PullServerPort = $Script:DSCTools_DefaultPullServerPort }
-		[Int]$ComplianceServerPort = $Node.ComplianceServerPort
-		If (($ComplianceServerPort -eq 0) -or ($ComplianceServerPort -eq $null)) { $ComplianceServerPort = $Script:DSCTools_DefaultComplianceServerPort }
-		[String]$CertificateThumbprint = $Node.CertificateThumbprint
-		If (($CertificateThumbprint -eq '') -or ($CertificateThumbprint -eq $null)) { $CertificateThumbprint = 'AllowUnencryptedTraffic' }
-		[String]$PullServerEndpointName = $Node.PullServerEndpointName
-		If (($PullServerEndpointName -eq '') -or ($PullServerEndpointName -eq $null)) { $PullServerEndpointName = $Script:DSCTools_DefaultPullServerEndpointName }
-		[String]$PullServerResourcePath = $Node.PullServerResourcePath
-		If (($PullServerResourcePath -eq '') -or ($PullServerResourcePath -eq $null)) { $PullServerResourcePath = $Script:DSCTools_DefaultPullServerResourcePath }
-	    [String]$PullServerConfigurationPath = $Node.PullServerConfigurationPath
-		If (($PullServerConfigurationPath -eq '') -or ($PullServerConfigurationPath -eq $null)) { $PullServerConfigurationPath = $Script:DSCTools_DefaultPullServerConfigurationPath }
-	    [String]$PullServerPhysicalPath = $Node.PullServerPhysicalPath
-		If (($PullServerPhysicalPath -eq '') -or ($PullServerPhysicalPath -eq $null)) { $PullServerPhysicalPath = $Script:DSCTools_DefaultPullServerPhysicalPath }
-	    [String]$ComplianceServerEndpointName = $Node.ComplianceServerEndpointName
-		If (($ComplianceServerEndpointName -eq '') -or ($ComplianceServerEndpointName -eq $null)) { $ComplianceServerEndpointName = $Script:DSCTools_DefaultComplianceServerEndpointName }
-	    [String]$ComplianceServerPhysicalPath = $Node.ComplianceServerPhysicalPath
-		If (($ComplianceServerPhysicalPath -eq '') -or ($ComplianceServerPhysicalPath -eq $null)) { $ComplianceServerPhysicalPath = $Script:DSCTools_DefaultComplianceServerPhysicalPath }
-	    [PSCredential]$Credential = $Node.Credential
-		Try {
-			Write-Verbose "Enable-DSCPullServer: Pull Server MOF $TempPath\$NodeName.MOF for $NodeName Begin Creation"
+		# Get the Pull Server Protocol
+		[String]$PullServerProtocol = $Node.PullServerProtocol
+		If (($PullServerProtocol -eq '') -or ($PullServerProtocol -eq $null)) { $PullServerProtocol = $Script:DSCTools_DefaultPullServerProtocol }
+        Write-Verbose "Enable-DSCPullServer: Enabling $PullServerProtocol Pull Server $NodeName"
 
-			# Load the CreatePullServer Configuration into memory (dot source it)
-			# The file should be in Configuration folder beneath the folder the module is in.
-			. "$(Join-Path -Path $PSScriptRoot -ChildPath 'Configuration\Config_EnablePullServer.ps1')"
-			Config_EnablePullServer `
-				-NodeName $NodeName `
-				-Output $TempPath `
-				-PullServerPort $PullServerPort `
-				-ComplianceServerPort $ComplianceServerPort `
-				-CertificateThumbprint $CertificateThumbprint `
-				-PullServerEndpointName $PullServerEndpointName `
-				-PullServerResourcePath $PullServerResourcePath `
-				-PullServerConfigurationPath $PullServerConfigurationPath `
-				-PullServerPhysicalPath $PullServerPhysicalPath `
-				-ComplianceServerEndpointName $ComplianceServerEndpointName `
-				-ComplianceServerPhysicalPath $ComplianceServerPhysicalPath `
-				| Out-Null
-		} Catch {
-			Throw
+		# Get the credentials that need to be used to apply the DSC Config to the Pull Server
+		[PSCredential]$Credential = $Node.Credential
+
+		If ($PullServerProtocol -match  '^https?://') {
+			# An HTTP/HTTPS Pull Server is required
+			[String]$CertificateThumbprint = $Node.CertificateThumbprint
+			# Get the certificate thumbprint
+			If (($CertificateThumbprint -eq '') -or ($CertificateThumbprint -eq $null)) { 
+				# If the pull server is HTTPS and no certificate thumbprint was provided then throw an error.
+				If ($PullServerProtocol -match 'https') {
+					Throw "A certificate thumbprint must be provided if the Pull Server protocol is set to HTTPS"
+				}
+				$CertificateThumbprint = 'AllowUnencryptedTraffic'
+			}
+			# Get all the Pull Server properties from the node or use defaults.
+			[Int]$PullServerPort = $Node.PullServerPort
+			If (($PullServerPort -eq 0) -or ($PullServerPort -eq $null)) { $PullServerPort = $Script:DSCTools_DefaultPullServerPort }
+			[Int]$ComplianceServerPort = $Node.ComplianceServerPort
+			If (($ComplianceServerPort -eq 0) -or ($ComplianceServerPort -eq $null)) { $ComplianceServerPort = $Script:DSCTools_DefaultComplianceServerPort }
+			[String]$PullServerEndpointName = $Node.PullServerEndpointName
+			If (($PullServerEndpointName -eq '') -or ($PullServerEndpointName -eq $null)) { $PullServerEndpointName = $Script:DSCTools_DefaultPullServerEndpointName }
+			[String]$PullServerResourcePath = $Node.PullServerResourcePath
+			If (($PullServerResourcePath -eq '') -or ($PullServerResourcePath -eq $null)) { $PullServerResourcePath = $Script:DSCTools_DefaultPullServerResourcePath }
+			[String]$PullServerConfigurationPath = $Node.PullServerConfigurationPath
+			If (($PullServerConfigurationPath -eq '') -or ($PullServerConfigurationPath -eq $null)) { $PullServerConfigurationPath = $Script:DSCTools_DefaultPullServerConfigurationPath }
+			[String]$PullServerPhysicalPath = $Node.PullServerPhysicalPath
+			If (($PullServerPhysicalPath -eq '') -or ($PullServerPhysicalPath -eq $null)) { $PullServerPhysicalPath = $Script:DSCTools_DefaultPullServerPhysicalPath }
+			[String]$ComplianceServerEndpointName = $Node.ComplianceServerEndpointName
+			If (($ComplianceServerEndpointName -eq '') -or ($ComplianceServerEndpointName -eq $null)) { $ComplianceServerEndpointName = $Script:DSCTools_DefaultComplianceServerEndpointName }
+			[String]$ComplianceServerPhysicalPath = $Node.ComplianceServerPhysicalPath
+			If (($ComplianceServerPhysicalPath -eq '') -or ($ComplianceServerPhysicalPath -eq $null)) { $ComplianceServerPhysicalPath = $Script:DSCTools_DefaultComplianceServerPhysicalPath }
+			Try {
+				Write-Verbose "Enable-DSCPullServer: HTTP Pull Server MOF $TempPath\$NodeName.MOF for $NodeName Begin Creation"
+
+				# Load the CreatePullServer Configuration into memory (dot source it)
+				# The file should be in Configuration folder beneath the folder the module is in.
+				. "$(Join-Path -Path $PSScriptRoot -ChildPath 'Configuration\Config_EnablePullServerHTTP.ps1')"
+				Config_EnablePullServerHTTP `
+					-NodeName $NodeName `
+					-Output $TempPath `
+					-PullServerPort $PullServerPort `
+					-ComplianceServerPort $ComplianceServerPort `
+					-CertificateThumbprint $CertificateThumbprint `
+					-PullServerEndpointName $PullServerEndpointName `
+					-PullServerResourcePath $PullServerResourcePath `
+					-PullServerConfigurationPath $PullServerConfigurationPath `
+					-PullServerPhysicalPath $PullServerPhysicalPath `
+					-ComplianceServerEndpointName $ComplianceServerEndpointName `
+					-ComplianceServerPhysicalPath $ComplianceServerPhysicalPath `
+					| Out-Null
+			} Catch {
+				Throw
+			}
+			Write-Verbose "Enable-DSCPullServer: HTTP Pull Server MOF $TempPath\$NodeName.MOF for $NodeName Created Successfully"
+		} Else {
+			[String]$PullServerPhysicalPath = $Node.PullServerPhysicalPath
+			If (($PullServerPhysicalPath -eq '') -or ($PullServerPhysicalPath -eq $null)) { $PullServerPhysicalPath = $Script:DSCTools_DefaultPullServerPhysicalPath }
+			[String]$PullServerEndpointName = $Node.PullServerEndpointName
+			If (($PullServerEndpointName -eq '') -or ($PullServerEndpointName -eq $null)) { $PullServerEndpointName = $Script:DSCTools_DefaultPullServerEndpointName }
+
+			Try {
+				Write-Verbose "Enable-DSCPullServer: SMB Pull Server MOF $TempPath\$NodeName.MOF for $NodeName Begin Creation"
+
+				# Load the CreatePullServer Configuration into memory (dot source it)
+				# The file should be in Configuration folder beneath the folder the module is in.
+				. "$(Join-Path -Path $PSScriptRoot -ChildPath 'Configuration\Config_EnablePullServerSMB.ps1')"
+				Config_EnablePullServerSMB `
+					-NodeName $NodeName `
+					-Output $TempPath `
+					-PullServerEndpointName $PullServerEndpointName `
+					-PullServerConfigurationPath $PullServerConfigurationPath `
+					| Out-Null
+			} Catch {
+				Throw
+			}
+			Write-Verbose "Enable-DSCPullServer: SMB Pull Server MOF $TempPath\$NodeName.MOF for $NodeName Created Successfully"
+
 		}
-		Write-Verbose "Enable-DSCPullServer: Pull Server MOF $TempPath\$NodeName.MOF for $NodeName Created Successfully"
-        
-		# Apply the Pull Server MOF File to the Server
+
+        # Apply the Pull Server MOF File to the Server
 		Try {
 			If ($Credential -eq $null) {
-				Write-Verbose "Enable-DSCPullServer: Applying MOF $TempPath\$NodeName.MOF to $NodeName Pull Server"
+				Write-Verbose "Enable-DSCPullServer: Applying Pull Server MOF $TempPath\$NodeName.MOF to $NodeName Pull Server"
 				Start-DSCConfiguration -ComputerName $NodeName -Path $TempPath -Wait -Force
 			} Else {
-				Write-Verbose "Enable-DSCPullServer: Applying MOF $TempPath\$NodeName.MOF to $NodeName Pull Server using Credentials"
+				Write-Verbose "Enable-DSCPullServer: Applying Pull Server MOF $TempPath\$NodeName.MOF to $NodeName Pull Server using Credentials"
 				Start-DSCConfiguration -ComputerName $NodeName -Path $TempPath -Wait -Force -Credential $Credential
 			}
 		} Catch {
 			Throw
 		}
-		Write-Verbose "Enable-DSCPullServer: MOF $TempPath\$NodeName.MOF Applied to $NodeName Successfully"
+		Write-Verbose "Enable-DSCPullServer: Pull ServerMOF $TempPath\$NodeName.MOF Applied to $NodeName Successfully"
 
 		# Reove the LCM MOF File
 		Remove-Item -Path "$TempPath\$NodeName.MOF"
@@ -783,21 +835,22 @@ Function Set-DSCPullServerLogging {
 	} # If
 	Foreach ($Node In $Nodes) {
 		# Create an array of additional parameters that will be added to the end of the command to set the log
-		$Parameters = @()
+		$Parameters = @{}
 
 		# Was a computer name provided?
 		[String]$NodeName = $Node.Name
 		If (-not (($NodeName -eq '') -or ($NodeName -eq $null))) {
-			$Parameters +- @{ComputerName=$NodeName}
+			$Parameters += @{ComputerName=$NodeName;}
 		} # If
 
 		# Were credentials provided
 	    If ($Node.Credential) {
-			$Parameters +- @{Credential=$Node.Credential;}
+			$Parameters += @{Credential=$Node.Credential;}
 		} Elseif ($Credential) {
-			$Parameters +- @{Credential=$Credential;}			
+			$Parameters += @{Credential=$Credential;}			
 		}
-
+		 Write-Verbose $Parameters.Count
+		Foreach ($Parameter in $Parameters) { Write-Verbose $Parameter.Values }
 		# Enable/Disable the Analytic Log
 		If (($Node.AnalyticLog) -or ($AnalyticLog)) {
 			Write-Verbose "Set-DSCPullServerLogging: Pull Server $NodeName Analytic Logging Enabled"
@@ -899,10 +952,21 @@ Function Start-DSCPullMode {
 		Guid = If no guid is passed for this node a new one will be created
 		RebootIfNeeded = $false
 		ConfigurationMode = 'ApplyAndAutoCorrect'
-		MofFile = This is the path and filename of the MOF file to use for this node. If not provided the MOF file will be used
+		MofFile = This is the path and filename of the MOF file to use for this node. If not provided the MOF file will default to the NodeConfigSourceFolder parameter plus NodeName
+		Credential = These are node specific credentials that will be used to apply the LCM configuration. If none are supplied then the Credential parameter is used unless it it not passed.
+		CertificateThumbprint = This is the certificate thumbprint of the certificate that will be used to encrypt credentials passed to this node. If none are supplied then the certificate thuumbpring parameter is used unless it it not passed.
 
 		For example:
 		@(@{Name='SERVER01';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e7'},@{Name='SERVER02';Guid='';RebootIfNeeded=$true;MofFile='c:\users\Administrtor\Documents\WindowsPowerShell\DSCConfig\SERVER02.MOF'})
+
+.PARAMETER Credential
+		These are the credentials (if required) that will be used to apply the LCM configuration to all nodes where a node specific credentials weren't supplied.
+
+.PARAMETER CertificateThumbprint
+		This is the certificate thumbprint of the certificate that will be used to encrypt credentials passed to any of these nodes.
+
+.PARAMETER PullServerCredential
+		These are the credentials (if required) that all nodes will need to use to pull the configuration from the Pull Server.
 
 .EXAMPLE 
 		 Start-DSCPullMode `
@@ -937,11 +1001,23 @@ Function Start-DSCPullMode {
 	    [ValidateSet('ApplyAndAutoCorrect','ApplyAndMonitor','ApplyOnly')]
 		[String]$ConfigurationMode='ApplyAndAutoCorrect',
 
-		[string]$PullServerURL="$($Script:DSCTools_DefaultPullServerProtocol)://$($Script:DSCTools_DefaultPullServerName):$($Script:DSCTools_DefaultPullServerPort)/$($Script:DSCTools_DefaultPullServerPath)",
+		[ValidateNotNullOrEmpty()]
+		[string]$PullServerURL="",
 
-        [String]$PullServerConfigurationPath=$Script:DSCTools_DefaultPullServerConfigurationPath,
+        [ValidateNotNullOrEmpty()]
+		[String]$PullServerConfigurationPath=$Script:DSCTools_DefaultPullServerConfigurationPath,
 
-        [String]$NodeConfigSourceFolder=$Script:DSCTools_DefaultNodeConfigSourceFolder
+        [ValidateNotNullOrEmpty()]
+		[String]$NodeConfigSourceFolder=$Script:DSCTools_DefaultNodeConfigSourceFolder,
+
+		[ValidateNotNullOrEmpty()]
+		[PSCredential]$Credential,
+
+		[ValidateNotNullOrEmpty()]
+		[String]$CertificateThumbprint,
+
+		[ValidateNotNullOrEmpty()]
+		[PSCredential]$PullServerCredential
     )
     
     # Set up a temporary path
@@ -956,6 +1032,15 @@ Function Start-DSCPullMode {
 			MofFile=$MOFFile;
 		} # $Nodes
 	} # If
+
+	# Figure out the Pull Server URL if it wasn't specified
+	If (($PullServerURL -eq '') -or ($PullServerURL -eq $null)) {
+		If ($Script:DSCTools_DefaultPullServerProtocol -match "SMB") {
+			$PullServerURL = "\\$($Script:DSCTools_DefaultPullServerName)\$($Script:DSCTools_DefaultPullServerEndpointName)\"
+		} Else {
+			$PullServerURL = "$($Script:DSCTools_DefaultPullServerProtocol)://$($Script:DSCTools_DefaultPullServerName):$($Script:DSCTools_DefaultPullServerPort)/$($Script:DSCTools_DefaultPullServerPath)"
+		}
+	}
 
 	Foreach ($Node In $Nodes) {
         # Clear the node error flag
@@ -984,7 +1069,18 @@ Function Start-DSCPullMode {
         } # If
 		Write-Verbose "Start-DSCPullMode: $NodeName Will Use GUID $NodeGuid with Configuration Mode $Mode $(@{$true='and will Reboot If Needed';$false=''}[$RebootIfNeeded])"
 
-        # If the node doesn't have a specific MOF path specified then see if we can figure it out
+        # Were credentials supplied to allow the LCM to be applied to the node?
+		[PSCredential]$Cred = $Node.Credential
+        If ($Cred -eq $null) {
+            $Cred = $Credential
+        } # If
+
+		[PSCredential]$Cert = $Node.CertificateThumbprint
+        If (($Cert -eq $null) -or ($Cert -eq '')) {
+            $Cert = $CertificateThumbprint
+        } # If
+
+		# If the node doesn't have a specific MOF path specified then see if we can figure it out
         # Based on other parameters specified - or even create it.
         [String]$MofFile = $Node.MofFile
         If ($MofFile -eq $null) {
@@ -1010,20 +1106,41 @@ Function Start-DSCPullMode {
             Write-Verbose "Start-DSCPullMode: Node $NodeName Configuration MOF Checksum Created for $DestMof"
 
             # Create the LCM MOF File to set the nodes LCM to pull mode
+            Write-Verbose "Start-DSCPullMode: Node $NodeName LCM MOF $TempPath\$NodeName.MOF Start Creation"
 			. "$(Join-Path -Path $PSScriptRoot -ChildPath 'Configuration\Config_SetLCMPullMode.ps1')"
-            Config_SetLCMPullMode `
-                -NodeName $NodeName `
-                -NodeGuid $NodeGuid `
-                -RebootNodeIfNeeded $Reboot `
-                -ConfigurationMode $Mode `
-                -PullServerURL $PullServerURL `
-                -Output $TempPath `
-                | Out-Null
-
-            Write-Verbose "Start-DSCPullMode: Node $NodeName LCM MOF $TempPath\$NodeName.MOF Created"
+            If ($PullServerCredential -eq $null) {
+				Config_SetLCMPullMode `
+					-NodeName $NodeName `
+					-NodeGuid $NodeGuid `
+					-RebootNodeIfNeeded $Reboot `
+					-ConfigurationMode $Mode `
+					-PullServerURL $PullServerURL `
+					-Output $TempPath `
+					| Out-Null
+			} Else {
+				If ($Cert -eq $null) {
+					Throw "A Certificate Thumbprint must be provided for the node if a Pull Server credential is passed"
+				}
+				Config_SetLCMPullMode `
+					-NodeName $NodeName `
+					-NodeGuid $NodeGuid `
+					-RebootNodeIfNeeded $Reboot `
+					-ConfigurationMode $Mode `
+					-PullServerURL $PullServerURL `
+					-CertificateId $Cert `
+					-Credential $PullServerCredential `
+					-Output $TempPath `
+					| Out-Null
+			}
+            Write-Verbose "Start-DSCPullMode: Node $NodeName LCM MOF $TempPath\$NodeName.MOF Created Successfully"
         
-            # Apply the LCM MOF File to the node
-            Set-DSCLocalConfigurationManager -Computer $NodeName -Path $TempPath
+            If (($NodeName -match 'localhost') -or ($NodeName -eq $ENV:COMPUTERNAME)) {
+				# Apply the LCM MOF File to the local node
+				Set-DSCLocalConfigurationManager -Path $TempPath
+			} Else {
+				# Apply the LCM MOF File to a remote node
+				Set-DSCLocalConfigurationManager -Path $TempPath -Credential $Cred -ComputerName $NodeName
+			}
 
             Write-Verbose "Start-DSCPullMode: Node $NodeName set to use LCM MOF $TempPath"
 
@@ -1178,6 +1295,7 @@ Function Start-DSCPushMode {
 
 		If (-not $NodeError) {
             # Create the LCM MOF File to set the nodes LCM to push mode
+            Write-Verbose "Start-DSCPushMode: Node $NodeName LCM MOF $TempPath\$NodeName.MOF Start Creation"
 			. "$(Join-Path -Path $PSScriptRoot -ChildPath 'Configuration\Config_SetLCMPushMode.ps1')"
             Config_SetLCMPushMode `
                 -NodeName $NodeName `
@@ -1185,8 +1303,7 @@ Function Start-DSCPushMode {
                 -ConfigurationMode $Mode `
                 -Output $TempPath `
                 | Out-Null
-
-            Write-Verbose "Start-DSCPushMode: Node $NodeName LCM MOF $TempPath\$NodeName.MOF Created"
+            Write-Verbose "Start-DSCPushMode: Node $NodeName LCM MOF $TempPath\$NodeName.MOF Created Successfully"
         
             # Apply the LCM MOF File to the node
             Set-DSCLocalConfigurationManager -Computer $NodeName -Path $TempPath
@@ -1295,7 +1412,9 @@ Function Get-xDscConfiguration {
 					[Void]$PSBoundParameters.Remove('Credential')
 					$cimSessionParameters += @{Credential=$Credential}
 				} # if
+				Write-Verbose "Get-xDscConfiguration: Connecting to $ComputerName"
 				$cimSession = New-CimSession -ComputerName $ComputerName @CimSessionParameters
+				Write-Verbose "Get-xDscConfiguration: Calling Get-DscConfiguration"
 				$scriptCmd = {& $wrappedCmd @PSBoundParameters -CimSession $cimSession }
 			} else {
 				$scriptCmd = {& $wrappedCmd @PSBoundParameters }
@@ -1319,6 +1438,7 @@ Function Get-xDscConfiguration {
         try {
             $steppablePipeline.End()
 			if ($ComputerName) {
+				Write-Verbose "Get-xDscConfiguration: Disconnecting from $ComputerName"
 				Remove-CimSession -CimSession $cimSession
 			} # if
         } catch {
@@ -1404,7 +1524,7 @@ Function Get-xDscLocalConfigurationManager {
                 $PSBoundParameters['OutBuffer'] = 1
             } # if
 
-            $wrappedCmd = $ExecutionContext.InvokeCommand.GetCommand('Get-xDscLocalConfigurationManager', [System.Management.Automation.CommandTypes]::Function)
+            $wrappedCmd = $ExecutionContext.InvokeCommand.GetCommand('Get-DscLocalConfigurationManager', [System.Management.Automation.CommandTypes]::Function)
 			if ($ComputerName) {
 				$cimSessionParameters = @{}
 				[Void]$PSBoundParameters.Remove('ComputerName')
@@ -1417,7 +1537,9 @@ Function Get-xDscLocalConfigurationManager {
 					[Void]$PSBoundParameters.Remove('Credential')
 					$cimSessionParameters += @{Credential=$Credential}
 				} # if
+				Write-Verbose "Get-xDscLocalConfigurationManager: Connecting to $ComputerName"
 				$cimSession = New-CimSession -ComputerName $ComputerName @CimSessionParameters
+				Write-Verbose "Get-xDscLocalConfigurationManager: Calling Get-DscLocalConfigurationManager"
 				$scriptCmd = {& $wrappedCmd @PSBoundParameters -CimSession $cimSession }
 			} else {
 				$scriptCmd = {& $wrappedCmd @PSBoundParameters }
@@ -1441,6 +1563,7 @@ Function Get-xDscLocalConfigurationManager {
         try {
             $steppablePipeline.End()
 			if ($ComputerName) {
+				Write-Verbose "Get-xDscLocalConfigurationManager: Disconnecting from $ComputerName"
 				Remove-CimSession -CimSession $cimSession
 			} # if
         } catch {
@@ -1461,7 +1584,8 @@ Function Get-xDscLocalConfigurationManager {
 # -----------------------------
 # Configuration Config_SetLCMPullMode
 # Configuration Config_SetLCMPushMode
-# Configuration Config_EnablePullServer
+# Configuration Config_EnablePullServerHTTP
+# Configuration Config_EnablePullServerSMB
 ##########################################################################################################################################
 
 ##########################################################################################################################################

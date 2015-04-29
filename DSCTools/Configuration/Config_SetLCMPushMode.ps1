@@ -13,7 +13,6 @@ Configuration Config_SetLCMPushMode {
 
         [ValidateNotNullOrEmpty()]
         [boolean]$RebootNodeIfNeeded = $false
-
     ) # Param
 
     If ($ConfigurationMode -notin ('ApplyAndAutoCorrect','ApplyAndMonitor','ApplyOnly')) {
