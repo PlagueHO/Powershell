@@ -30,6 +30,8 @@
 		README.md
 
 .VERSIONS
+		1.4   2015-04-30   Daniel Scott-Raynsford       Misc fixes to DSCTools.psm1
+														Renamed DSCTools.selftest.* files to DSCTools.Example files and moved to Examples folder
 		1.3   2015-04-28   Daniel Scott-Raynsford       Added DSCTools.Package.ps1 Script
 														Added Get-xDSCLocalConfigurationManager CmdLet
 														Added Set-DSCPullServerLogging Cmdlet
@@ -420,6 +422,8 @@ This is the URL to use to download the DSC Resource Kit from. It defaults to the
 .PARAMETER PullServerResourcePath
 		This is the destination path to which the zipped resources and checksum files will be written to. The user running this command must have write access to this folder.
 
+		Note: If this is a SMB Pull Server then resources should be installed into the same folder as the configuration files.
+
 .EXAMPLE 
 		 Install-DSCResourceKit -Publish
 
@@ -714,8 +718,8 @@ Function Enable-DSCPullServer {
 			}
 			Write-Verbose "Enable-DSCPullServer: HTTP Pull Server MOF $TempPath\$NodeName.MOF for $NodeName Created Successfully"
 		} Else {
-			[String]$PullServerPhysicalPath = $Node.PullServerPhysicalPath
-			If (($PullServerPhysicalPath -eq '') -or ($PullServerPhysicalPath -eq $null)) { $PullServerPhysicalPath = $Script:DSCTools_DefaultPullServerPhysicalPath }
+			[String]$PullServerConfigurationPath = $Node.PullServerConfigurationPath
+			If (($PullServerConfigurationPath -eq '') -or ($PullServerConfigurationPath -eq $null)) { $PullServerConfigurationPath = $Script:DSCTools_DefaultPullServerConfigurationPath }
 			[String]$PullServerEndpointName = $Node.PullServerEndpointName
 			If (($PullServerEndpointName -eq '') -or ($PullServerEndpointName -eq $null)) { $PullServerEndpointName = $Script:DSCTools_DefaultPullServerEndpointName }
 
@@ -1075,7 +1079,7 @@ Function Start-DSCPullMode {
             $Cred = $Credential
         } # If
 
-		[PSCredential]$Cert = $Node.CertificateThumbprint
+		[String]$Cert = $Node.CertificateThumbprint
         If (($Cert -eq $null) -or ($Cert -eq '')) {
             $Cert = $CertificateThumbprint
         } # If
@@ -1437,7 +1441,7 @@ Function Get-xDscConfiguration {
     end {
         try {
             $steppablePipeline.End()
-			if ($ComputerName) {
+			if ($ComputerName -and $cimSession) {
 				Write-Verbose "Get-xDscConfiguration: Disconnecting from $ComputerName"
 				Remove-CimSession -CimSession $cimSession
 			} # if
@@ -1562,7 +1566,7 @@ Function Get-xDscLocalConfigurationManager {
     end {
         try {
             $steppablePipeline.End()
-			if ($ComputerName) {
+			if ($ComputerName -and $cimSession) {
 				Write-Verbose "Get-xDscLocalConfigurationManager: Disconnecting from $ComputerName"
 				Remove-CimSession -CimSession $cimSession
 			} # if

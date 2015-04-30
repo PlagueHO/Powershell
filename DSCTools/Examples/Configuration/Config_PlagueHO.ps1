@@ -12,8 +12,10 @@ $ConfigurationData = @{
     );
 } # $ConfigurationData
 
-configuration Config_Test 
+configuration Config_PlagueHO
 {
+	Import-DSCResource -ModuleName 'PSDesiredStateConfiguration'
+
     node $allnodes.NodeName
     {
 
@@ -39,11 +41,11 @@ configuration Config_Test
         # Write a Completion Log Entry
         Log WriteCompleteLog
         {
-            Message = "DSC Configration Test-PlagueHO has been applied to $Node"
+            Message = "DSC Configration Config_PlagueHO has been applied to $Node"
             DependsOn = '[File]ReadmeCreate'
         } # Log WriteCompleteLog
     } # node $allnodes.NodeName
-} # configuration Config_Test 
+} # configuration Config_PlagueHO 
 
 # Generate the MOF file(s)
-Config_Test -ConfigurationData $ConfigurationData -OutputPath "$PSScriptRoot\Config_PlagueHO"
+Config_PlagueHO -ConfigurationData $ConfigurationData -OutputPath "$PSScriptRoot\Config_PlagueHO"

@@ -1,16 +1,16 @@
 ##########################################################################################################################################
-# Self Test functions
+# Example functions
+# They will set up an SMB pull server on the local machine and then configure one or multiple nodes to use this pull server.
 ##########################################################################################################################################
-Function Test-DSCToolsMulti {
+Function Example-DSCToolsMulti {
 	# Configure where the pull server is and how it can be connected to.
-    $Script:DSCTools_DefaultPullServerName = 'PLAGUE-PDC'
+    $Script:DSCTools_DefaultPullServerName = 'PLAGUE-PDC.PLAGUEHO.COM'
     $Script:DSCTools_DefaultPullServerProtocol = 'SMB'  # Pull server has a valid trusted cert installed
     $Script:DSCTools_DefaultPullServerConfigurationPath = "e:\DSC\Configuration\"   # This is the path where a DSC Pull Server will look for MOF Files.
-    $Credential = Get-Credential
 
     # These are the nodes that will become DSC Pull Servers
     $PullServers = @( `
-	    @{Name=$Script:DSCTools_DefaultPullServerName;PullServerProtocol='SMB';Credential=$Credential} )
+	    @{Name=$Script:DSCTools_DefaultPullServerName;CertificateThumbprint='3aaeef3f4b6dad0c8cb59930b48a9ffc25daa7d8'} )
 
     # These are the nodes that we are going to set up Pull mode for
     $Nodes = @( `
@@ -24,98 +24,93 @@ Function Test-DSCToolsMulti {
 
 	# Create the folder structure on the Pull Server where the DSC files will be installed to
 	# If the default paths are used then this wouldn't need to be done as these paths usually already exist
-    New-Item `
-        -Path \\$Script:DSCTools_DefaultPullServerName\e$\DSC\Configuration\ `
-        -ItemType Directory
+    If ( -not (Test-Path -Path $Script:DSCTools_DefaultPullServerConfigurationPath -PathType Container )) {
+        New-Item `
+		    -Path $Script:DSCTools_DefaultPullServerConfigurationPath `
+		    -ItemType Directory
+    }
 
     # Download the DSC Resource Kit and install it to the local machine and to the DSC Pull Server
     Install-DSCResourceKit `
-        -UseCache `
-        -Verbose
-    Install-DSCResourceKit `
-        -ModulePath "\\$Script:DSCTools_DefaultPullServerName\c$\program files\windowspowershell\modules\" `
-        -UseCache `
-        -Verbose
+		-UseCache `
+		-Verbose
 
     # Copy all the resources up to the pull server (zipped and with a checksum file).
     Publish-DSCPullResources `
-        -PullServerResourcePath "\\$Script:DSCTools_DefaultPullServerName\e$\DSC\Configuration\" `
-        -Verbose
+		-Verbose
 
     # Install a DSC Pull Server
     Enable-DSCPullServer `
-        -Nodes $PullServers `
-        -Verbose
+		-Nodes $PullServers `
+		-Verbose
 
     # Set DSC Pull Server Logging Mode
     Set-DSCPullServerLogging `
-        -Nodes $PullServers `
-        -AnalyticLog $True `
-        -OperationalLog $True `
-        -Verbose
+		-Nodes $PullServers `
+		-AnalyticLog $True `
+		-OperationalLog $True `
+		-Verbose
 
     # Check the pull server
     Get-xDscConfiguration `
-        -Verbose
+		-Verbose
     Get-xDscLocalConfigurationManager `
-        -Verbose
+		-Verbose
 
     # Set all the nodes to pull mode and copy the config files over to the pull server.
     Start-DSCPullMode `
-        -Nodes $Nodes `
-        -Verbose
+		-Nodes $Nodes `
+		-Verbose
 
     # Force the all the machines to pull thier config from the Pull server (although we could just wait 15 minutes for this to happen automatically)
     Invoke-DSCCheck `
-        -Nodes $Nodes `
-        -Verbose
+		-Nodes $Nodes `
+		-Verbose
 
 <#
     # Set all the nodes to back to push mode if we don't want to use Pull mode any more.
     Start-DSCPushMode `
-        -Nodes $Nodes `
-        -Verbose
+		-Nodes $Nodes `
+		-Verbose
 
     # Force the all the machines to reapply thier configuration (although we could just wait 15 minutes for this to happen automatically)
     Invoke-DSCCheck `
-        -Nodes $Nodes `
-        -Verbose
+		-Nodes $Nodes `
+		-Verbose
 #>
 
-} # Function Test-DSCToolsMulti
+} # Function Example-DSCToolsMulti
 ##########################################################################################################################################
 
 ##########################################################################################################################################
-Function Test-DSCToolsSingle {
-    $PullServer = 'PLAGUE-PDC'
-    $Credential = Get-Credential
+Function Example-DSCToolsSingle {
+    $PullServer = 'PLAGUE-PDC.PLAGUEHO.COM'
+    $ConfigPath = 'e:\DSC\Configuration\'
+    $NodeName = 'PLAGUE-MEMBER.PLAGUEHO.COM'
+    $NodeGuid = '115929a0-61e2-41fb-a9ad-0cdcd66fc2e7'
 
 	# Create the folder structure on the Pull Server where the DSC files will be installed to
 	# If the default paths are used then this wouldn't need to be done as these paths usually already exist
-    New-Item `
-        -Path \\$PullServer\e$\DSC\Configuration\ `
-        -ItemType Directory
+    If ( -not (Test-Path -Path $ConfigPath -PathType Container )) {
+        New-Item `
+            -Path $ConfigPath `
+            -ItemType Directory
+    }
 
 	# Download the DSC Resource Kit and install it to the local machine and to the DSC Pull Server
     Install-DSCResourceKit `
         -UseCache `
         -Verbose
-    Install-DSCResourceKit `
-        -ModulePath "\\$PullServer\c$\program files\windowspowershell\modules\" `
-        -UseCache `
-        -Verbose
 
 	# Copy all the resources up to the pull server (zipped and with a checksum file).
     Publish-DSCPullResources `
-        -PullServerResourcePath "\\$PullServer\e$\DSC\Configuration\" `
+        -PullServerResourcePath $ConfigPath `
         -Verbose
 
     # Install a DSC Pull Server
     Enable-DSCPullServer `
-		-ComputerName $PullServer `
-        -Credential $Credential `
 		-PullServerProtocol 'SMB' `
-        -PullServerConfigurationPath "e:\DSC\Configuration\" `
+        -PullServerConfigurationPath $ConfigPath `
         -Verbose
 
     # Set DSC Pull Server Logging Mode
@@ -125,65 +120,59 @@ Function Test-DSCToolsSingle {
 		-OperationalLog $True `
 		-Verbose
 
-	# Check the pull server
+    # Check the pull server
     Get-xDscConfiguration `
-        -ComputerName $PullServer `
-        -UseSSL `
-        -Credential ($Credential) `
         -Verbose
-    Get-xDscLocalConfigurationManager `
-        -ComputerName $PullServer `
-        -UseSSL `
-        -Credential ($Credential) `
-        -Verbose
-
+	Get-xDscLocalConfigurationManager `
+		-Verbose
+    
 	# Set all the nodes to pull mode and copy the config files over to the pull server.
     Start-DSCPullMode `
-		-ComputerName 'PLAGUE-MEMBER.PLAGUEHO.COM' `
-		-Guid '115929a0-61e2-41fb-a9ad-0cdcd66fc2e7' `
+		-ComputerName $NodeName `
+		-Guid $NodeGuid `
 		-RebootIfNeeded `
-		-MofFile "$PSScriptRoot\Configuration\Config_PlagueHO\PLAGUE-MEMBER.PLAGUEHO.COM.MOF" `
+		-MofFile "$PSScriptRoot\Configuration\Config_PlagueHO\$NodeName.MOF" `
 		-ConfigurationMode 'ApplyAndAutoCorrect' `
-        -PullServerConfigurationPath "\\$($PullServer)\e$\DSC\Configuration\" `
-        -PullServerURL "\\$($PullServer)\($Script:DSCTools_DefaultPullServerEndpointName)\" `
+        -PullServerConfigurationPath $ConfigPath `
+        -PullServerURL "\\$PullServer\PSDSCPullServer\" `
 		-Verbose
 
     # Force the all the machines to pull thier config from the Pull server (although we could just wait 15 minutes for this to happen automatically)
     Invoke-DSCCheck `
-	 	-ComputerName PLAGUE-MEMBER.PLAGUEHO.COM `
+	 	-ComputerName $NodeName `
 	 	-Verbose
 
-<#   
+<#
 	# Set all the nodes to back to push mode if we don't want to use Pull mode any more.
     Start-DSCPushMode `
-	 	-ComputerName PLAGUE-MEMBER.PLAGUEHO.COM `
+	 	-ComputerName $NodeName `
 		-RebootIfNeeded `
-		-MofFile "$PSScriptRoot\Configuration\Config_PlagueHO\PLAGUE-MEMBER.PLAGUEHO.COM.MOF" `
+		-MofFile "$PSScriptRoot\Configuration\Config_PlagueHO\$NodeName.MOF" `
 		-ConfigurationMode 'ApplyAndAutoCorrect' `
 		-Verbose
 
     # Force the all the machines to reapply thier configuration (although we could just wait 15 minutes for this to happen automatically)
     Invoke-DSCCheck `
-		-ComputerName PLAGUE-MEMBER.PLAGUEHO.COM `
+		-ComputerName $NodeName `
 		-Verbose
 #>
 
-} # Function Test-DSCToolsSingle
+} # Function Example-DSCToolsSingle
 ##########################################################################################################################################
 
 ##########################################################################################################################################
-Function Test-DSCToolsLoadModule {
+Function Example-DSCToolsLoadModule {
 	Get-Module DSCTools | Remove-Module
-	Import-Module "$PSScriptRoot\DSCTools.psm1"
-} # Function Test-DSCToolsLoadModule
+	Import-Module "$PSScriptRoot\..\DSCTools.psm1"
+} # Function Example-DSCToolsLoadModule
 ##########################################################################################################################################
 
 ##########################################################################################################################################
-Function Test-DSCCreateTestConfig {
+Function Example-DSCCreateConfig {
 	& "$PSScriptRoot\Configuration\Config_PlagueHO.ps1"
-} # Function Test-DSCCreateTestConfig
+} # Function Example-DSCCreateConfig
 ##########################################################################################################################################
-Test-DSCToolsLoadModule
-Test-DSCCreateTestConfig
-#Test-DSCToolsSingle
-Test-DSCToolsMulti
+Example-DSCToolsLoadModule
+Example-DSCCreateConfig
+Example-DSCToolsSingle
+#Example-DSCToolsMulti

@@ -29,12 +29,13 @@
   <ItemGroup>
     <Folder Include="Configuration\" />
     <Folder Include="Configuration\Config_Test\" />
+    <Folder Include="Examples\" />
+    <Folder Include="Examples\Configuration\" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Configuration\Config_SetLCMPullMode.ps1" />
     <Compile Include="Configuration\Config_SetLCMPushMode.ps1" />
     <Compile Include="Configuration\Config_EnablePullServerHTTP.ps1" />
-    <Compile Include="Configuration\Config_PlagueHO.ps1" />
     <Compile Include="Configuration\Config_Test.ps1" />
     <Compile Include="Configuration\Config_EnablePullServerSMB.ps1" />
     <Compile Include="Configuration\Config_Test\NODE01.mof" />
@@ -44,12 +45,14 @@
     <Compile Include="Configuration\Config_Test\NODE05.mof" />
     <Compile Include="Configuration\Config_Test\NODE06.mof" />
     <Compile Include="Configuration\Config_Test\NODE07.mof" />
-    <Compile Include="DSCTools.Test.PlagueHO.SMB.Remote.ps1" />
+    <Compile Include="Examples\Configuration\Config_PlagueHO.ps1" />
+    <Compile Include="Examples\DSCTools.Example.PlagueHO.SMB.Local.ps1" />
+    <Compile Include="Examples\DSCTools.Example.PlagueHO.SMB.Remote.ps1" />
     <Compile Include="DSCTools.Package.ps1" />
     <Compile Include="DSCTools.psd1" />
     <Compile Include="DSCTools.psm1" />
-    <Compile Include="DSCTools.Test.PlagueHO.HTTPS.Local.ps1" />
-    <Compile Include="DSCTools.Test.PlagueHO.HTTPS.Remote.ps1" />
+    <Compile Include="Examples\DSCTools.Example.PlagueHO.HTTPS.Local.ps1" />
+    <Compile Include="Examples\DSCTools.Example.PlagueHO.HTTPS.Remote.ps1" />
     <Compile Include="DSCTools.Test.Nodes.ps1" />
     <Compile Include="DSCTools.Test.ps1" />
     <Compile Include="README.md" />
