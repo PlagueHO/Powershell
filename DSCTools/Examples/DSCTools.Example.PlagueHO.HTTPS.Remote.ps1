@@ -87,7 +87,6 @@ Function Example-DSCToolsMulti {
 		-Nodes $Nodes `
 		-Verbose
 
-<#
     # Set all the nodes to back to push mode if we don't want to use Pull mode any more.
     Start-DSCPushMode `
 		-Nodes $Nodes `
@@ -97,7 +96,6 @@ Function Example-DSCToolsMulti {
     Invoke-DSCCheck `
 		-Nodes $Nodes `
 		-Verbose
-#>
 
 } # Function Example-DSCToolsMulti
 ##########################################################################################################################################

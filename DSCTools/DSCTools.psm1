@@ -1162,17 +1162,26 @@ Function Start-DSCPullMode {
         
             If (($NodeName -match 'localhost') -or ($NodeName -eq $ENV:COMPUTERNAME)) {
 				# Apply the LCM MOF File to the local node
-				Set-DSCLocalConfigurationManager -Path $TempPath
+				Try {
+					Set-DSCLocalConfigurationManager -Path $TempPath
+					Write-Verbose "Start-DSCPullMode: Node Localhost set to use LCM MOF $TempPath"
+				} Catch {
+			        Write-Error "Start-DSCPullMode: Error Setting Localhost to use LCM MOF $TempPath"
+				} # Try
 			} Else {
 				# Apply the LCM MOF File to a remote node
 				If (Test-Connection -ComputerName $NodeName -Count 1 -Quiet) {
-					Set-DSCLocalConfigurationManager -Path $TempPath -Credential $Cred -ComputerName $NodeName
+					Try {
+						Set-DSCLocalConfigurationManager -Path $TempPath -Credential $Cred -ComputerName $NodeName
+						Write-Verbose "Start-DSCPullMode: Node $NodeName set to use LCM MOF $TempPath"
+					} Catch {
+						Write-Error "Start-DSCPullMode: Error Setting $NodeName to use LCM MOF $TempPath"
+					} # Try
 				} Else {
 					Write-Error "Start-DSCPullMode: Error contacting $NodeName. Pull Mode Configuration was not applied."
 				} # If
 			} # If
 
-            Write-Verbose "Start-DSCPullMode: Node $NodeName set to use LCM MOF $TempPath"
 
             # Reove the LCM MOF File
             Remove-Item -Path "$TempPath\$NodeName.meta.MOF"
@@ -1338,17 +1347,25 @@ Function Start-DSCPushMode {
             # Apply the LCM MOF File to the node
             If (($NodeName -match 'localhost') -or ($NodeName -eq $ENV:COMPUTERNAME)) {
 				# Apply the LCM MOF File to the local node
-				Set-DSCLocalConfigurationManager -Path $TempPath
+				Try {
+					Set-DSCLocalConfigurationManager -Path $TempPath
+					Write-Verbose "Start-DSCPushMode: Localhost set to use LCM MOF $TempPath"
+				} Catch {
+			        Write-Error "Start-DSCPushMode: Error Setting Localhost to use LCM MOF $TempPath"
+				} # Try
 			} Else {
 				# Apply the LCM MOF File to a remote node
 				If (Test-Connection -ComputerName $NodeName -Count 1 -Quiet) {
-					Set-DSCLocalConfigurationManager -Path $TempPath -Credential $Cred -ComputerName $NodeName
+					Try {
+						Set-DSCLocalConfigurationManager -Path $TempPath -Credential $Cred -ComputerName $NodeName
+			            Write-Verbose "Start-DSCPushMode: Node $NodeName set to use LCM MOF $TempPath"
+					} Catch {
+			            Write-Error "Start-DSCPushMode: Error Setting $NodeName to use LCM MOF $TempPath"					
+					} # Try
 				} Else {
 					Write-Error "Start-DSCPushMode: Error contacting $NodeName. Push Mode Configuration was not applied."
 				} # If
 			} # If
-
-            Write-Verbose "Start-DSCPushMode: Node $NodeName set to use LCM MOF $TempPath"
 
             # Reove the LCM MOF File
             Remove-Item -Path "$TempPath\$NodeName.meta.MOF"
