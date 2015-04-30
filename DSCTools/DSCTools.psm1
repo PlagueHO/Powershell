@@ -3,51 +3,9 @@
 # DSCTools
 ##########################################################################################################################################
 <#
-.SYNOPSIS
-		This module provides miscellaneous helper functions for setting up and using Powershell DSC.
-
-.DESCRIPTION 
-		This module contains functions to try and make setting up and using Desired State Configuration easier.
-
-		I noticed while attempting to set up my first DSC Pull server that it was a resonably intricate process with lots of room for mistakes.
-		There were many manual steps that could all go wrong. So I attempted to try and automate some of the steps involved with setting up
-		Pull servers and installing resource files onto them as well as configuring the LCM on the machines being configured.
-
-		The functions in this module are:
-		Invoke-DSCCheck - Forces the LCM on the specified nodes to trigger a DSC check.
-		Publish-DSCPullResources - Publishes DSC Resources to a DSC pull server.
-		Install-DSCResourceKit - Downloads and installs the DSC Resource Kit. It can also optionally publish the Resources to a pull server.
-		Enable-DSCPullServer - Installs and configures one or more servers as a DSC Pull Servers.
-		Set-DSCPullServerLogging - Enable/Disable DSC pull server logging on one or more DSC Pull Servers.
-		Start-DSCPullMode - Configures one or mode nodes for Pull Mode.
-		Start-DSCPushMode - Configures one or mode nodes for Push Mode.
-		Get-xDscConfiguration - Returns the DSC configuration for this machine or for a remote node.
-		Get-xDscLocalConfigurationManager - Returns the DSC Local Configuration Manager configuration for this machine or for a remote node.
-
-		Example usage can be found in the file README.md.
-
-.LINK
-		README.md
-
-.VERSIONS
-		1.4   2015-04-30   Daniel Scott-Raynsford       Misc fixes to DSCTools.psm1
-														Renamed DSCTools.selftest.* files to DSCTools.Example files and moved to Examples folder
-		1.3   2015-04-28   Daniel Scott-Raynsford       Added DSCTools.Package.ps1 Script
-														Added Get-xDSCLocalConfigurationManager CmdLet
-														Added Set-DSCPullServerLogging Cmdlet
-		1.2   2015-04-23   Daniel Scott-Raynsford       Added Install-DSCResourceKit CmdLet
-														Added Enable-DSCPullServer CmdLet
-		1.1   2014-11-22   Daniel Scott-Raynsford       Alowed Invoke-DSCPull to use a Nodes param
-														Added test functions
-														Added Configuration ConfigureLCMPushMode
-														Added Function Start-DSCPushMode
-		1.0   2014-10-23   Daniel Scott-Raynsford       Initial Version
-
-.TODO
-		Add ability to build the DSC configuration files if the MOF can't be found but the PS1 file can be found.
-		Add support for passing credentials to Start-DSCPushMode
-		Force rebuild MOF if the PS1 file is newer.
-		Add support for Nodes to provide credentials to connect to a Pull Server.
+See README.md for additional information.
+Github Repo: https://github.com/PlagueHO/Powershell/tree/master/DSCTools
+Script Center: https://gallery.technet.microsoft.com/scriptcenter/DSC-Tools-c96e2c53
 #>
 
 

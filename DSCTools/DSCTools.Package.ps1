@@ -3,7 +3,8 @@
 	@{ Filename = 'DSCTools.psd1' };
 	@{ Filename = 'README.md' };
 	@{ Filename = 'Configuration\' };
-	@{ Filename = 'Configuration\Config_EnablePullServer.ps1' };
+	@{ Filename = 'Configuration\Config_EnablePullServerHTTP.ps1' };
+	@{ Filename = 'Configuration\Config_EnablePullServerSMB.ps1' };
 	@{ Filename = 'Configuration\Config_SetLCMPullMode.ps1' };
 	@{ Filename = 'Configuration\Config_SetLCMPushMode.ps1' };
 )
