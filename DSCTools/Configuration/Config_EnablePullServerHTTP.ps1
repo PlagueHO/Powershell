@@ -36,7 +36,7 @@ Configuration Config_EnablePullServerHTTP {
         [String]$ComplianceServerPhysicalPath = "$($env:SystemDrive)\inetpub\wwwroot\PSDSCComplianceServer"
     ) # Param
 
-	Import-DscResource –ModuleName 'PSDesiredStateConfiguration'
+	Import-DscResource –ModuleName xPSDesiredStateConfiguration,PSDesiredStateConfiguration
 
 	Node $NodeName {
 		WindowsFeature WebServer

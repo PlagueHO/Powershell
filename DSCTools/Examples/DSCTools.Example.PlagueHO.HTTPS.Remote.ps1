@@ -11,7 +11,7 @@ Function Example-DSCToolsMulti {
     $Script:DSCTools_DefaultPullServerConfigurationPath = "\\$Script:DSCTools_DefaultPullServerName\e$\DSC\Configuration\"   # This is the path where a DSC Pull Server will look for MOF Files.
     $Script:DSCTools_DefaultPullServerPhysicalPath = "e:\DSC\PSDSCPullServer\" # The location a Pull Server web site will be installed to.
     $Script:DSCTools_DefaultComplianceServerPhysicalPath = "e:\DSC\PSDSCComplianceServer\" # The location a Pull Server compliance site will be installed to.
-    $Credential = Get-Credential
+    $Credential = Get-Credential -Message "User Account to Install HTTPS Pull Server on $Script:DSCTools_DefaultPullServerName"
 
     # These are the nodes that will become DSC Pull Servers
     $PullServers = @( `
@@ -29,12 +29,16 @@ Function Example-DSCToolsMulti {
 
 	# Create the folder structure on the Pull Server where the DSC files will be installed to
 	# If the default paths are used then this wouldn't need to be done as these paths usually already exist
-    New-Item `
-		-Path $Script:DSCTools_DefaultPullServerResourcePath `
-		-ItemType Directory
-    New-Item `
-		-Path $Script:DSCTools_DefaultPullServerConfigurationPath `
-		-ItemType Directory
+    If ( -not (Test-Path -Path $Script:DSCTools_DefaultPullServerResourcePath -PathType Container )) {
+        New-Item `
+		    -Path $Script:DSCTools_DefaultPullServerResourcePath `
+		    -ItemType Directory
+    }
+    If ( -not (Test-Path -Path $Script:DSCTools_DefaultPullServerConfigurationPath -PathType Container )) {
+        New-Item `
+		    -Path $Script:DSCTools_DefaultPullServerConfigurationPath `
+		    -ItemType Directory
+    }
 
     # Download the DSC Resource Kit and install it to the local machine and to the DSC Pull Server
     Install-DSCResourceKit `
@@ -101,12 +105,20 @@ Function Example-DSCToolsMulti {
 ##########################################################################################################################################
 Function Example-DSCToolsSingle {
     $PullServer = 'PLAGUE-PDC.PLAGUEHO.COM'
-    $Credential = Get-Credential
+    $Credential = Get-Credential -Message "User Account to Install HTTPS Pull Server on $PullServer"
 
 	# Create the folder structure on the Pull Server where the DSC files will be installed to
 	# If the default paths are used then this wouldn't need to be done as these paths usually already exist
-    New-Item -Path "\\$PullServer\e$\DSC\Resources\" -ItemType Directory
-    New-Item -Path "\\$PullServer\e$\DSC\Configuration\" -ItemType Directory
+    If ( -not (Test-Path -Path "\\$PullServer\e$\DSC\Resources\" -PathType Container )) {
+        New-Item `
+            -Path "\\$PullServer\e$\DSC\Resources\" `
+            -ItemType Directory
+    }
+    If ( -not (Test-Path -Path "\\$PullServer\e$\DSC\Configuration\" -PathType Container )) {
+        New-Item `
+            -Path "\\$PullServer\e$\DSC\Configuration\" `
+            -ItemType Directory
+    }
 
 	# Download the DSC Resource Kit and install it to the local machine and to the DSC Pull Server
     Install-DSCResourceKit `
@@ -157,7 +169,7 @@ Function Example-DSCToolsSingle {
 		-ComputerName 'PLAGUE-MEMBER.PLAGUEHO.COM' `
 		-Guid '115929a0-61e2-41fb-a9ad-0cdcd66fc2e7' `
 		-RebootIfNeeded `
-		-MofFile "$PSScriptRoot\Configuration\Config_PlagueHO\PLAGUE-MEMBER.MOF" `
+		-MofFile "$PSScriptRoot\Configuration\Config_PlagueHO\PLAGUE-MEMBER.PLAGUEHO.COM.MOF" `
 		-ConfigurationMode 'ApplyAndAutoCorrect' `
         -PullServerConfigurationPath "\\$($PullServer)\e$\DSC\Configuration\" `
         -PullServerURL "https://$($PullServer):8080/$($Script:DSCTools_DefaultPullServerPath)" `
@@ -167,7 +179,6 @@ Function Example-DSCToolsSingle {
 	 	-ComputerName PLAGUE-MEMBER.PLAGUEHO.COM `
 	 	-Verbose
 
-<#
 	# Set all the nodes to back to push mode if we don't want to use Pull mode any more.
     Start-DSCPushMode `
 	 	-ComputerName PLAGUE-MEMBER.PLAGUEHO.COM `
@@ -180,7 +191,6 @@ Function Example-DSCToolsSingle {
     Invoke-DSCCheck `
 		-ComputerName PLAGUE-MEMBER.PLAGUEHO.COM `
 		-Verbose
-#>
 
 } # Function Example-DSCToolsSingle
 ##########################################################################################################################################
@@ -199,5 +209,5 @@ Function Example-DSCCreateConfig {
 ##########################################################################################################################################
 Example-DSCToolsLoadModule
 Example-DSCCreateConfig
-Example-DSCToolsSingle
-#Example-DSCToolsMulti
+#Example-DSCToolsSingle
+Example-DSCToolsMulti

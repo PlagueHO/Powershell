@@ -15,7 +15,7 @@ Configuration Config_EnablePullServerSMB {
         [String]$PullServerConfigurationPath = "$($env:PROGRAMFILES)\WindowsPowerShell\DscService\Configuration"
     ) # Param
 
-	Import-DscResource -ModuleName xSmbShare,PSDesiredStateConfiguration
+	Import-DscResource -ModuleName xSmbShare,xPSDesiredStateConfiguration,PSDesiredStateConfiguration
 
 	Node $NodeName {
 		WindowsFeature FileServer

@@ -7,7 +7,7 @@ Function Example-DSCToolsMulti {
     $Script:DSCTools_DefaultPullServerName = 'PLAGUE-PDC.PLAGUEHO.COM'
     $Script:DSCTools_DefaultPullServerProtocol = 'SMB'  # Pull server has a valid trusted cert installed
     $Script:DSCTools_DefaultPullServerConfigurationPath = "\\$Script:DSCTools_DefaultPullServerName\e$\DSC\Configuration\"   # This is the path where a DSC Pull Server will look for MOF Files.
-    $Credential = Get-Credential -Message 'Specify account to use to install Pull Server'
+    $Credential = Get-Credential -Message "User Account to Install SMB Pull Server on $Script:DSCTools_DefaultPullServerName"
 
     # These are the nodes that will become DSC Pull Servers
     $PullServers = @( `
@@ -89,7 +89,7 @@ Function Example-DSCToolsMulti {
 ##########################################################################################################################################
 Function Example-DSCToolsSingle {
     $PullServer = 'PLAGUE-PDC.PLAGUEHO.COM'
-    $Credential = Get-Credential -Message 'Specify account to use to install Pull Server'
+    $Credential = Get-Credential -Message "User Account to Install SMB Pull Server on $PullServer"
 
 	# Create the folder structure on the Pull Server where the DSC files will be installed to
 	# If the default paths are used then this wouldn't need to be done as these paths usually already exist

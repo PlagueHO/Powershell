@@ -666,7 +666,7 @@ Function Enable-DSCPullServer {
 		# Get the credentials that need to be used to apply the DSC Config to the Pull Server
 		[PSCredential]$Credential = $Node.Credential
 
-		If ($PullServerProtocol -match  '^https?://') {
+		If ($PullServerProtocol -match  'http') {
 			# An HTTP/HTTPS Pull Server is required
 			[String]$CertificateThumbprint = $Node.CertificateThumbprint
 			# Get the certificate thumbprint
@@ -853,33 +853,55 @@ Function Set-DSCPullServerLogging {
 		} Elseif ($Credential) {
 			$Parameters += @{Credential=$Credential;}			
 		}
-		 Write-Verbose $Parameters.Count
-		Foreach ($Parameter in $Parameters) { Write-Verbose $Parameter.Values }
 		# Enable/Disable the Analytic Log
 		If (($Node.AnalyticLog) -or ($AnalyticLog)) {
-			Write-Verbose "Set-DSCPullServerLogging: Pull Server $NodeName Analytic Logging Enabled"
-			Update-xDscEventLogStatus -Channel Analytic -Status Enabled @Parameters
+			Try {
+				Update-xDscEventLogStatus -Channel Analytic -Status Enabled @Parameters
+				Write-Verbose "Set-DSCPullServerLogging: Pull Server $NodeName Analytic Logging Enabled"
+			} Catch {
+				Write-Error "Set-DSCPullServerLogging: Error Enabling Analytic Logging on $NodeName"
+			}
 		} Else {
-			Write-Verbose "Set-DSCPullServerLogging: Pull Server $NodeName Analytic Logging Disabled"
-			Update-xDscEventLogStatus -Channel Analytic -Status Disabled @Parameters
+			Try {
+				Write-Verbose "Set-DSCPullServerLogging: Pull Server $NodeName Analytic Logging Disabled"
+				Update-xDscEventLogStatus -Channel Analytic -Status Disabled @Parameters
+			} Catch {
+				Write-Error "Set-DSCPullServerLogging: Error Disabling Analytic Logging on $NodeName"
+			}
 		} # If
 
 		# Enable/Disable the Debug Log
 		If (($Node.DebugLog) -or ($DebugLog)) {
-			Write-Verbose "Set-DSCPullServerLogging: Pull Server $NodeName Debug Logging Enabled"
-			Update-xDscEventLogStatus -Channel Debug -Status Enabled @Parameters
+			Try {
+				Write-Verbose "Set-DSCPullServerLogging: Pull Server $NodeName Debug Logging Enabled"
+				Update-xDscEventLogStatus -Channel Debug -Status Enabled @Parameters
+			} Catch {
+				Write-Error "Set-DSCPullServerLogging: Error Enabling Debug Logging on $NodeName"
+			}
 		} Else {
-			Write-Verbose "Set-DSCPullServerLogging: Pull Server $NodeName Debug Logging Disabled"
-			Update-xDscEventLogStatus -Channel Debug -Status Disabled @Parameters
+			Try {
+				Write-Verbose "Set-DSCPullServerLogging: Pull Server $NodeName Debug Logging Disabled"
+				Update-xDscEventLogStatus -Channel Debug -Status Disabled @Parameters
+			} Catch {
+				Write-Error "Set-DSCPullServerLogging: Error Disabling Debug Logging on $NodeName"
+			}
 		} # If
 
 		# Enable/Disable the Operational Log
 		If (($Node.OperationalLog) -or ($OperationalLog)) {
-			Write-Verbose "Set-DSCPullServerLogging: Pull Server $NodeName Operational Logging Enabled"
-			Update-xDscEventLogStatus -Channel Operational -Status Enabled @Parameters
+			Try {
+				Write-Verbose "Set-DSCPullServerLogging: Pull Server $NodeName Operational Logging Enabled"
+				Update-xDscEventLogStatus -Channel Operational -Status Enabled @Parameters
+			} Catch {
+				Write-Error "Set-DSCPullServerLogging: Error Enabling Operational Logging on $NodeName"
+			}
 		} Else {
-			Write-Verbose "Set-DSCPullServerLogging: Pull Server $NodeName Operational Logging Disabled"
-			Update-xDscEventLogStatus -Channel Operational -Status Disabled @Parameters 
+			Try {
+				Write-Verbose "Set-DSCPullServerLogging: Pull Server $NodeName Operational Logging Disabled"
+				Update-xDscEventLogStatus -Channel Operational -Status Disabled @Parameters 
+			} Catch {
+				Write-Error "Set-DSCPullServerLogging: Error Disabling Operational Logging on $NodeName"
+			}
 		} # If
 	} # Foreach
 } # Set-DSCPullServerLogging
@@ -1091,7 +1113,7 @@ Function Start-DSCPullMode {
             $SourceMof = "$NodeConfigSourceFolder\$NodeName.mof"
         } Else {
             $SourceMof = $MofFile
-        }
+        } # If
         Write-Verbose "Start-DSCPullMode: $NodeName Will Use Configuration MOF $SourceMof"
 
         # If the MOF doesn't throw an error?
@@ -1099,7 +1121,7 @@ Function Start-DSCPullMode {
             #TODO: Can we try to create the MOF file from the configuration?
             Write-Error "Start-DSCPullMode: Node $NodeName Configuration MOF $SourceMof Could Not Be Found"
             $NodeError = $true
-        }
+        } # If
 
         If (-not $NodeError) {
             # Create and/or Move the Node Configuration file to the Pull server
@@ -1124,7 +1146,7 @@ Function Start-DSCPullMode {
 			} Else {
 				If ($Cert -eq $null) {
 					Throw "A Certificate Thumbprint must be provided for the node if a Pull Server credential is passed"
-				}
+				} # If
 				Config_SetLCMPullMode `
 					-NodeName $NodeName `
 					-NodeGuid $NodeGuid `
@@ -1135,7 +1157,7 @@ Function Start-DSCPullMode {
 					-Credential $PullServerCredential `
 					-Output $TempPath `
 					| Out-Null
-			}
+			} # If
             Write-Verbose "Start-DSCPullMode: Node $NodeName LCM MOF $TempPath\$NodeName.MOF Created Successfully"
         
             If (($NodeName -match 'localhost') -or ($NodeName -eq $ENV:COMPUTERNAME)) {
@@ -1143,8 +1165,12 @@ Function Start-DSCPullMode {
 				Set-DSCLocalConfigurationManager -Path $TempPath
 			} Else {
 				# Apply the LCM MOF File to a remote node
-				Set-DSCLocalConfigurationManager -Path $TempPath -Credential $Cred -ComputerName $NodeName
-			}
+				If (Test-Connection -ComputerName $NodeName -Count 1 -Quiet) {
+					Set-DSCLocalConfigurationManager -Path $TempPath -Credential $Cred -ComputerName $NodeName
+				} Else {
+					Write-Error "Start-DSCPullMode: Error contacting $NodeName. Pull Mode Configuration was not applied."
+				} # If
+			} # If
 
             Write-Verbose "Start-DSCPullMode: Node $NodeName set to use LCM MOF $TempPath"
 
@@ -1310,7 +1336,17 @@ Function Start-DSCPushMode {
             Write-Verbose "Start-DSCPushMode: Node $NodeName LCM MOF $TempPath\$NodeName.MOF Created Successfully"
         
             # Apply the LCM MOF File to the node
-            Set-DSCLocalConfigurationManager -Computer $NodeName -Path $TempPath
+            If (($NodeName -match 'localhost') -or ($NodeName -eq $ENV:COMPUTERNAME)) {
+				# Apply the LCM MOF File to the local node
+				Set-DSCLocalConfigurationManager -Path $TempPath
+			} Else {
+				# Apply the LCM MOF File to a remote node
+				If (Test-Connection -ComputerName $NodeName -Count 1 -Quiet) {
+					Set-DSCLocalConfigurationManager -Path $TempPath -Credential $Cred -ComputerName $NodeName
+				} Else {
+					Write-Error "Start-DSCPushMode: Error contacting $NodeName. Push Mode Configuration was not applied."
+				} # If
+			} # If
 
             Write-Verbose "Start-DSCPushMode: Node $NodeName set to use LCM MOF $TempPath"
 
