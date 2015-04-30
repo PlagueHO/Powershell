@@ -28,12 +28,16 @@ Function Example-DSCToolsMulti {
 
 	# Create the folder structure on the Pull Server where the DSC files will be installed to
 	# If the default paths are used then this wouldn't need to be done as these paths usually already exist
-    New-Item `
-		-Path $Script:DSCTools_DefaultPullServerResourcePath `
-		-ItemType Directory
-    New-Item `
-		-Path $Script:DSCTools_DefaultPullServerConfigurationPath `
-		-ItemType Directory
+    If ( -not (Test-Path -Path $Script:DSCTools_DefaultPullServerResourcePath -PathType Container )) {
+		New-Item `
+			-Path $Script:DSCTools_DefaultPullServerResourcePath `
+			-ItemType Directory
+	}
+    If ( -not (Test-Path -Path $Script:DSCTools_DefaultPullServerConfigurationPath -PathType Container )) {
+		New-Item `
+			-Path $Script:DSCTools_DefaultPullServerConfigurationPath `
+			-ItemType Directory
+	}
 
     # Download the DSC Resource Kit and install it to the local machine and to the DSC Pull Server
     Install-DSCResourceKit `
@@ -91,8 +95,16 @@ Function Example-DSCToolsMulti {
 Function Example-DSCToolsSingle {
 	# Create the folder structure on the Pull Server where the DSC files will be installed to
 	# If the default paths are used then this wouldn't need to be done as these paths usually already exist
-    New-Item -Path "e:\DSC\Resources\" -ItemType Directory
-    New-Item -Path "e:\DSC\Configuration\" -ItemType Directory
+    If ( -not (Test-Path -Path "e:\DSC\Resources\" -PathType Container )) {
+		New-Item `
+			-Path "e:\DSC\Resources\" `
+			-ItemType Directory
+	}
+    If ( -not (Test-Path -Path "e:\DSC\Configuration\" -PathType Container )) {
+		New-Item `
+			-Path "e:\DSC\Configuration\" `
+			-ItemType Directory
+	}
 
 	# Download the DSC Resource Kit and install it to the local machine and to the DSC Pull Server
     Install-DSCResourceKit `
