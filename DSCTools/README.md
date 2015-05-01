@@ -31,7 +31,10 @@ This module contains functions to try and make setting up and using Desired Stat
 
 I noticed while attempting to set up my first DSC Pull server that it was a resonably intricate process with lots of room for mistakes.
 There were many manual steps that could all go wrong. So I attempted to try and automate some of the steps involved with setting up
-Pull servers and installing resource files onto them as well as configuring the LCM on the machines being configured.
+Pull servers and installing resource files onto them as well as configuring the LCM on the nodes being controlled.
+
+The intent of this module is that it should allow setting up a full DSC pull system (the fiddly part) with only a few lines of code,
+freeing up time to actually write the node configuration scripts (the fun part).
 
 The functions in this module are:
 

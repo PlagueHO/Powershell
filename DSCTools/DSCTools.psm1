@@ -65,6 +65,10 @@ Script Center: https://gallery.technet.microsoft.com/scriptcenter/DSC-Tools-c96e
 # It may change when newer versions of the resource kit are released.
 [String]$Script:DSCTools_ResourceKitURL = "https://gallery.technet.microsoft.com/scriptcenter/DSC-Resource-Kit-All-c449312d/file/131371/4/DSC%20Resource%20Kit%20Wave%2010%2004012015.zip"
 
+# This is the default folder the functions Start-DSCPull, Start-DSCPush and Update-DSCNodeConfiguration functions will look for
+# MOF files for node configuration. In future they may also look for PS1 files that can be converted to MOF files.
+[String]$Script:DSCTools_DefaultNodeConfigSourceFolder = "$HOME\Documents\"
+
 # This is the version of PowerShell that the Configuration files should be built to use.
 # This is for future use when WMF 5.0 is available the LCM configuration files can be
 # written in a more elegant fashion. Currently this should always be set to 4.0
