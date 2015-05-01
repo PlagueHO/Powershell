@@ -12,8 +12,9 @@ Script Center: https://gallery.technet.microsoft.com/scriptcenter/DSC-Tools-c96e
 ##########################################################################################################################################
 # Default Configuration Variables
 ##########################################################################################################################################
-# Changing these variables after this module has been imported will allow the default parameters that the module cmdlets will use.
-# This can be used to reduce the number of parameters that have to be passed to the module cmdlets if non-default values are used.
+# The DSCTools module contains some script variables that can be changed to allow the default properties
+# of the module to be changed. This helps reduce the number of parameters that need to be passed to each
+# DSCTools function if you want to configure your DSC system with parameters other than the default.
 
 # This is the name of the pull server that will be used if no pull server parameter is passed to functions
 # Setting this value is a lazy way of using a different pull server (rather than passing the pullserver parameter)
