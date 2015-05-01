@@ -9,6 +9,7 @@ Anyone who has attempted to install and use DSC and DSC pull servers knows that 
 
 ### Version Info
 <pre>
+1.6   2015-05-01   Daniel Scott-Raynsford       Added function Update-DSCNodeConfiguration
 1.5   2015-05-01   Daniel Scott-Raynsford       Improved Handling of calling functions with Localhost.
                                                 Checks to see if remote computers accessible before calling functions.
 1.4   2015-04-30   Daniel Scott-Raynsford       Misc fixes to DSCTools.psm1
@@ -116,6 +117,21 @@ Set-DSCPullServerLogging -ComputerName DSCPULLSRV01 -AnalyticLog $True -Operatio
 See:
 ```powershell
 Get-Help -Name Set-DSCPullServerLogging -Full
+```
+For more information.
+
+
+#### Function Update-DSCNodeConfiguration
+Updates the configuration for one or more nodes in a Pull Server.
+
+For example:
+```powershell
+Update-DSCNodeConfiguration -Nodes @(@{Name='SERVER01';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e7'})
+```
+
+See:
+```powershell
+Get-Help -Name Update-DSCNodeConfiguration -Full
 ```
 For more information.
 

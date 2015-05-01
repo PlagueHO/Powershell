@@ -34,10 +34,32 @@ configuration Config_PlagueHO
             DestinationPath = 'c:\program files\windowspowershell\modules\dscreadme.txt'
             Contents = 'Windows PowerShell Modules have been installed by DSC.'
             Type = 'File'
-            DependsOn = '[File]ModulesFolderCreate'
             CheckSum = 'SHA-256'
+            DependsOn = '[File]ModulesFolderCreate'
         } # File ReadmeCreate
                       
+		Archive PSWindowsUpdateModule
+		{
+			Destination = 'c:\program files\windowspowershell\modules\'
+			Path = '\\plague-pdc.plagueho.com\public\PSModules\PSWindowsUpdate.zip'
+			Ensure = 'Present'
+			Force = $True
+			CheckSum = 'SHA-256'
+			Validate = $True
+            DependsOn = '[File]ModulesFolderCreate'
+		}
+
+		Archive CoreFigModule
+		{
+			Destination = 'c:\program files\windowspowershell\modules\'
+			Path = '\\plague-pdc.plagueho.com\public\PSModules\CoreFig.zip'
+			Ensure = 'Present'
+			Force = $True
+			CheckSum = 'SHA-256'
+			Validate = $True
+            DependsOn = '[File]ModulesFolderCreate'
+		}
+
         # Write a Completion Log Entry
         Log WriteCompleteLog
         {

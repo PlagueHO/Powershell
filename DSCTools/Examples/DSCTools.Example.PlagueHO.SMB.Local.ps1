@@ -63,6 +63,12 @@ Function Example-DSCToolsMulti {
 		-Nodes $Nodes `
 		-Verbose
 
+    # Re-copy the node configuration files up to the pull server.
+    Update-DSCNodeConfiguration `
+		-Nodes $Nodes `
+		-InvokeCheck `
+		-Verbose
+
     # Force the all the machines to pull thier config from the Pull server (although we could just wait 15 minutes for this to happen automatically)
     Invoke-DSCCheck `
 		-Nodes $Nodes `
@@ -86,7 +92,7 @@ Function Example-DSCToolsSingle {
     $PullServer = 'PLAGUE-PDC.PLAGUEHO.COM'
     $ConfigPath = 'e:\DSC\Configuration\'
     $NodeName = 'PLAGUE-MEMBER.PLAGUEHO.COM'
-    $NodeGuid = '115929a0-61e2-41fb-a9ad-0cdcd66fc2e7'
+    $NodeGuid = '115929a0-61e2-41fb-a9ad-0cdcd66fc2e1'
 
 	# Create the folder structure on the Pull Server where the DSC files will be installed to
 	# If the default paths are used then this wouldn't need to be done as these paths usually already exist
@@ -134,6 +140,15 @@ Function Example-DSCToolsSingle {
         -PullServerConfigurationPath $ConfigPath `
         -PullServerURL "\\$PullServer\PSDSCPullServer\" `
 		-Verbose
+
+    # Re-copy the node configuration files up to the pull server.
+    Update-DSCNodeConfiguration `
+        -ComputerName $NodeName `
+		-Guid $NodeGuid `
+		-MofFile "$PSScriptRoot\Configuration\Config_PlagueHO\$NodeName.MOF" `
+        -PullServerConfigurationPath $ConfigPath `
+		-InvokeCheck `
+        -Verbose
 
     # Force the all the machines to pull thier config from the Pull server (although we could just wait 15 minutes for this to happen automatically)
     Invoke-DSCCheck `

@@ -897,6 +897,177 @@ Function Set-DSCPullServerLogging {
 ##########################################################################################################################################
 
 ##########################################################################################################################################
+Function Update-DSCNodeConfiguration {
+<#
+.SYNOPSIS
+		Updates the configuration for one or more nodes in a Pull Server.
+
+.DESCRIPTION 
+		This function will copy the node configuration MOF files to the pull server for the specified nodes.
+
+		Note: The nodes should have already been successfully put into Pull Mode against the pull server using Start-DSCPullMode function.
+		If any of these nodes are in push mode then the updated configuration will not be applied untill the node is switched into pull
+		mode using the Start-DSCPullMode function.
+
+		It will take an array of nodes in the nodes parameter which will list all nodes that should recieve updated MOF files.
+
+		The function will:
+		1. Create the node DSC configuration MOF file if it is missing (and the configration .ps1 file is specified).
+		2. Copy the node DSC configuration MOF file and rename with GUID provided in the nodes array.
+		3. Create a node DSC configuration MOF checksum file.
+		4. Move the node DSC configration MOF and checksum file to the Pull server.
+     
+.PARAMETER ComputerName
+		This is the name of the computer that should be switched into Pull Mode. This parameter should not be set if Nodes are provided.
+
+.PARAMETER Guid
+		This is the GUID that will be used to identify this computers configuration on the DSC Pull sever. This parameter should not be set if Nodes are provided.
+
+.PARAMETER MOFFile
+		This is MOF file that contains the DSC Configuration for this computer. This parameter should not be set if Nodes are provided.
+
+.PARAMETER PullServerConfigurationPath
+		This optional parameter contains the full path to where the Pull Server DSC Node configuration files should be written to.
+
+		If this parameter is not passed it will be set to $Script:DSCTools_DefaultPullServerConfigurationPath
+
+		For example:
+
+		c:\program files\windowspowershell\DscService\configuration
+
+.PARAMETER NodeConfigSourceFolder
+
+		This parameter is used to specify the folder where the node configration files can be found. If it is not passed it will default to the
+		module variable $Script:DSCTools_DefaultNodeConfigSourceFolder.
+
+		This value will be ignored for any node that has a MOFFile key value set.
+
+.PARAMETER Nodes
+		Must contain an array of hash tables. Each hash table will represent a node that should be configured full DSC pull mode.
+
+		The hash table must contain the following entries:
+		Name = 
+
+		Each hash entry can also contain the following optional items. If each item is not specified it will default.
+		Guid = If no guid is passed for this node a new one will be created
+		MofFile = This is the path and filename of the MOF file to use for this node. If not provided the MOF file will default to the NodeConfigSourceFolder parameter plus NodeName
+		CertificateThumbprint = This is the certificate thumbprint of the certificate that will be used to encrypt credentials passed to this node. If none are supplied then the certificate thuumbpring parameter is used unless it it not passed.
+
+		For example:
+		@(@{Name='SERVER01';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e7'})
+
+.PARAMETER CertificateThumbprint
+		This is the certificate thumbprint of the certificate that will be used to encrypt credentials contained in these configuration files.
+		This is for future use and is not currently supported.
+
+.PARAMETER InvokeCheck
+		If this switch is set it will cause Invoke-DSCCheck to be called after the node configuration is updated. This will cause the configuration change to be immediately applied.
+
+.EXAMPLE 
+		 Update-DSCNodeConfiguration `
+			-Nodes @(@{Name='SERVER01';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e7'}) 
+		 This command will upload a new confguration file for node SERVER01 to the Pull Server configuration folder specified in $Script:DSCTools_DefaultPullServerConfigurationPath.
+
+.EXAMPLE 
+		 Update-DSCNodeConfiguration `
+			-Nodes @(@{Name='SERVER01';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e7'}) `
+			-PullServerConfigurationPath '\\MyPullServer\DSCConfiguration'
+		 This command will upload a new configuraton file for node SERVER01 to the Pull Server configuration folder '\\MyPullServer\DSCConfiguration'
+#>
+    [CmdletBinding()]
+    Param (
+        [Parameter(ParameterSetName='ComputerName')]
+	    [ValidateNotNullOrEmpty()]
+		[string]$ComputerName,
+
+        [Parameter(ParameterSetName='ComputerName')]
+	    [ValidateNotNullOrEmpty()]
+		[guid]$Guid,
+
+        [Parameter(ParameterSetName='ComputerName')]
+	    [ValidateNotNullOrEmpty()]
+	    [string]$MOFFile,
+
+        [Parameter(ParameterSetName='Nodes')]
+        [Array]$Nodes,
+
+        [ValidateNotNullOrEmpty()]
+		[String]$PullServerConfigurationPath=$Script:DSCTools_DefaultPullServerConfigurationPath,
+
+        [ValidateNotNullOrEmpty()]
+		[String]$NodeConfigSourceFolder=$Script:DSCTools_DefaultNodeConfigSourceFolder,
+
+		[ValidateNotNullOrEmpty()]
+		[String]$CertificateThumbprint,
+
+		[Switch]$InvokeCheck
+    )
+    
+    If ($ComputerName) {
+		$Nodes = @{
+			Name=$ComputerName;
+			Guid=$Guid;
+			MofFile=$MOFFile;
+		} # $Nodes
+	} # If
+
+	Foreach ($Node In $Nodes) {
+        # Clear the node error flag
+        [Boolean]$NodeError = $false
+        
+        # Get the Node parameters into variables and check them
+        [String]$NodeName = $Node.Name
+        If ($NodeName -eq '') {
+            Throw 'Node name is empty.'
+        } # If
+
+        [String]$NodeGuid = $Node.Guid
+        If ($NodeGuid -eq '') {
+            Throw "Guid for node $NodeName is empty."
+        } # If
+        Write-Verbose "Update-DSCNodeConfiguration: Updating $NodeName Guid $NodeGuid with Pull Mode configuration"
+
+		# This is the certificate thumbrint that will be used to encrypt any credentials in this configuration.
+		[String]$Cert = $Node.CertificateThumbprint
+        If (($Cert -eq $null) -or ($Cert -eq '')) {
+            $Cert = $CertificateThumbprint
+        } # If
+
+		# If the node doesn't have a specific MOF path specified then see if we can figure it out
+        # Based on other parameters specified - or even create it.
+        [String]$MofFile = $Node.MofFile
+        If ($MofFile -eq $null) {
+            $SourceMof = "$NodeConfigSourceFolder\$NodeName.mof"
+        } Else {
+            $SourceMof = $MofFile
+        } # If
+        Write-Verbose "Update-DSCNodeConfiguration: $NodeName Will Use Configuration MOF $SourceMof"
+
+        # If the MOF doesn't throw an error?
+        If (-not (Test-Path -PathType Leaf -Path $SourceMof)) {
+            #TODO: Can we try to create the MOF file from the configuration?
+            Write-Error "Update-DSCNodeConfiguration: Node $NodeName Configuration MOF $SourceMof Could Not Be Found"
+            $NodeError = $true
+        } # If
+
+        If (-not $NodeError) {
+            # Create and/or Move the Node Configuration file to the Pull server
+            $DestMof = Join-Path -Path $PullServerConfigurationPath -ChildPath "$NodeGuid.mof"
+            Copy-Item -Path $SourceMof -Destination $DestMof -Force
+            Write-Verbose "Update-DSCNodeConfiguration: Node $NodeName Configuration MOF $SourceMof Copied to $DestMof"
+            New-DSCChecksum -ConfigurationPath $DestMof -Force
+            Write-Verbose "Update-DSCNodeConfiguration: Node $NodeName Configuration MOF Checksum Created for $DestMof"
+			If ($InvokeCheck) {
+				Invoke-DSCCheck -ComputerName $NodeName
+			} # If
+		} # If
+
+		Write-Verbose "Update-DSCNodeConfiguration: Node $NodeName Pull Mode configuration update complete"
+    } # Foreach
+} # Update-DSCNodeConfiguration
+##########################################################################################################################################
+
+##########################################################################################################################################
 Function Start-DSCPullMode {
 <#
 .SYNOPSIS
@@ -1650,6 +1821,6 @@ Function Get-xDscLocalConfigurationManager {
 # Exports
 ##########################################################################################################################################
 Export-ModuleMember `
-    -Function Invoke-DSCCheck,Publish-DSCPullResources,Install-DSCResourceKit,Start-DSCPullMode,Start-DSCPushMode,Enable-DSCPullServer,Set-DSCPullServerLogging,Get-xDSCConfiguration,Get-xDscLocalConfigurationManager,IsLocalHost `
+    -Function Invoke-DSCCheck,Publish-DSCPullResources,Install-DSCResourceKit,Start-DSCPullMode,Start-DSCPushMode,Enable-DSCPullServer,Set-DSCPullServerLogging,Get-xDSCConfiguration,Get-xDscLocalConfigurationManager,Update-DSCNodeConfiguration `
     -Variable DSCTools_Default*,DSCTools_PSVersion
 ##########################################################################################################################################
