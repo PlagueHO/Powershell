@@ -9,6 +9,8 @@ Anyone who has attempted to install and use DSC and DSC pull servers knows that 
 
 ### Version Info
 <pre>
+1.5   2015-05-01   Daniel Scott-Raynsford       Improved Handling of calling functions with Localhost.
+                                                Checks to see if remote computers accessible before calling functions.
 1.4   2015-04-30   Daniel Scott-Raynsford       Misc fixes to DSCTools.psm1
 											    Renamed DSCTools.selftest.* files to DSCTools.Example files and moved to Examples folder
 1.3   2015-04-28   Daniel Scott-Raynsford       Added DSCTools.Package.ps1 Script
@@ -380,3 +382,5 @@ https://github.com/PlagueHO/Powershell/tree/master/DSCTools/Examples
 - Add ability to build the DSC configuration files if the MOF can't be found but the PS1 file can be found.
 - Force rebuild MOF if the PS1 file is newer.
 - Add support for Nodes to provide credentials to connect to a Pull Server.
+- Add automatic update of module function.
+- Add support for downloading Resource Kit Resouces when PS 5.0 is installed.

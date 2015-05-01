@@ -18,7 +18,7 @@ Script Center: https://gallery.technet.microsoft.com/scriptcenter/DSC-Tools-c96e
 # This is the name of the pull server that will be used if no pull server parameter is passed to functions
 # Setting this value is a lazy way of using a different pull server (rather than passing the pullserver parameter)
 # to each function that needs it.
-[String]$Script:DSCTools_DefaultPullServerName = 'Localhost'
+[String]$Script:DSCTools_DefaultPullServerName = 'localhost'
 
 # This is the protocol that will be used by the DSC machines to connect to the pull server. This must be HTTP or HTTPS.
 # If HTTPS is used then the HTTPS certificate on your Pull server must be trusted by all DSC Machines.
@@ -113,6 +113,14 @@ Function ZipFolder ([String]$ZipFileName,[String]$SourcePath)
 ##########################################################################################################################################
 
 ##########################################################################################################################################
+Function IsLocalHost ([String]$Name)
+{
+	Return (($Name -match 'localhost') -or ($Name -match '127.0.0.1') -or ("$Name." -match "$ENV:COMPUTERNAME\."))
+} # Function IsLocalHost
+##########################################################################################################################################
+
+
+##########################################################################################################################################
 # Main CmdLets
 ##########################################################################################################################################
 Function Invoke-DSCCheck {
@@ -168,50 +176,51 @@ Function Invoke-DSCCheck {
     Begin {}
     Process {
         If ($ComputerName -eq $null) {
-            Foreach ($Node In $Nodes) {
-                # For some reason using the Invoke-CimMethod cmdlet with the -ComputerName parameter doesn't work
-                # So the Invoke-Command is used instead to execute the command on the destination computer.
-                $Computer = $Node.Name
-                If (($Computer -eq $null) -or ($Computer -eq '')) {
-                    Throw 'Node name is empty.'
-                }
-				# If PS5 is installed then the Update-DscConfiguration command can be called -otherwise we need to
-				# use Invoke-CimMethod on the remote host.
+			# Load all the nodes into the computername array.
+            $ComputerName = @()
+			Foreach ($Node In $Nodes) {
+				$ComputerName += $Node.Name
+			} # Foreach
+		} # Foreach
+        Foreach ($Computer In $ComputerName) {
+			# If PS5 is installed then the Update-DscConfiguration command can be called -otherwise we need to
+			# use Invoke-CimMethod on the remote host.
+			If (IsLocalHost($Computer)) {
 				If ($Script:PSVersion -lt 5) {
-					Write-Verbose "Invoke-DSCCheck: Invoking Method PerformRequiredConfigurationChecks on node $Computer"
-					Invoke-Command -ComputerName $Computer { `
-						Invoke-CimMethod `
-							-Namespace 'root/Microsoft/Windows/DesiredStateConfiguration' `
-							-ClassName 'MSFT_DSCLocalConfigurationManager' `
-							-MethodName 'PerformRequiredConfigurationChecks' `
-							-Arguments @{ Flags = [uint32]1 }
-					} # Invoke-Command
-				} Else {
-					Write-Verbose "Invoke-DSCCheck: Calling Update-DscConfigration on node $Computer"
-					Update-DscConfiguration -ComputerName $Computer
-				} # If
-            } # Foreach ($Node In $Nodes)
-        } Else {
-            Foreach ($Computer In $ComputerName) {
-				# If PS5 is installed then the Update-DscConfiguration command can be called -otherwise we need to
-				# use Invoke-CimMethod on the remote host.
-				If ($Script:PSVersion -lt 5) {
-					Write-Verbose "Invoke-DSCCheck: Invoking Method PerformRequiredConfigurationChecks on node $Computer"
+					Write-Verbose "Invoke-DSCCheck: Invoking Method PerformRequiredConfigurationChecks on Localhost"
 					# For some reason using the Invoke-CimMethod cmdlet with the -ComputerName parameter doesn't work
 					# So the Invoke-Command is used instead to execute the command on the destination computer.
-					Invoke-Command -ComputerName $Computer { `
-						Invoke-CimMethod `
-							-Namespace 'root/Microsoft/Windows/DesiredStateConfiguration' `
-							-ClassName 'MSFT_DSCLocalConfigurationManager' `
-							-MethodName 'PerformRequiredConfigurationChecks' `
-							-Arguments @{ Flags = [uint32]1 }
-					} # Invoke-Command
+					Invoke-CimMethod `
+						-Namespace 'root/Microsoft/Windows/DesiredStateConfiguration' `
+						-ClassName 'MSFT_DSCLocalConfigurationManager' `
+						-MethodName 'PerformRequiredConfigurationChecks' `
+						-Arguments @{ Flags = [uint32]1 }
 				} Else {
-					Write-Verbose "Invoke-DSCCheck: Calling Update-DscConfigration on node $Computer"
-					Update-DscConfiguration -ComputerName $Computer
+					Write-Verbose "Invoke-DSCCheck: Calling Update-DscConfigration on Localhost"
+					Update-DscConfiguration
 				} # If
-            } # Foreach ($Computer In $ComputerName)
-        } # If ($ComputerName -eq $null)
+			} Else {
+				If (Test-Connection -ComputerName $Computer -Count 1 -Quiet) {
+					If ($Script:PSVersion -lt 5) {
+						Write-Verbose "Invoke-DSCCheck: Invoking Method PerformRequiredConfigurationChecks on node $Computer"
+						# For some reason using the Invoke-CimMethod cmdlet with the -ComputerName parameter doesn't work
+						# So the Invoke-Command is used instead to execute the command on the destination computer.
+						Invoke-Command -ComputerName $Computer { `
+							Invoke-CimMethod `
+								-Namespace 'root/Microsoft/Windows/DesiredStateConfiguration' `
+								-ClassName 'MSFT_DSCLocalConfigurationManager' `
+								-MethodName 'PerformRequiredConfigurationChecks' `
+								-Arguments @{ Flags = [uint32]1 }
+						} # Invoke-Command
+					} Else {
+						Write-Verbose "Invoke-DSCCheck: Calling Update-DscConfigration on node $Computer"
+						Update-DscConfiguration -ComputerName $Computer
+					} # If
+				} Else {
+					Write-Error "Invoke-DSCCheck: Error contacting $Computer. DSC check could not be triggered."
+				}
+			} # If
+        } # Foreach ($Computer In $ComputerName)
     } # Process
     End {}
 } # Function Invoke-DSCCheck
@@ -534,11 +543,11 @@ Function Enable-DSCPullServer {
 		 Enable-DSCPullServer -ComputerName DSCPULLSRV01
 		 This command will install and configure a DSC Pull Server onto machine DSCPULLSRV01
 #>
-    [CmdletBinding()]
+    [CmdletBinding(DefaultParameterSetName='ComputerName')]
     Param (
         [Parameter(ParameterSetName='ComputerName')]
 		[ValidateNotNullOrEmpty()]
-		[String]$ComputerName,
+		[String]$ComputerName='localhost',
 
         [Parameter(ParameterSetName='ComputerName')]
 		[ValidateSet('HTTP','HTTPS','SMB')]
@@ -593,7 +602,7 @@ Function Enable-DSCPullServer {
 	Write-Verbose "Enable-DSCPullServer: Creating Temporary Folder $TempPath."
 	New-Item -Path $TempPath -ItemType 'Directory' -Force | Out-Null
 
-	If ($ComputerName) {
+	If (-not $Nodes) {
 		$Nodes = @{
 			Name=$ComputerName;
 			PullServerProtocol = $PullServerProtocol;
@@ -613,7 +622,7 @@ Function Enable-DSCPullServer {
 		# Create the Pull Mode MOF that will configure the elements on this computer needed for Pull Mode
 		[String]$NodeName = $Node.Name
 		If (($NodeName -eq '') -or ($NodeName -eq $null)) {
-			Throw 'Node name is empty.'
+			$NodeName = $ENV:COMPUTERNAME
 		} # If
 
 		# Get the Pull Server Protocol
@@ -701,21 +710,41 @@ Function Enable-DSCPullServer {
 		}
 
         # Apply the Pull Server MOF File to the Server
-		Try {
-			If ($Credential -eq $null) {
-				Write-Verbose "Enable-DSCPullServer: Applying Pull Server MOF $TempPath\$NodeName.MOF to $NodeName Pull Server"
-				Start-DSCConfiguration -ComputerName $NodeName -Path $TempPath -Wait -Force
-			} Else {
-				Write-Verbose "Enable-DSCPullServer: Applying Pull Server MOF $TempPath\$NodeName.MOF to $NodeName Pull Server using Credentials"
-				Start-DSCConfiguration -ComputerName $NodeName -Path $TempPath -Wait -Force -Credential $Credential
+        If  (IsLocalHost($NodeName)) {
+			# Apply the Pull Server MOF File to the localhost
+			If ($NodeName -match '\.') {
+				Write-Warning "Enable-DSCPullServer: Warning Applying MOF $TempPath\$NodeName.MOF may fail because an FQDN name was used for Pull Server."
 			}
-		} Catch {
-			Throw
-		}
-		Write-Verbose "Enable-DSCPullServer: Pull ServerMOF $TempPath\$NodeName.MOF Applied to $NodeName Successfully"
+			Try {
+				Write-Verbose "Enable-DSCPullServer: Applying Pull Server MOF $TempPath\$NodeName.MOF to Localhost"
+				Start-DSCConfiguration -Path $TempPath -Wait -Force
+				Write-Verbose "Enable-DSCPullServer: Pull Server MOF $TempPath\$NodeName.MOF Applied to Localhost Successfully"
+			} Catch {
+			    Write-Warning "Enable-DSCPullServer: Error Applying Pull Server MOF $TempPath\$NodeName.MOF to Localhost"
+				Throw
+			} # Try
+		} Else {
+			# Apply the LCM MOF File to a remote node
+			If (Test-Connection -ComputerName $NodeName -Count 1 -Quiet) {
+				Try {
+					Write-Verbose "Enable-DSCPullServer: Applying Pull Server MOF $TempPath\$NodeName.MOF to $NodeName"
+					If ($Credential) {
+						Start-DSCConfiguration -Path $TempPath -ComputerName $NodeName -Credential $Credential -Wait -Force
+					} Else {
+						Start-DSCConfiguration -Path $TempPath -ComputerName $NodeName -Wait -Force
+					} # If
+					Write-Verbose "Enable-DSCPullServer: Pull Server MOF $TempPath\$NodeName.MOF Applied to $NodeName Successfully"
+				} Catch {
+					Write-Warning "Enable-DSCPullServer: Error Applying Pull Server MOF $TempPath\$NodeName.MOF to $NodeName"
+					Throw
+				} # Try
+			} Else {
+				Write-Error "Enable-DSCPullServer: Error contacting $NodeName. Push Mode Configuration was not applied."
+			} # If
+		} # If
 
 		# Reove the LCM MOF File
-		Remove-Item -Path "$TempPath\$NodeName.MOF"
+		Remove-Item -Path "$TempPath\$NodeName.MOF" -Force
 		Write-Verbose "Enable-DSCPullServer: MOF $TempPath\$NodeName.MOF for $NodeName Deleted"
 	} # Foreach
 	
@@ -769,7 +798,7 @@ Function Set-DSCPullServerLogging {
 		 Set-DSCPullServerLogging -ComputerName DSCPULLSRV01 -Analytic $True -Debug $False -Operational $True
 		 This command will enable Analytic and Operational logging for DSC Pull Server DSCPULLSRV01.
 #>
-    [CmdletBinding()]
+    [CmdletBinding(DefaultParameterSetName='ComputerName')]
     Param (
         [Parameter(ParameterSetName='ComputerName')]
 		[ValidateNotNullOrEmpty()]
@@ -801,16 +830,18 @@ Function Set-DSCPullServerLogging {
 
 		# Was a computer name provided?
 		[String]$NodeName = $Node.Name
-		If (-not (($NodeName -eq '') -or ($NodeName -eq $null))) {
+		If (($NodeName -eq '') -or ($NodeName -eq $null) -or (IsLocalHost($NodeName))) {
+			# None was provided or localhost was used.			
+		} Else {
 			$Parameters += @{ComputerName=$NodeName;}
+			# Were credentials provided?
+			If ($Node.Credential) {
+				$Parameters += @{Credential=$Node.Credential;}
+			} Elseif ($Credential) {
+				$Parameters += @{Credential=$Credential;}			
+			}
 		} # If
 
-		# Were credentials provided
-	    If ($Node.Credential) {
-			$Parameters += @{Credential=$Node.Credential;}
-		} Elseif ($Credential) {
-			$Parameters += @{Credential=$Credential;}			
-		}
 		# Enable/Disable the Analytic Log
 		If (($Node.AnalyticLog) -or ($AnalyticLog)) {
 			Try {
@@ -1118,9 +1149,10 @@ Function Start-DSCPullMode {
 			} # If
             Write-Verbose "Start-DSCPullMode: Node $NodeName LCM MOF $TempPath\$NodeName.MOF Created Successfully"
         
-            If (($NodeName -match 'localhost') -or ($NodeName -eq $ENV:COMPUTERNAME)) {
+            If (IsLocalHost($NodeName)) {
 				# Apply the LCM MOF File to the local node
 				Try {
+					Write-Verbose "Start-DSCPullMode: Setting Localhost to use LCM MOF $TempPath"
 					Set-DSCLocalConfigurationManager -Path $TempPath
 					Write-Verbose "Start-DSCPullMode: Node Localhost set to use LCM MOF $TempPath"
 				} Catch {
@@ -1130,7 +1162,12 @@ Function Start-DSCPullMode {
 				# Apply the LCM MOF File to a remote node
 				If (Test-Connection -ComputerName $NodeName -Count 1 -Quiet) {
 					Try {
-						Set-DSCLocalConfigurationManager -Path $TempPath -Credential $Cred -ComputerName $NodeName
+						Write-Verbose "Start-DSCPullMode: Setting $NodeName to use LCM MOF $TempPath"
+						If ($Cred) {
+							Set-DSCLocalConfigurationManager -Path $TempPath -ComputerName $NodeName -Credential $Cred 
+						} Else {
+							Set-DSCLocalConfigurationManager -Path $TempPath -ComputerName $NodeName
+						} # If
 						Write-Verbose "Start-DSCPullMode: Node $NodeName set to use LCM MOF $TempPath"
 					} Catch {
 						Write-Error "Start-DSCPullMode: Error Setting $NodeName to use LCM MOF $TempPath"
@@ -1303,9 +1340,10 @@ Function Start-DSCPushMode {
             Write-Verbose "Start-DSCPushMode: Node $NodeName LCM MOF $TempPath\$NodeName.MOF Created Successfully"
         
             # Apply the LCM MOF File to the node
-            If (($NodeName -match 'localhost') -or ($NodeName -eq $ENV:COMPUTERNAME)) {
+            If  (IsLocalHost($NodeName)) {
 				# Apply the LCM MOF File to the local node
 				Try {
+					Write-Verbose "Start-DSCPushMode: Setting Localhost to use LCM MOF $TempPath"
 					Set-DSCLocalConfigurationManager -Path $TempPath
 					Write-Verbose "Start-DSCPushMode: Localhost set to use LCM MOF $TempPath"
 				} Catch {
@@ -1315,7 +1353,12 @@ Function Start-DSCPushMode {
 				# Apply the LCM MOF File to a remote node
 				If (Test-Connection -ComputerName $NodeName -Count 1 -Quiet) {
 					Try {
-						Set-DSCLocalConfigurationManager -Path $TempPath -Credential $Cred -ComputerName $NodeName
+						Write-Verbose "Start-DSCPushMode: Setting $NodeName to use LCM MOF $TempPath"
+						If ($Cred) {
+							Set-DSCLocalConfigurationManager -Path $TempPath -ComputerName $NodeName -Credential $Cred 
+						} Else {
+							Set-DSCLocalConfigurationManager -Path $TempPath -ComputerName $NodeName
+						} # If
 			            Write-Verbose "Start-DSCPushMode: Node $NodeName set to use LCM MOF $TempPath"
 					} Catch {
 			            Write-Error "Start-DSCPushMode: Error Setting $NodeName to use LCM MOF $TempPath"					
@@ -1607,6 +1650,6 @@ Function Get-xDscLocalConfigurationManager {
 # Exports
 ##########################################################################################################################################
 Export-ModuleMember `
-    -Function Invoke-DSCCheck,Publish-DSCPullResources,Install-DSCResourceKit,Start-DSCPullMode,Start-DSCPushMode,Enable-DSCPullServer,Set-DSCPullServerLogging,Get-xDSCConfiguration,Get-xDscLocalConfigurationManager `
+    -Function Invoke-DSCCheck,Publish-DSCPullResources,Install-DSCResourceKit,Start-DSCPullMode,Start-DSCPushMode,Enable-DSCPullServer,Set-DSCPullServerLogging,Get-xDSCConfiguration,Get-xDscLocalConfigurationManager,IsLocalHost `
     -Variable DSCTools_Default*,DSCTools_PSVersion
 ##########################################################################################################################################

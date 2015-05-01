@@ -14,7 +14,7 @@ Function Example-DSCToolsMulti {
 
     # These are the nodes that will become DSC Pull Servers
     $PullServers = @( `
-	    @{Name=$Script:DSCTools_DefaultPullServerName;CertificateThumbprint='3aaeef3f4b6dad0c8cb59930b48a9ffc25daa7d8'} )
+	    @{Name='PLAGUE-PDC';CertificateThumbprint='3aaeef3f4b6dad0c8cb59930b48a9ffc25daa7d8'} )
 
     # These are the nodes that we are going to set up Pull mode for
     $Nodes = @( `
@@ -47,7 +47,6 @@ Function Example-DSCToolsMulti {
     # Copy all the resources up to the pull server (zipped and with a checksum file).
     Publish-DSCPullResources `
 		-Verbose
-
     # Install a DSC Pull Server
     Enable-DSCPullServer `
 		-Nodes $PullServers `
@@ -76,7 +75,6 @@ Function Example-DSCToolsMulti {
 		-Nodes $Nodes `
 		-Verbose
 
-<#
     # Set all the nodes to back to push mode if we don't want to use Pull mode any more.
     Start-DSCPushMode `
 		-Nodes $Nodes `
@@ -86,8 +84,6 @@ Function Example-DSCToolsMulti {
     Invoke-DSCCheck `
 		-Nodes $Nodes `
 		-Verbose
-#>
-
 } # Function Example-DSCToolsMulti
 ##########################################################################################################################################
 
@@ -127,7 +123,6 @@ Function Example-DSCToolsSingle {
 
     # Set DSC Pull Server Logging Mode
     Set-DSCPullServerLogging `
-		-ComputerName 'PLAGUE-PDC.PLAGUEHO.COM' `
 		-AnalyticLog $True `
 		-OperationalLog $True `
 		-Verbose
@@ -154,7 +149,6 @@ Function Example-DSCToolsSingle {
 	 	-ComputerName PLAGUE-MEMBER.PLAGUEHO.COM `
 	 	-Verbose
 
-<#
 	# Set all the nodes to back to push mode if we don't want to use Pull mode any more.
     Start-DSCPushMode `
 	 	-ComputerName PLAGUE-MEMBER.PLAGUEHO.COM `
@@ -167,8 +161,6 @@ Function Example-DSCToolsSingle {
     Invoke-DSCCheck `
 		-ComputerName PLAGUE-MEMBER.PLAGUEHO.COM `
 		-Verbose
-#>
-
 } # Function Example-DSCToolsSingle
 ##########################################################################################################################################
 
@@ -187,4 +179,4 @@ Function Example-DSCCreateConfig {
 Example-DSCToolsLoadModule
 Example-DSCCreateConfig
 Example-DSCToolsSingle
-#Example-DSCToolsMulti
+Example-DSCToolsMulti
