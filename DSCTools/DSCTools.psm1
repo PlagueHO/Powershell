@@ -155,6 +155,10 @@ Function Invoke-DSCCheck {
 		For example:
 		@(@{Name='SERVER01'},@{Name='SERVER02'})
 
+.PARAMETER SkipConnectionCheck
+		Some machines will falsely return that they are not contactable when they are actually able to be contacted. This swtich
+		causes the cmdlet to skip the connection test to each node and will always allow the check to be performed. 
+
 .EXAMPLE 
 		 Invoke-DSCCheck -ComputerName SERVER01,SERVER02,SERVER03
 		 Causes the LCMs on computers SERVER01, SERVER02 and SERVER03 to repull DSC Configuration MOF files from the DSC Pull server.
@@ -175,7 +179,9 @@ Function Invoke-DSCCheck {
         [Parameter(
             ParameterSetName='Nodes'
             )]
-        [Array]$Nodes
+        [Array]$Nodes,
+
+		[Switch]$SkipConnectionCheck = $false
     ) # Param
 
     Begin {}
@@ -205,7 +211,7 @@ Function Invoke-DSCCheck {
 					Update-DscConfiguration
 				} # If
 			} Else {
-				If (Test-Connection -ComputerName $Computer -Count 1 -Quiet) {
+				If (($SkipConnectionCheck) -or (Test-Connection -ComputerName $Computer -Count 1 -Quiet)) {
 					If ($Script:PSVersion -lt 5) {
 						Write-Verbose "Invoke-DSCCheck: Invoking Method PerformRequiredConfigurationChecks on node $Computer"
 						# For some reason using the Invoke-CimMethod cmdlet with the -ComputerName parameter doesn't work
@@ -540,6 +546,10 @@ Function Enable-DSCPullServer {
 .PARAMETER Credential
 		Credentials to use to configure the DSC Pull Server using. Defaults to none.
 
+.PARAMETER SkipConnectionCheck
+		Some machines will falsely return that they are not contactable when they are actually able to be contacted. This swtich
+		causes the cmdlet to skip the connection test to each node and will always allow the set up to be performed. 
+
 .EXAMPLE 
 		 Enable-DSCPullServer -Nodes @(@{Name='DSCPULLSRV01';},@{Name='DSCPULLSRV01';})
 		 This command will install and configure a DSC Pull Server onto machines DSCPULLSRV01 and DSCPULLSRV02.
@@ -599,7 +609,9 @@ Function Enable-DSCPullServer {
 	    [PSCredential]$Credential,
 
         [Parameter(ParameterSetName='Nodes')]
-        [Array]$Nodes
+        [Array]$Nodes,
+
+		[Switch]$SkipConnectionCheck = $false
     )
     
 	# Set up a temporary path
@@ -730,7 +742,7 @@ Function Enable-DSCPullServer {
 			} # Try
 		} Else {
 			# Apply the LCM MOF File to a remote node
-			If (Test-Connection -ComputerName $NodeName -Count 1 -Quiet) {
+			If (($SkipConnectionCheck) -or (Test-Connection -ComputerName $NodeName -Count 1 -Quiet)) {
 				Try {
 					Write-Verbose "Enable-DSCPullServer: Applying Pull Server MOF $TempPath\$NodeName.MOF to $NodeName"
 					If ($Credential) {
@@ -1159,6 +1171,10 @@ Function Start-DSCPullMode {
 .PARAMETER PullServerCredential
 		These are the credentials (if required) that all nodes will need to use to pull the configuration from the Pull Server.
 
+.PARAMETER SkipConnectionCheck
+		Some machines will falsely return that they are not contactable when they are actually able to be contacted. This swtich
+		causes the cmdlet to skip the connection test to each node and will always allow the set up to be attempted. 
+
 .EXAMPLE 
 		 Start-DSCPullMode `
 			-Nodes @(@{Name='SERVER01';Guid='115929a0-61e2-41fb-a9ad-0cdcd66fc2e7'},@{Name='SERVER02';RebootIfNeeded=$true;MofFile='c:\users\Administrtor\Documents\WindowsPowerShell\DSCConfig\SERVER02.MOF'})
@@ -1208,7 +1224,9 @@ Function Start-DSCPullMode {
 		[String]$CertificateThumbprint,
 
 		[ValidateNotNullOrEmpty()]
-		[PSCredential]$PullServerCredential
+		[PSCredential]$PullServerCredential,
+
+		[Switch]$SkipConnectionCheck = $false
     )
     
     # Set up a temporary path
@@ -1336,7 +1354,7 @@ Function Start-DSCPullMode {
 				} # Try
 			} Else {
 				# Apply the LCM MOF File to a remote node
-				If (Test-Connection -ComputerName $NodeName -Count 1 -Quiet) {
+				If (($SkipConnectionCheck) -or (Test-Connection -ComputerName $NodeName -Count 1 -Quiet)) {
 					Try {
 						Write-Verbose "Start-DSCPullMode: Setting $NodeName to use LCM MOF $TempPath"
 						If ($Cred) {
@@ -1415,6 +1433,10 @@ Function Start-DSCPushMode {
 		For example:
 		@(@{Name='SERVER01';},@{Name='SERVER02';RebootIfNeeded=$true;MofFile='c:\users\Administrtor\Documents\WindowsPowerShell\DSCConfig\SERVER02.MOF'})
 
+.PARAMETER SkipConnectionCheck
+		Some machines will falsely return that they are not contactable when they are actually able to be contacted. This swtich
+		causes the cmdlet to skip the connection test to each node and will always allow the set up to be performed. 
+
 .EXAMPLE 
 		 Start-DSCPushlMode `
 			-Nodes @(@{Name='SERVER01'},@{Name='SERVER02';RebootIfNeeded=$true;MofFile='c:\users\Administrtor\Documents\WindowsPowerShell\DSCConfig\SERVER02.MOF'})
@@ -1442,7 +1464,9 @@ Function Start-DSCPushMode {
 	    [ValidateSet('ApplyAndAutoCorrect','ApplyAndMonitor','ApplyOnly')]
 		[String]$ConfigurationMode='ApplyAndAutoCorrect',
 
-        [String]$NodeConfigSourceFolder=$Script:DSCTools_DefaultNodeConfigSourceFolder
+        [String]$NodeConfigSourceFolder=$Script:DSCTools_DefaultNodeConfigSourceFolder,
+
+		[Switch]$SkipConnectionCheck = $false
     )
     
     # Set up a temporary path
@@ -1527,7 +1551,7 @@ Function Start-DSCPushMode {
 				} # Try
 			} Else {
 				# Apply the LCM MOF File to a remote node
-				If (Test-Connection -ComputerName $NodeName -Count 1 -Quiet) {
+				If (($SkipConnectionCheck) -or (Test-Connection -ComputerName $NodeName -Count 1 -Quiet)) {
 					Try {
 						Write-Verbose "Start-DSCPushMode: Setting $NodeName to use LCM MOF $TempPath"
 						If ($Cred) {
