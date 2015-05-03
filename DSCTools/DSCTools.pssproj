@@ -31,6 +31,7 @@
     <Folder Include="Configuration\Config_Test\" />
     <Folder Include="Examples\" />
     <Folder Include="Examples\Configuration\" />
+    <Folder Include="Package\" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Configuration\Config_SetLCMPullMode.ps1" />
@@ -56,6 +57,7 @@
     <Compile Include="Examples\DSCTools.Example.PlagueHO.HTTPS.Remote.ps1" />
     <Compile Include="DSCTools.Test.Nodes.ps1" />
     <Compile Include="DSCTools.Test.ps1" />
+    <Compile Include="Package\DSCTools.zip" />
     <Compile Include="README.md" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
