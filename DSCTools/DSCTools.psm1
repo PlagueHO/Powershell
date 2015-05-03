@@ -82,7 +82,7 @@ Script Center: https://gallery.technet.microsoft.com/scriptcenter/DSC-Tools-c96e
 [Int]$Script:PSVersion = $PSVersionTable.PSVersion.Major
 
 # This is the location the latest version of the DSCTools module can be downloaded from.
-[String]$Script:DSCTools_ModuleDownloadURL = 'https://gallery.technet.microsoft.com/scriptcenter/DSC-Tools-c96e2c53/file/137079/1/DSCTools.zip'
+[String]$Script:DSCTools_ModuleDownloadURL = 'https://github.com/PlagueHO/Powershell/raw/master/DSCTools/Package/DSCTools.zip'
 ##########################################################################################################################################
 
 ##########################################################################################################################################
@@ -141,8 +141,8 @@ Function Update-DSCTools {
 
 .DESCRIPTION 
 		This will look online for an updated version of the DSC Tools module and download it and install it if it is available.
-		It currently always downloads and installs the latest version from the Microsoft Script Center page:
-		https://gallery.technet.microsoft.com/scriptcenter/DSC-Tools-c96e2c53
+		It currently always downloads and installs the latest version from the GitHub Repository:
+		https://github.com/PlagueHO/Powershell/raw/master/DSCTools/Package/DSCTools.zip
 		However, once the PowerShell Gallery is publicly available and if WMF 5.0 is installed then the Install-Module/Update-Module can be used.	
 
 		If PS 4 is used then this function requires the PSCX module to be available and installed on this computer.
