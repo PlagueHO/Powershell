@@ -75,8 +75,14 @@ Script Center: https://gallery.technet.microsoft.com/scriptcenter/DSC-Tools-c96e
 # written in a more elegant fashion. Currently this should always be set to 4.0
 [Float]$Script:DSCTools_PSVersion = 4.0
 
+##########################################################################################################################################
+# Internal Module Variables/Constants
+##########################################################################################################################################
 # Get the PS Version to a variable for easier access.
 [Int]$Script:PSVersion = $PSVersionTable.PSVersion.Major
+
+# This is the location the latest version of the DSCTools module can be downloaded from.
+[String]$Script:DSCTools_ModuleDownloadURL = 'https://gallery.technet.microsoft.com/scriptcenter/DSC-Tools-c96e2c53/file/137079/1/DSCTools.zip'
 ##########################################################################################################################################
 
 ##########################################################################################################################################
@@ -99,7 +105,7 @@ Function InitZip
 Function UnzipFile ([String]$ZipFileName,[String]$DestinationPath)
 {
 	If ($Script:PSVersion -lt 5) {
-		Expand-Archive -Path $ZipFileName -OutputPath $DestinationPath
+		Expand-Archive -Path $ZipFileName -OutputPath $DestinationPath -Force
 	} Else {
 		Expand-Archive -Path $ZipFileName -DestinationPath $DestinationPath -Force
 	} # If
@@ -127,6 +133,59 @@ Function IsLocalHost ([String]$Name)
 
 ##########################################################################################################################################
 # Main CmdLets
+##########################################################################################################################################
+Function Update-DSCTools {
+<#
+.SYNOPSIS
+		 Checks for updated versions of the DSCTools module and installs the udpated version if it is available.
+
+.DESCRIPTION 
+		This will look online for an updated version of the DSC Tools module and download it and install it if it is available.
+		It currently always downloads and installs the latest version from the Microsoft Script Center page:
+		https://gallery.technet.microsoft.com/scriptcenter/DSC-Tools-c96e2c53
+		However, once the PowerShell Gallery is publicly available and if WMF 5.0 is installed then the Install-Module/Update-Module can be used.	
+
+		If PS 4 is used then this function requires the PSCX module to be available and installed on this computer.
+
+		PSCX Module can be downloaded from http://pscx.codeplex.com/
+
+.EXAMPLE 
+		 Update-DSCTools
+		 Will update the DSCTools module.
+
+ .LINK
+		http://pscx.codeplex.com/
+ #>
+    [CmdletBinding(SupportsShouldProcess=$true, ConfirmImpact='High')]
+	Param ()
+	if ($pscmdlet.ShouldProcess($ENV:COMPUTERNAME,"Install the latest version of DSCTools module?")) {
+		InitZip
+
+		# Download the module zip file DSCTools.zip
+		[String]$TempPath = Join-Path -Path $ENV:TEMP -ChildPath DSCTools.zip
+		Write-Verbose "Update-DSCTools: Downloading $Script:DSCTools_ModuleDownloadURL to $TempPath"
+		Try {
+			Invoke-WebRequest $Script:DSCTools_ModuleDownloadURL -OutFile $TempPath	    
+		} Catch {
+			Throw
+		}
+		
+		# Unzip the Module
+		[String]$ModuleDest = Split-Path $PSScriptRoot
+		Write-Verbose "Update-DSCTools: Unzipping $TempPath to $ModuleDest"
+		UnzipFile -ZipFileName $TempPath -DestinationPath $ModuleDest
+
+		# Reload the module
+		Write-Verbose "Update-DSCTools: Unloading current DSCTools Module"
+		Remove-Module DSCTools
+
+		Write-Verbose "Update-DSCTools: Loading new DSCTools Module"
+		Import-Module (Join-Path -Path $PSScriptRoot -ChildPath 'DSCTools.psm1')
+
+		Write-Verbose "Update-DSCTools: Deleting Module Package $TempPath"
+		Import-Module (Join-Path -Path $PSScriptRoot -ChildPath 'DSCTools.psm1')
+	}
+} # Function Update-DSCTools
 ##########################################################################################################################################
 Function Invoke-DSCCheck {
 <#
@@ -449,7 +508,6 @@ This is the URL to use to download the DSC Resource Kit from. It defaults to the
 	Write-Verbose "Install-DSCResourceKit: Extracting $TempPath to $ModulePath"
 	Try {
 		UnzipFile -ZipFileName $TempPath -DestinationPath $ModulePath
-		#Expand-Archive -Path $TempPath -OutputPath $ModulePath
 	} Catch {
 		Throw
 	} # Try
@@ -1850,6 +1908,6 @@ Function Get-xDscLocalConfigurationManager {
 # Exports
 ##########################################################################################################################################
 Export-ModuleMember `
-    -Function Invoke-DSCCheck,Publish-DSCPullResources,Install-DSCResourceKit,Start-DSCPullMode,Start-DSCPushMode,Enable-DSCPullServer,Set-DSCPullServerLogging,Get-xDSCConfiguration,Get-xDscLocalConfigurationManager,Update-DSCNodeConfiguration `
+    -Function Invoke-DSCCheck,Publish-DSCPullResources,Install-DSCResourceKit,Start-DSCPullMode,Start-DSCPushMode,Enable-DSCPullServer,Set-DSCPullServerLogging,Get-xDSCConfiguration,Get-xDscLocalConfigurationManager,Update-DSCNodeConfiguration,Update-DSCTools `
     -Variable DSCTools_Default*,DSCTools_PSVersion
 ##########################################################################################################################################

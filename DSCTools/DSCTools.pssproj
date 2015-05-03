@@ -46,6 +46,7 @@
     <Compile Include="Configuration\Config_Test\NODE06.mof" />
     <Compile Include="Configuration\Config_Test\NODE07.mof" />
     <Compile Include="Examples\Configuration\Config_PlagueHO.ps1" />
+    <Compile Include="Examples\DSCTools.Example.Misc.ps1" />
     <Compile Include="Examples\DSCTools.Example.PlagueHO.SMB.Local.ps1" />
     <Compile Include="Examples\DSCTools.Example.PlagueHO.SMB.Remote.ps1" />
     <Compile Include="DSCTools.Package.ps1" />

@@ -11,6 +11,7 @@ Anyone who has attempted to install and use DSC and DSC pull servers knows that 
 <pre>
 1.7   2015-05-02   Daniel Scott-Raynsford       Added SkipConnectionCheck parameter to some cmdlets to prevent checking of connection
                                                 prior to perfoming required function.
+                                                Added Update-DSCTools function.
 1.6   2015-05-01   Daniel Scott-Raynsford       Added function Update-DSCNodeConfiguration
 1.5   2015-05-01   Daniel Scott-Raynsford       Improved Handling of calling functions with Localhost.
                                                 Checks to see if remote computers accessible before calling functions.
@@ -40,6 +41,7 @@ freeing up time to actually write the node configuration scripts (the fun part).
 
 The functions in this module are:
 
+- Update-DSCTools - Checks for updated versions of the DSCTools module and installs the udpated version if it is available.
 - Invoke-DSCCheck - Forces the LCM on the specified nodes to trigger a DSC check.
 - Publish-DSCPullResources - Publishes DSC Resources to a DSC pull server.
 - Install-DSCResourceKit - Downloads and installs the DSC Resource Kit. It can also optionally publish the Resources to a pull server.
@@ -49,6 +51,21 @@ The functions in this module are:
 - Start-DSCPushMode - Configures one or mode nodes for Push Mode.
 - Get-xDscConfiguration - Returns the DSC configuration for this machine or for a remote node.
 - Get-xDscLocalConfigurationManager - Returns the DSC Local Configuration Manager configuration for this machine or for a remote node.
+
+#### Function Update-DSCTools
+Checks for updated versions of the DSCTools module and installs the udpated version if it is available.
+
+For example:
+```powershell
+Update-DSCTools
+```
+
+See:
+```powershell
+Get-Help -Name Update-DSCTools -Full
+```
+For more information.
+
 
 #### Function Invoke-DSCCheck
 Forces the LCM on the specified nodes to trigger a DSC check.
@@ -560,6 +577,5 @@ https://github.com/PlagueHO/Powershell/tree/master/DSCTools/Examples
 - Add ability to build the DSC configuration files if the MOF can't be found but the PS1 file can be found.
 - Force rebuild MOF if the PS1 file is newer.
 - Add support for Nodes to provide credentials to connect to a Pull Server.
-- Add automatic update of module function.
 - Add support for downloading Resource Kit Resouces when PS 5.0 is installed.
 - Add support for specifying a list of Resources to be downloaded with PS 5.0 from PowerShell Get.
