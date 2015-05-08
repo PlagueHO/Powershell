@@ -15,7 +15,6 @@
 
 		This script can be found:
 		Github Repo: https://github.com/PlagueHO/Powershell/tree/master/New-NanoServerVHD
-		Script Center: https://gallery.technet.microsoft.com/scriptcenter/DSC-Tools-c96e2c53
 
     .PARAMETER ServerISO
     This is the path to the Windows Server 2016 Technical Preview 2 ISO downloaded from:
@@ -26,14 +25,14 @@
 
     .PARAMETER Packages
     This is a list of the packages to install in this Nano Server. There are only 6 available currently:
-    Compute = Default compute pacakge
+    Compute = Hyper-V Server
     OEM-Drivers = Standard OEM Drivers
     Storage = Storage Server
     FailoverCluster = FailOver Cluster Server
     ReverseForwarders = ReverseForwarders to allow some older App Servers to run
-    Guest = Hyper-V tools
+    Guest = Hyper-V Guest Tools
 
-    If not specified all packages are installed.
+    If not specified then packages OEM-Drivers, Storage and Guest packages are installed.
 
     .PARAMETER ComputerName
     This is the Computer Name for the new Nano Server (if the default Unattended.XML is used).
@@ -59,10 +58,12 @@
             -DestVHD D:\Temp\NanoServer01.vhd `
             -ComputerName NANOTEST01 `
             -AdministratorPassword 'P@ssword!1' `
-            -Packages 'Compute','OEM-Drivers','Guest' `
+            -Packages 'Storage','OEM-Drivers','Guest' `
+            -IPAddress '192.168.1.65' `
             -Verbose
 
-        This command will create a new VHD containing a Nano Server machine with the name NANOTEST01. It will contain only the Compute, OEM-Drivers and Guest packages.
+        This command will create a new VHD containing a Nano Server machine with the name NANOTEST01. It will contain only the Storage, OEM-Drivers and Guest packages.
+		It will set the Administrator password to P@ssword!1 and set the IP address of the first ethernet NIC to 192.168.1.65.
 
     .LINK
     https://www.microsoft.com/en-us/evalcenter/evaluate-windows-server-technical-preview
@@ -83,7 +84,7 @@ Param (
     [String]$DestVHD,
 
     [ValidateSet('Compute','OEM-Drivers','Storage','FailoverCluster','ReverseForwarders','Guest')]
-    [String[]]$Packages = @('Compute','OEM-Drivers','Storage','FailoverCluster','ReverseForwarders','Guest'),
+    [String[]]$Packages = @('OEM-Drivers','Storage','Guest'),
 
     [ValidateNotNullOrEmpty()]
     [String]$ComputerName = "NanoServer01",
@@ -108,6 +109,10 @@ Param (
     
 )
 
+If (-not (Test-Path -Path .\Convert-WindowsImage.ps1 -PathType Leaf)) {
+	Write-Error "The Convert-WindowsImage.ps1 script was not found in the current folder. Please download it from https://gallery.technet.microsoft.com/scriptcenter/Convert-WindowsImageps1-0fe23a8f"
+	Return
+}
 [String]$WorkFolder = Join-Path -Path $ENV:Temp -ChildPath 'NanoServer' 
 [String]$DismFolder = Join-Path -Path $WorkFolder -ChildPath "DISM"
 [String]$MountFolder = Join-Path -Path $WorkFolder -ChildPath "Mount"
@@ -126,21 +131,17 @@ Mount-DiskImage -ImagePath $ServerISO
 [String]$DriveLetter = (Get-Diskimage -ImagePath $ServerISO | Get-Volume).DriveLetter
 
 # Copy DISM off the Windows ISO and put it into the working folder.
-Write-Verbose 'Copying DISM to Working Folders'
+Write-Verbose 'Copying DISM from Server ISO to Working Folders'
+If (-not (Test-Path -Path $DismFolder -PathType Container)) {
+    New-Item -Path $DismFolder -ItemType Directory
+}
 Copy-Item -Path "$($DriveLetter):\Sources\api*downlevel*.dll" -Destination $DismFolder -Force
 Copy-Item -Path "$($DriveLetter):\Sources\*dism*" -Destination $DismFolder -Force
 Copy-Item -Path "$($DriveLetter):\Sources\*provider*" -Destination $DismFolder -Force
 
-# Copy the WIM file to the working folder
-Write-Verbose 'Copying NanoServer.WIM to Working Folders'
-Copy-Item -Path "$($DriveLetter):\NanoServer\NanoServer.wim" -Destination "$WorkFolder\NanoServer.wim"
-
 # Use Convert-WindowsImage.ps1 to convert the NanoServer.WIM into a VHD
 Write-Verbose 'Creating base Nano Server Image from WIM file'
-.\Convert-WindowsImage.ps1 -Sourcepath "$WorkFolder\NanoServer.wim" -VHD (Join-Path -Path $WorkFolder -ChildPath $TempVHDName ) –VHDformat $VHDType -Edition 1
-If (-not (Test-Path -Path $DismFolder -PathType Container)) {
-    New-Item -Path $DismFolder -ItemType Directory
-}
+.\Convert-WindowsImage.ps1 -Sourcepath "$($DriveLetter):\NanoServer\NanoServer.wim" -VHD (Join-Path -Path $WorkFolder -ChildPath $TempVHDName ) –VHDformat $VHDType -Edition 1
 
 If (-not (Test-Path -Path $MountFolder -PathType Container)) {
     New-Item -Path $MountFolder -ItemType Directory
@@ -190,9 +191,11 @@ If ('Guest' -in $Packages) {
 }
 
 # Apply Unattended File
-If ($UnattendedContent -eq $null) {
+If (($UnattendedContent -eq $null) -or ($UnattendedContent -eq '')) {
+# For some reason applying computername in the Offline Servicing Phase doesn't work
+# So it can be applied in the Specialize phase...
 
-$UnattendedContent = [XML] @"
+$UnattendedContent = [String] @"
 <?xml version='1.0' encoding='utf-8'?>
 <unattend xmlns="urn:schemas-microsoft-com:unattend" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
 
@@ -216,6 +219,7 @@ $UnattendedContent = [XML] @"
 
   <settings pass="specialize">
     <component name="Microsoft-Windows-Shell-Setup" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
+      <ComputerName>$ComputerName</ComputerName>
       <RegisteredOwner>$RegisteredOwner</RegisteredOwner>
       <RegisteredOrganization>$RegisteredCorporation</RegisteredOrganization>
     </component>
@@ -224,30 +228,29 @@ $UnattendedContent = [XML] @"
 "@
 }
 
-Write-Verbose 'Assigning Unattended.XML file to Image'
+Write-Verbose 'Assigning Unattended.XML file to Nano Server'
 $UnattendFile = Join-Path -Path $WorkFolder -ChildPath 'Unattend.xml'
 Set-Content -Path $UnattendFile -Value $UnattendedContent
 & "$DismFolder\Dism.exe" "/Image:$MountFolder" "/Apply-Unattend:$UnattendFile"
 New-Item -Path "$MountFolder\windows\panther" -ItemType Directory
 Copy-Item -Path $UnattendFile -Destination "$MountFolder\windows\panther"
 
-
-If (-not ($IPaddress -eq $null)) {
-# Set a static IP Address on the machine
-    $SetupComplete += 'powershell.exe -command "Import-Module C:\windows\system32\windowspowershell\v1.0\Modules\Microsoft.PowerShell.Utility\Microsoft.PowerShell.Utility.psd1; Import-Module C:\windows\system32\WindowsPowerShell\v1.0\Modules\NetAdapter\NetAdapter.psd1; $ifa = (Get-NetAdapter -Name Ethernet).ifalias; netsh interface ip set address $ifa static' + $IPaddress + '"'
+If ($IPaddress -ne $null) {
+	# Set a static IP Address on the machine
+    $SetupComplete += 'powershell.exe -command "Import-Module C:\windows\system32\windowspowershell\v1.0\Modules\Microsoft.PowerShell.Utility\Microsoft.PowerShell.Utility.psd1; Import-Module C:\windows\system32\WindowsPowerShell\v1.0\Modules\NetAdapter\NetAdapter.psd1; $ifa = (Get-NetAdapter -Name Ethernet).ifalias; netsh interface ip set address $ifa static ' + $IPaddress + '"'
     New-Item "$MountFolder\Windows\Setup\Scripts" -ItemType Directory
     Set-Content -Path "$MountFolder\Windows\Setup\Scripts\SetupComplete.cmd" -Value $SetupComplete
 }
 
 # Dismount the image after adding the Packages to it and configuring it
-Write-Verbose 'Dismounting Nano Image'
+Write-Verbose 'Dismounting Nano Server Image'
 & "$DismFolder\Dism.exe" "/Unmount-Image" "/MountDir:$MountFolder" "/Commit"
 
 # Dismount the ISO File
 Write-Verbose 'Dismounting Server ISO'
 Dismount-DiskImage -ImagePath $ServerISO
 
-Write-Verbose 'Moving Image to Final Destination'
+Write-Verbose "Moving Nano Server Image to $DestVHD"
 Copy-Item -Path $WorkFolder\$TempVHDName -Destination $DestVHD -Force
 
 # Cleanup
