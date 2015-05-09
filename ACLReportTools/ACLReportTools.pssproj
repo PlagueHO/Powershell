@@ -28,9 +28,11 @@
   </PropertyGroup>
   <ItemGroup />
   <ItemGroup>
-    <Compile Include="Module.psd1" />
-    <Compile Include="Module.psm1" />
-    <Compile Include="Module.test.ps1" />
+    <Compile Include="ACLReportTools.format.ps1xml" />
+    <Compile Include="ACLReportTools.psd1" />
+    <Compile Include="ACLReportTools.psm1" />
+    <Compile Include="ACLReportTools.test.ps1" />
+    <Compile Include="README.md" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <Target Name="Build" />

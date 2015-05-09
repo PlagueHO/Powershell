@@ -7,6 +7,12 @@ This module contains functions for generating reports of file, folder and share 
 ### Overview
 This module provides functions for storing all file, folder and share ACL's in a report file that can be used to compare the ACL state of the same files, folders and shares later on.
 
+
+### Version Info
+<pre>
+1.0   2015-05-09   Daniel Scott-Raynsford       Initial Version
+</pre>
+
 #### Function Get-ACLShareReport
 This cmdlet returns an ACL Share Report in the pipeline for the computers/shares specified. The output of the cmdlet can be
 exported as a file by being piped to Export-ACLShareReport for later comparison or used directly in a Compare-ACLShareReport.

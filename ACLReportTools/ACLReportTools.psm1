@@ -31,7 +31,6 @@ $Html_Footer = Data {
 ##########################################################################################################################################
 # Main CmdLets
 ##########################################################################################################################################
-
 Function Get-ACLShareReport {
 <#
 .SYNOPSIS
@@ -88,9 +87,9 @@ This is a list of shares to exclude from the report. If this parameter is not se
         return $acls
     } # End
 } # Function Get-ACLShareReport
+##########################################################################################################################################
 
-
-
+##########################################################################################################################################
 function Export-ACLShareReport {
 <#
 .SYNOPSIS
@@ -144,9 +143,9 @@ Causes the file to be overwritten if it exists.
     Export-ACLs @PSBoundParameters
 
 } # Function Export-ACLShareReport
+##########################################################################################################################################
 
-
-
+##########################################################################################################################################
 function Import-ACLShareReport {
 <#
 .SYNOPSIS
@@ -175,9 +174,9 @@ This is the path to the ACL Share Report file to import. This parameter is requi
     Import-ACLs @PSBoundParameters
 
 } # Function Import-ACLShareReport
+##########################################################################################################################################
 
-
-
+##########################################################################################################################################
 Function Compare-ACLShareReports {
 <#
 .SYNOPSIS
@@ -658,13 +657,12 @@ Setting this switch will cause a 'No Change' report item to be shown when a shar
         $Comparison
     } # End
 } # Function Compare-ACLShareReports
-
+##########################################################################################################################################
 
 
 ##########################################################################################################################################
 # Support CmdLets
 ##########################################################################################################################################
-
 Function Get-Shares {
 <#
 .SYNOPSIS
@@ -750,9 +748,9 @@ This is a list of shares to exclude from the computer. If this parameter is not 
         Return $SelectedShares
     } # End
 } # Function Get-Shares
+##########################################################################################################################################
 
-
-
+##########################################################################################################################################
 function Get-ShareACLs {
 <#
 .SYNOPSIS
@@ -826,9 +824,9 @@ Get-Shares -ComputerName CLIENT01,CLIENT02 -Exclude SYSVOL | Get-ShareACLs
         Return $share_acls
     } # End
 } # function Get-ShareACLs
+##########################################################################################################################################
 
-
-
+##########################################################################################################################################
 function Get-ShareFileACLs {
 <#
 .SYNOPSIS
@@ -919,9 +917,9 @@ Setting this switch will cause the non inherited file/folder ACLs to be pulled r
         Return $file_acls
     } # End
 } # Function Get-ShareFileACLs
+##########################################################################################################################################
 
-
-
+##########################################################################################################################################
 function Get-PathFileACLs {
 <#
 .SYNOPSIS
@@ -992,9 +990,9 @@ Setting this switch will cause the non inherited file/folder ACLs to be pulled r
     } # If
     return $file_acls
 } # Function Get-PathFileACLs
+##########################################################################################################################################
 
-
-
+##########################################################################################################################################
 function Export-ACLs {
 <#
 .SYNOPSIS
@@ -1058,9 +1056,9 @@ Causes the file to be overwritten if it exists.
         }
     } # End
 } # Function Export-ACLs
+##########################################################################################################################################
 
-
-
+##########################################################################################################################################
 function Import-ACLs {
 <#
 .SYNOPSIS
@@ -1095,8 +1093,7 @@ This is the path to the ACL output file. This parameter is required.
         Write-Error "Unable to import the ACL file $Path."
     } # Try
 } # Function Import-ACLs
-
-
+##########################################################################################################################################
 
 ##########################################################################################################################################
 # Hidden Support CmdLets
@@ -1179,9 +1176,9 @@ This function creates a .net dynamic module via reflection and adds classes and 
         $TypeBuilder.CreateType() | Out-Null
     } # If
 } # Function Initialize-Module
+##########################################################################################################################################
 
-
-
+##########################################################################################################################################
 function New-ShareObject {
 <#
 .SYNOPSIS
@@ -1206,9 +1203,9 @@ This function creates an ACLReportTools.Share object from the class definition i
     $share_object.Name = $ShareName
     return $share_object
 } # function New-ShareObject
+##########################################################################################################################################
 
-
-
+##########################################################################################################################################
 function New-PermissionObject {
 <#
 .SYNOPSIS
@@ -1254,9 +1251,9 @@ This function creates an ACLReportTools.Permission object from the class definit
     $permission_object.Access = $Access
     return $permission_object
 } # function New-PermissionObject
+##########################################################################################################################################
 
-
-
+##########################################################################################################################################
 function New-PermissionDiffObject {
 <#
 .SYNOPSIS
@@ -1293,9 +1290,9 @@ This function creates an ACLReportTools.PermissionDiff object from the class def
     $permissiondiff_object.Difference = $Difference
     return $permissiondiff_object
 } # function New-PermissionDiffObject
+##########################################################################################################################################
 
-
-
+##########################################################################################################################################
 function Convert-FileSystemAccessToString {
 <#
 .SYNOPSIS
@@ -1314,9 +1311,9 @@ function Convert-FileSystemAccessToString {
         Return $FileSystemAccess
     }
 } # function Convert-FileSystemAccessToString
+##########################################################################################################################################
 
-
-
+##########################################################################################################################################
 function Convert-FileSystemAppliesToString {
 <#
 .SYNOPSIS
@@ -1346,9 +1343,9 @@ function Convert-FileSystemAppliesToString {
     } # If
     return "Unknown"
 } # function Convert-FileSystemAppliesToString
+##########################################################################################################################################
 
-
-
+##########################################################################################################################################
 function Convert-ACEToString {
 <#
 .SYNOPSIS
@@ -1367,9 +1364,9 @@ function Convert-ACEToString {
     [string]$AppliesTo=Convert-FileSystemAppliesToString -InheritanceFlags $ace.InheritanceFlags -PropagationFlags $ace.PropagationFlags
     Return "FileSystemRights  : $rights`nAccessControlType : $controltype`nIdentityReference : $IdentityReference`nIsInherited       : $IsInherited`nAppliesTo         : $AppliesTo`n"
 } # function Convert-ACEToString
+##########################################################################################################################################
 
-
-
+##########################################################################################################################################
 function Convert-FileSystemACLToString {
 <#
 .SYNOPSIS
@@ -1387,9 +1384,9 @@ function Convert-FileSystemACLToString {
     [string]$acestring=Convert-ACEToString($acl.access)
     Return "Path              : $path`nOwner             : $owner`nGroup             : $group`n$acestring"
 } # function Convert-FileSystemACLToString
+##########################################################################################################################################
 
-
-
+##########################################################################################################################################
 Function Create-HTMLReportHeader {
     Param (
         [Parameter(Mandatory=$true)]
@@ -1397,17 +1394,22 @@ Function Create-HTMLReportHeader {
     ) # Param
     return $Html_Header -f $Title
 } # Function Create-HTMLReportHeader
+##########################################################################################################################################
 
-
-
+##########################################################################################################################################
 Function Create-HTMLReportFooter {
     return $Html_Footer
 } # Function Create-HTMLReportFooter
+##########################################################################################################################################
 
 
-
+##########################################################################################################################################
 # Ensure all the custom classes are loaded in available
 Initialize-Module
+##########################################################################################################################################
 
+
+##########################################################################################################################################
 # Export the Module Cmdlets
 Export-ModuleMember -Function Get-ACLShareReport,Import-ACLShareReport,Export-ACLShareReport,Compare-ACLShareReports,Get-Shares,Get-ShareACLs,Get-PathFileACLs,Get-ShareFileACLs,Import-ACLs,Export-ACLs
+##########################################################################################################################################
