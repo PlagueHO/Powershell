@@ -31,6 +31,7 @@
     <Compile Include="ACLReportTools.format.ps1xml" />
     <Compile Include="ACLReportTools.psd1" />
     <Compile Include="ACLReportTools.psm1" />
+    <Compile Include="ACLReportTools.test.Default.ps1" />
     <Compile Include="ACLReportTools.test.ps1" />
     <Compile Include="README.md" />
   </ItemGroup>
