@@ -26,13 +26,19 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <Folder Include="Deprecated\" />
+    <Folder Include="Package\" />
+  </ItemGroup>
   <ItemGroup>
     <Compile Include="ACLReportTools.format.ps1xml" />
+    <Compile Include="ACLReportTools.Package.ps1" />
     <Compile Include="ACLReportTools.psd1" />
     <Compile Include="ACLReportTools.psm1" />
     <Compile Include="ACLReportTools.test.Default.ps1" />
     <Compile Include="ACLReportTools.test.ps1" />
+    <Compile Include="Deprecated\Compare-ShareACLs.ps1" />
+    <Compile Include="Package\ACLReportTools.zip" />
     <Compile Include="README.md" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />

@@ -2,159 +2,244 @@ Powershell
 ==========
 
 ## ACLReportTools
-This module contains functions for generating reports of file, folder and share ACL's, storing the reports and comparing them with earlier reports.
+This module contains functions for creating reports on file, folder and share ACL's, storing the reports and comparing them with earlier reports.
 
 ### Overview
-This module provides functions for storing all file, folder and share ACL's in a report file that can be used to compare the ACL state of the same files, folders and shares later on.
+The intended purpose of this module is to allow an Admininstrator to report on how ACL's for a set of path or shares have changed since a baseline was last created.
 
+Basically it allows administrators to easily see what ACL changes are being made so they keep an eye on any secuity issues arising. The process of creating/updating the baseline and producing the ACL Difference report could be easily automated. If performing SMB share comparisons, the report generation can be performed remotely (from a desktop PC for example).
+
+The process that is normally followed using this module is:
+1. Produce a baseline ACL Report from a set of Folders or Shares (even on multiple computers).
+2. Export the baseline ACL Report as a file.
+3. ... Sometime later ...
+4. Import the baseline ACL Report from a stored file.
+5. Produce a ACL Difference report comparing the imported baseline ACL Report with the current ACL state of the Folders or Shares.
+6. Repeat from step 1.
+
+The above process could be easily automated in many ways (Task Scheduler is suggested).
+
+The comparison is always performed recursively scanning a specified set of folders or SMB shares. All files and folders within these locations will be scanned, but only non-inherited ACLs will be added to the ACL Reports.
+
+Note:
+
+An ACL report is a list of the current ACLs for a set of Shares or Folders. It is stored as a serialized array of [ACLReportTools.Permission] objects that are returned by the New-ACLShareReport, New-ACLPathFileReport and Import-ACLReport cmdlets.
+
+An ACL Difference report is a list of all ACL differences between two ACL reports. It is stored as serialized array of [ACLReportTools.PermissionDiff] objects that are produced by the Compare-ACLReports cmdlet.
+
+ACL Reports produced for Shares rather than folders differ in that the Share name is provided in each [ACLReportTools.Permission] object and that the SMB Share ACL is also provided in the [ACLReportTools.Permission] array.
+
+IMPORTANT NOTES:
+When performing a comparison, make sure the baseline report used covers the same set of folders/shares you want to compare now. E.g. Don't try and compare ACLs for c:\windows and c:\wwwroot - that would make no sense.
+
+If shares or folders that are being compared have large numbers of non-inherited ACLs (perhaps because some junior admin doesn't understand inheritance) then a comparison can take a LONG time (hours) and really hog your CPU. If this is the case, run on another machine using Share mode or run after hours - or better yet, teach junior admins about inheritance! :)
+
+This Module uses the awesome NTFS Security Module available here:
+
+https://gallery.technet.microsoft.com/scriptcenter/1abd77a5-9c0b-4a2b-acef-90dbb2b84e85
+
+Ensure that you unblock all files in the NTFSSecurity module before attempting to Import Module ACLReportTools. Module ACLReportTools automatically looks for and Imports NTFSSecuriy if present. If it is missing an error will be reported stating that it is missing. If you recieve any other errors loading ACL Report tools, it is usually because some of the NTFSSecurity module files are blocked and need to be unblocked manually or with Unblock-File. You can confirm this by calling Import-Module NTFSSecurity - if any errors appear then it is most likely the cause. After unblocking the module files you may need to restart PowerShell.
+
+You should also ensure that the account that is being used to generate the reports has read access to all paths (recursively) you are reporting on and can access also read the ACLs. If it can't access them then you may get access denied errors.
 
 ### Version Info
 <pre>
+1.1   2015-05-12   Daniel Scott-Raynsford       Updated to use NTFSSecurity Module
+                                                Updated CmdLet names to follow standards
 1.0   2015-05-09   Daniel Scott-Raynsford       Initial Version
 </pre>
 
-#### Function Get-ACLShareReport
-This cmdlet returns an ACL Share Report in the pipeline for the computers/shares specified. The output of the cmdlet can be
-exported as a file by being piped to Export-ACLShareReport for later comparison or used directly in a Compare-ACLShareReport.
+### Installing ACLReportTools
+1. Unzip the archive containing the ACLReportTools module into the one of the PowerShell Modules folders.
+   E.g. c:\program files\windowspowershell\modules
+2. This will create a folder called ACLReportTools containing all the files required for this module.
+3. In PowerShell execute:
+```powershell
+Import-Module ACLReportTools
+```
+
+### Example Usage
+
+#### Example Usage: Creating a Baseline ACL Report file from Folders
+This example creates a baseline ACL Report on the folders e:\work and d:\profiles and stores it in the Baseline.acl file in the current users Documents folder.
+```powershell
+Import-Module ACLReportTools
+New-ACLPathFileReport -Path "e:\Work","d:\Profiles" | Export-ACLReport -Path "$HOME\Documents\Baseline.acl" -Force
+```
+
+#### Example Usage: Comparing a Baseline ACL Report file from Folders with Current ACLs
+This example compares the previously created baseline ACL Report stored in the users Documents folder and compares it with the current ACLs for the folders e:\Work and d:\Profiles.
+```powershell
+Import-Module ACLReportTools
+Compare-ACLReports -Baseline (Import-ACLReport -Path "$HOME\Documents\Baseline.acl") -Path "e:\Work","d:\Profiles"
+```
+
+#### Example Usage: Creating a Baseline ACL Report file from Shares
+This example creates a baseline ACL Report on the shares \\client\Share1\ and \\client\Share2\ and stores it in the Baseline.acl file in the current users Documents folder.
+```powershell
+Import-Module ACLReportTools
+New-ACLShareReport -ComputerName Client -Include Share1,Share2 | Export-ACLReport -Path "$HOME\Documents\Baseline.acl" -Force
+```
+
+#### Example Usage: Comparing a Baseline ACL Report file from Shares with Current ACLs
+This example compares the previously created baseline ACL Report stored in the users Documents folder and compares it with the current ACLs for the folders e:\Work and d:\Profiles.
+```powershell
+Import-Module ACLReportTools
+Compare-ACLReports -Baseline (Import-ACLReport -Path "$HOME\Documents\Baseline.acl") -ComputerName Client -Include Share1,Share2
+```
+
+### CmdLets
+
+#### CmdLet New-ACLShareReport
+Creates a list of Share, File and Folder ACLs for the specified shares/computers.
 
 For example:
 ```powershell
-Get-ACLShareReport -ComputerName CLIENT01,CLIENT02 -Include SHARE1,SHARE2
+New-ACLShareReport -ComputerName CLIENT01,CLIENT02 -Include SHARE1,SHARE2
 ```
 
 See:
 ```powershell
-Get-Help -Name Get-ACLShareReport -Full
+Get-Help -Name New-ACLShareReport -Full
 ```
 For more information.
 
-#### Function Export-ACLShareReport
-This cmdlet exports an ACL Share Report in the pipeline (or InputObject parameter) to the file specified.
+#### CmdLet New-ACLPathFileReport
+Creates a list of File and Folder ACLs for the provided path(s).
 
 For example:
 ```powershell
-Get-ACLShareReport -ComputerName CLIENT01,CLIENT02 -Include SHARE1,SHARE2 | Export-ACLShareReport -Path c:\ACLShareReports\MyShareReport.ACL
+New-ACLPathFileReport -Path 'e:\work','e:\profile'
 ```
 
 See:
 ```powershell
-Get-Help -Name Export-ACLShareReport -Full
+Get-Help -Name New-ACLPathFileReport -Full
 ```
 For more information.
 
-#### Function Import-ACLShareReport
+#### CmdLet Export-ACLReport 
+Export an ACL Report as a file.
+
+For example:
+```powershell
+Export-ACLReport -Path C:\ACLReports\server01.acl -InputObject $ShareReport
+```
+
+See:
+```powershell
+Get-Help -Name Export-ACLReport -Full
+```
+For more information.
+
+#### CmdLet Import-ACLReport
 This cmdlet imports an ACL Share Report from the file specified back and returns the objects in the pipeline.
 
 For example:
 ```powershell
-Import-ACLShareReport -Path c:\ACLShareReports\MyShareReport.ACL
+Import-ACLReport -Path C:\ACLReports\server01.acl
 ```
 
 See:
 ```powershell
-Get-Help -Name Import-ACLShareReport -Full
+Get-Help -Name Import-ACLReport -Full
 ```
 For more information.
 
-#### Function Compare-ACLShareReports
-This cmdlet compares a previously stored ACL Share Report with another ACL Share Report. The second ACL Share Report
-can either be the current Share ACLs for the computers/shares specified in cmdlet parameters or the return of another cmdlet
-e.g. Import-ACLShareReport or Get-ACLShareReport.
+#### CmdLet Compare-ACLReports
+Compares two ACL reports and produces an ACL Difference report.
 
 For example:
 ```powershell
-Compare-ACLShareReports -Baseline (Import-ACLShareReport -Path c:\ACLShareReports\MyShareReport.ACL) -ComputerName CLIENT01,CLIENT02 -Include SHARE1,SHARE2
+Compare-ACLReports -Baseline (Import-ACLReport -Path C:\ACLReports\server01.acl) -Path 'e:\work','e:\profile'
 ```
 
 See:
 ```powershell
-Get-Help -Name Compare-ACLShareReport -Full
+Get-Help -Name Compare-ACLReports -Full
 ```
 For more information.
 
-#### Function Export-ACLs
-This cmdlet exports any [ACLReportTool.permissions] objects that are in the pipeline to an XML file.
+#### CmdLet Export-ACLItem
+Export the ACLs that are in the pipeline as a file.
 
 For example:
 ```powershell
-Get-ShareACLs -ComputerName CLIENT01 | Export-ACLs -Path c:\ACLs\CLIENT01.ACL)
+Export-ACLItem -Path C:\ACLReports\server01.acl -InputObject $ShareReport
 ```
 
 See:
 ```powershell
-Get-Help -Name Export-ACLs -Full
+Get-Help -Name Export-ACLItem -Full
 ```
 For more information.
 
-#### Function Import-ACLs
-This cmdlet imports any [ACLReportTool.permissions] objects from a specified XML file back into the pipeline.
-
+#### CmdLet Import-ACLItem
+Import the ACLs that are in a file back into the pipeline.
 For example:
 ```powershell
-Import-ACLs -Path c:\ACLs\CLIENT01.ACL)
+Import-ACLItem -Path c:\ACLs\CLIENT01.ACL)
 ```
 
 See:
 ```powershell
-Get-Help -Name Import-ACLs -Full
+Get-Help -Name Import-ACLItem -Full
 ```
 For more information.
 
-#### Function Get-Shares
-This cmdlet returns a list of shares available on the specified computers. Specific shares can be excluded or included by passing the appropriate parameters.
+#### CmdLet Get-ACLShare
+Gets a list of the Shares on a specified computer(s) with specified inclusions or exclusions.
 
 For example:
 ```powershell
-Get-Shares -ComputerName CLIENT01,CLIENT02 -Exclude SYSVOL
+Get-ACLShare -ComputerName CLIENT01,CLIENT02 -Exclude SYSVOL
 ```
 
 See:
 ```powershell
-Get-Help -Name Get-Shares -Full
+Get-Help -Name Get-ACLShare -Full
 ```
 For more information.
 
-#### Function Get-ShareACLs
-This cmdlet returns a list of share permissions for the specified shares. The shares can be on multiple computers or on a single computer. To specify shares on multiple computers
-the shares must be passed in via the pipeline as ACLReportTools.Share objects.
+#### CmdLet Get-ACLShareACL
+Gets the ACLs for a specified Share.
 
 For example:
 ```powershell
-Get-Shares -ComputerName CLIENT01,CLIENT02 -Exclude SYSVOL | Get-ShareACLs
+Get-ACLShare -ComputerName CLIENT01,CLIENT02 -Exclude SYSVOL | Get-ACLShareACL
 ```
 
 See:
 ```powershell
-Get-Help -Name Get-ShareACLs -Full
+Get-Help -Name Get-ACLShareACL -Full
 ```
 For more information.
 
-#### Function Get-ShareFileACLs
-This cmdlet returns a list defined file/folder permissions for files and folders in the specified shares. The shares can be on multiple computers or on a single computer. To specify shares on multiple computers
-the shares must be passed in via the pipeline as ACLReportTools.Share objects. It will only return the permissions for the root folder unless the -Recurse switch is specified.
+#### CmdLet Get-ACLShareFileACL
+Gets all the non-inherited file/folder ACLs definited within a specified Share. A recursive search is optional.
 
 For example:
 ```powershell
-Get-Shares -ComputerName CLIENT01,CLIENT02 -Exclude SYSVOL | Get-ShareFileACLs -Recurse
+Get-Shares -ComputerName CLIENT01,CLIENT02 -Exclude SYSVOL | Get-ACLShareFileACL -Recurse
 ```
 
 See:
 ```powershell
-Get-Help -Name Get-ShareFileACLs -Full
+Get-Help -Name Get-ACLShareFileACL -Full
 ```
 For more information.
 
-#### Function Get-PathFileACLs
-This cmdlet returns a list defined file/folder permissions for files and folders in the specified path. Only a single path can be specified. It will only return the permissions for the root path unless the -Recurse switch is specified.
+#### CmdLet Get-ACLPathFileACL
+Gets all the non-inherited file/folder ACLs defined within a specified Path. A recursive search is optional.
 
 For example:
 ```powershell
-Get-PathFileACLs -Path c:\ -Recurse
+Get-ACLPathFileACL -Path c:\ -Recurse
 ```
 
 See:
 ```powershell
-Get-Help -Name Get-PathFileACLs -Full
+Get-Help -Name Get-ACLPathFileACL -Full
 ```
 For more information.
 
@@ -164,7 +249,7 @@ For more information.
 
 ### License and Copyright
 
-Copyright 2014 Daniel Scott-Raynsford
+Copyright 2015 Daniel Scott-Raynsford
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -177,96 +262,6 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-
-### Installing ACLReportTools
-1. Create a folder called ACLReportTools in the documents\windowspowershell\modules folder of your profile. E.g.
-   C:\Users\Daniel\Documents\WindowsPowerShell\Modueles\ACLReportTools\
-2. Copy the ACLReportTools.psm1, ACLReportTools.psd1 and ACLReportTools.format.ps1xml files into the folder created above.
-3. In PowerShell execute:
-```powershell
-   Import-Module ACLReportTools
-```
-
-### Creating an ACL Share Report
-...
 
 ### TODO
 1. Create a cmdlet that converts the result of the Compare-ACLShareReport into an HTML report file.
-2. Extend Get-PathFileACLs so that multiple paths can be specified and passed in via the pipeline.
-3. Correct Convert-FileSystemAccessToString so that Special Generic Rights are displayed correctly.
-
-
-
-## Compare-ShareACLs - DEPRECATED!
-This script is able record all the ACLs on specified SMB shares on computer and then report
-the differences at a later date.
-
-This script has been deprecated. The ACLReportTools module replaces it.
-
-### Overview
-This script has been deprecated!
-
-This script will get all the ACLs for all shares on this computer and compare them with a baseline set of share ACLs. It will also get and store the file/folder ACL's for all files/folders in each share.
-
-If this script is run it will look for specified baseline ACL. If none are found it will create them from the shares active on this machine.
-If the baseline data is found the script will output a report showing the changes to the share and file/folder ACLs.
-The script makes three different types of Baseline files (.BSL) in the baseline folder:
- 1. _SHARES.BSL - this is the list of shares available on the computer at the time of the baseline info being created.
- 2. SHARE_*.BSL - this is the share ACLs for the share specified by * on the computer.
- 3. FILE_*.BSL - this is the full list of defined (not inherited) file/folder ACLs for the * share on this computer.
-
-### Minimum requirements
-
-- PowerShell 4.0
-- May run on earlier versions of PS but untested.
-
-### License and Copyright
-
-Copyright 2014 Daniel Scott-Raynsford
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-
-### Installing Compare-ShareACLs
-Copy the Compare-ShareACLs.ps1 script into your Powershell Modules folder.
-
-### Future Changes
-This script needs to be converted into a module and the report generation split out from the main
-comparison script. This is so that the comparison can output custom PS objects containing any ACL changes to
-the shares. The objects can then be piped to a report function or to any other standard PS output cmdlet.
-
-### Example Usage
-```powershell
-Compare-ShareACLs -ComputerName DC -RebuildBaseline
-```
-Causes the Baseline share, file and folder ACL information to be rebuilt for the DC machine.
-
-```powershell
-Compare-ShareACLs -ComputerName DC -BaselinePath c:\baseline\DC\
-```
-Performs a Share, File and Folder ACL comparison with the current ACL info from all shares on the DC machine against the Baseline ACL
-info stored in the c:\baseline\DC\ folder. If baseline data does not exist in this folder it will be created as if the -RebuildBaseline
-swtich was set.
-
-```powershell
-Compare-ShareACLs -ComputerName DC -IncludeShares SHARE1,SHARE2
-```
-Performs a Share, File and Folder ACL comparison with the current ACL info from only shares SHARE1 and SHARE2 on the DC machine against the Baseline ACL
-info stored in the c:\baseline\DC\ folder. If baseline data does not exist in this folder it will be created as if the -RebuildBaseline
-swtich was set. Do not use the -ExcludeShares parameter when the -IncludeShares parameter is set.
-
-```powershell
- Compare-ShareACLs -ComputerName DC -ExcludeShares SYSVOL,NETLOGON
-```
-Performs a Share, File and Folder ACL comparison with the current ACL info from all shares except SYSVOL and NETLOGON on the DC machine against the Baseline ACL
-info stored in the c:\baseline\DC\ folder. If baseline data does not exist in this folder it will be created as if the -RebuildBaseline
-swtich was set. Do not use the -IncludeShares parameter when the -ExcludeShares parameter is set.

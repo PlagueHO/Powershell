@@ -37,9 +37,9 @@ Function New-ACLShareReport {
 	Creates a list of Share, File and Folder ACLs for the specified shares/computers.
 
 .DESCRIPTION 
-	Produces an array of [ACLReportTools.Permissions] objects for the list of computers provided. Specific shares can be specified or excluded using the Include/Exclude parameters.
+	Produces an array of [ACLReportTools.Permissions] objects for the computers provided. Specific shares can be specified or excluded using the Include/Exclude parameters.
 
-	The report can be stored for use as a comparison in either a variable or as a file using the Export-ACLItem cmdlet (found in this module). For example:
+	The report can be stored for use as a comparison in either a variable or as a file using the Export-ACLReport cmdlet (found in this module). For example:
 
 	New-ACLShareReport -ComputerName CLIENT01 -Include MyShare,OtherShare | Export-ACLReport -path c:\ACLReports\CLIENT01_2014_11_14.acl
      
@@ -93,12 +93,12 @@ Function New-ACLShareReport {
 Function New-ACLPathFileReport {
 <#
 .SYNOPSIS
-	Creates a list of File and Folder ACLs for the path(S).
+	Creates a list of File and Folder ACLs for the provided path(s).
 
 .DESCRIPTION 
 	Produces an array of [ACLReportTools.Permissions] objects for the list of paths provided.
 
-	The report can be stored for use as a comparison in either a variable or as a file using the Export-ACLItem cmdlet (found in this module). For example:
+	The report can be stored for use as a comparison in either a variable or as a file using the Export-ACLReport cmdlet (found in this module). For example:
 
 	New-ACLPathFileReport -Path e:\public | Export-ACLReport -path c:\ACLReports\Public_2015-04-04.acl
      
@@ -139,7 +139,7 @@ function Export-ACLReport {
 .DESCRIPTION 
 	This Cmdlet will save whatever ACL Report that is in the pipeline to a file.
 
-	This cmdlet just calls Export-ACLItem  although at some point may add additional functionality.
+	This cmdlet just calls Export-ACLItem although at some point will add additional functionality.
      
 .PARAMETER Path
 	This is the path to the ACL Share Report output file. This parameter is required.
@@ -159,11 +159,11 @@ function Export-ACLReport {
 	 Saves the ACLs in the $ShareReport variable to the file C:\ACLReports\server01.acl.
 
 .EXAMPLE 
-	 Export-ACLReport -Path C:\ACLReports\server01.acl -InputObject (Get-ACLReport -ComputerName SERVER01) -Force
+	 Export-ACLReport -Path C:\ACLReports\server01.acl -InputObject (New-ACLShareReport -ComputerName SERVER01) -Force
 	 Saves the file ACLs for all shares on the compuer SERVER01 to the file C:\ACLReports\server01.acl. If the file exists it will be overwritten.
 
 .EXAMPLE 
-	Get-ACLReport -ComputerName SERVER01 | Export-ACLReport -Path C:\ACLReports\server01.acl -Force
+	New-ACLShareReport -ComputerName SERVER01 | Export-ACLReport -Path C:\ACLReports\server01.acl -Force
 	Saves the file ACLs for all shares on the compuer SERVER01 to the file C:\ACLReports\server01.acl. If the file exists it will be overwritten.
 #>    
     [CmdLetBinding()]
@@ -181,9 +181,18 @@ function Export-ACLReport {
         [Switch]$Force
 
     ) # param
-
-    Export-ACLItem @PSBoundParameters
-
+    Begin {
+		[ACLReportTools.Permission[]]$InputObjectNew = $Null
+	}
+	Process {
+		Foreach ($I in $InputObject) {
+			$InputObjectNew += $I
+		}
+	}
+	End {
+		[Void]$PSBoundParameters.Remove('InputObject')
+		$InputObjectNew | Export-ACLItem @PSBoundParameters
+	}
 } # Function Export-ACLReport
 ##########################################################################################################################################
 
@@ -196,7 +205,7 @@ function Import-ACLReport {
 .DESCRIPTION 
 	This Cmdlet will import all the ACL Share Report (ACLReportTools.Permissions) records from a specified file into the pipeline.
 
-	This cmdlet just calls Import-ACLItem although at some point may add additional functionality.
+	This cmdlet just calls Import-ACLItem although at some point will add additional functionality.
      
 .PARAMETER Path
 	This is the path to the ACL Share Report file to import. This parameter is required.
@@ -221,7 +230,7 @@ function Import-ACLReport {
 Function Compare-ACLReports {
 <#
 .SYNOPSIS
-	Compares two ACL Share reports and produces a difference list.
+	Compares two ACL reports and produces an ACL Difference report.
 
 .DESCRIPTION 
 	This cmdlets compares two ACL Share reports and produces a difference list in the pipeline that can then be reported on.
@@ -283,18 +292,22 @@ Function Compare-ACLReports {
         [Object[]]$Baseline,
 
         [Parameter(
-            ParameterSetName='CompareToCurrent',
+            ParameterSetName='CompareToCurrentShares',
             ValueFromPipeline=$true,
             ValueFromPipelineByPropertyName=$true)]
         [String[]]$ComputerName=$env:computername,
 
         [Parameter(
-            ParameterSetName='CompareToCurrent')]
+            ParameterSetName='CompareToCurrentShares')]
         [String[]]$Include,
 
         [Parameter(
-            ParameterSetName='CompareToCurrent')]
+            ParameterSetName='CompareToCurrentShares')]
         [String[]]$Exclude,
+
+        [Parameter(
+            ParameterSetName='CompareToCurrentFiles')]
+        [String[]]$Path,
 
         [Parameter(
             ParameterSetName='CompareToOther')]
@@ -305,20 +318,34 @@ Function Compare-ACLReports {
     ) # param
     Begin {
         [ACLReportTools.PermissionDiff[]]$Comparison = $Null
-        If ($With -eq $Null) {
-            [ACLReportTools.Permission[]]$With = $Null
-        } # Null
     } # Begin
     Process {
-        If ($PsCmdlet.ParameterSetName -eq 'CompareToCurrent') {
-            # A report to compare to wasn't specified so we need to generate
-            # the current report using the other parameters passed.
-            $PSBoundParameters.Remove('Baseline') | Out-Null
-            $PSBoundParameters.Remove('With') | Out-Null
-            $PSBoundParameters.Remove('ReportNoChange') | Out-Null
-            Write-Verbose "Assembling current ACL Share report for comparison."
-            $With += Get-ACLReport @PSBoundParameters
-        }
+        Switch ($PSCmdLet.ParameterSetName) {
+			'CompareToCurrentShares' {
+				# A report to compare to wasn't specified so we need to generate
+				# the current report using the other parameters passed.
+				$PSBoundParameters.Remove('Baseline') | Out-Null
+				$PSBoundParameters.Remove('With') | Out-Null
+				$PSBoundParameters.Remove('ReportNoChange') | Out-Null
+				$PSBoundParameters.Remove('Path') | Out-Null
+				Write-Verbose "Assembling current ACL Share report for comparison."
+				[ACLReportTools.Permission[]]$With += New-ACLShareReport @PSBoundParameters
+				Break
+			}
+			'CompareToCurrentFiles' {
+				# A report to compare to wasn't specified so we need to generate
+				# the current report using the other parameters passed.
+				$PSBoundParameters.Remove('Baseline') | Out-Null
+				$PSBoundParameters.Remove('With') | Out-Null
+				$PSBoundParameters.Remove('ReportNoChange') | Out-Null
+				$PSBoundParameters.Remove('ComputerName') | Out-Null
+				$PSBoundParameters.Remove('Include') | Out-Null
+				$PSBoundParameters.Remove('Exclude') | Out-Null
+				Write-Verbose "Assembling current ACL Path File report for comparison."
+				[ACLReportTools.Permission[]]$With += New-ACLPathFileReport @PSBoundParameters
+				Break
+			}
+		}
     } # Process
     End {
         # The actual comparions is performed now
@@ -349,13 +376,13 @@ Function Compare-ACLReports {
                             # Now compare the current share ACLs wth the baseline share ACLs
                             Foreach ($current_share_acl in $current_share_acls) {
                                 [string]$c_accesscontroltype = $current_share_acl.Access.AccessControlType
-                                [string]$c_filesystemrights = Convert-FileSystemAccessToString($current_share_acl.Access.FileSystemRights)
-                                [string]$c_identityreference = $current_share_acl.Access.IdentityReference.ToString()
+                                [string]$c_filesystemrights = $current_share_acl.Access.AccessRights
+                                [string]$c_identityreference = $current_share_acl.Access.Account
                                 [boolean]$acl_found = $false
                                 Foreach ($baseline_share_acl in $baseline_share_acls) {
                                     [string]$b_accesscontroltype = $baseline_share_acl.Access.AccessControlType
-                                    [string]$b_filesystemrights = Convert-FileSystemAccessToString($baseline_share_acl.Access.FileSystemRights)
-                                    [string]$b_identityreference = $baseline_share_acl.Access.IdentityReference.ToString()
+                                    [string]$b_filesystemrights = $baseline_share_acl.Access.AccessRights
+                                    [string]$b_identityreference = $baseline_share_acl.Access.Account
                                     If ($c_identityreference -eq $b_identityreference) {
                                         $acl_found = $true
                                         break
@@ -409,13 +436,13 @@ Function Compare-ACLReports {
                             # We only need to check if a ACL has been removed from the baseline
                             Foreach ($baseline_share_acl in $baseline_share_acls) {
                                 [string]$b_accesscontroltype = $baseline_share_acl.Access.AccessControlType
-                                [string]$b_filesystemrights = Convert-FileSystemAccessToString($baseline_share_acl.Access.FileSystemRights)
-                                [string]$b_identityreference = $baseline_share_acl.Access.IdentityReference.ToString()
+                                [string]$b_filesystemrights = $baseline_share_acl.Access.AccessRights
+                                [string]$b_identityreference = $baseline_share_acl.Access.Account
                                 [boolean]$acl_found = $false
                                 Foreach ($current_share_acl in $current_share_acls) {
                                     [string]$c_accesscontroltype = $current_share_acl.Access.AccessControlType
-                                    [string]$c_filesystemrights = Convert-FileSystemAccessToString($current_share_acl.Access.FileSystemRights)
-                                    [string]$c_identityreference = $current_share_acl.Access.IdentityReference.ToString()
+                                    [string]$c_filesystemrights = $current_share_acl.Access.AccessRights
+                                    [string]$c_identityreference = $current_share_acl.Access.Account
                                     If ($c_identityreference -eq $b_identityreference) {
                                         $acl_found = $true
                                         break
@@ -448,27 +475,23 @@ Function Compare-ACLReports {
                                 # Put all the Current File ACL props into variables for easy access.
                                 [string]$c_path = $current_file_acl.Path
                                 [string]$c_owner = $current_file_acl.Owner
-                                [string]$c_group = $current_file_acl.Group
-                                [string]$c_SDDL = $current_file_acl.SDDL
                                 $c_access = $current_file_acl.Access
                                 [string]$c_accesscontroltype = $c_access.AccessControlType
-                                [string]$c_filesystemrights = Convert-FileSystemAccessToString -FileSystemAccess $c_access.FileSystemRights
-                                [string]$c_identityreference = $c_access.IdentityReference.ToString()
+                                [string]$c_filesystemrights = $c_access.AccessRights
+                                [string]$c_identityreference = $c_access.Account
                                 [string]$c_appliesto=Convert-FileSystemAppliesToString -InheritanceFlags $c_access.InheritanceFlags -PropagationFlags $c_access.PropagationFlags
                                 [boolean]$acl_found = $false
                                 Foreach ($baseline_file_acl in $baseline_file_acls) {
                                     [string]$b_path = $baseline_file_acl.Path
                                     [string]$b_owner = $baseline_file_acl.Owner
-                                    [string]$b_group = $baseline_file_acl.Group
-                                    [string]$b_SDDL = $baseline_file_acl.SDDL
                                     $b_access = $baseline_file_acl.Access
                                     [string]$b_accesscontroltype = $b_access.AccessControlType
-                                    [string]$b_filesystemrights = Convert-FileSystemAccessToString -FileSystemAccess $b_access.FileSystemRights
-                                    [string]$b_identityreference = $b_access.IdentityReference.ToString()
+                                    [string]$b_filesystemrights = $b_access.AccessRights
+                                    [string]$b_identityreference = $b_access.Account
                                     [string]$b_appliesto=Convert-FileSystemAppliesToString -InheritanceFlags $b_access.InheritanceFlags -PropagationFlags $b_access.PropagationFlags
                                     If ($c_path -eq $b_path) {
-                                        # Perform an owner/group check on each file/folder only once
-                                        # If we've already checked this path, don't bother checking the owner/group again.
+                                        # Perform an owner check on each file/folder only once
+                                        # If we've already checked this path, don't bother checking the owner again.
                                         If ($last_path -ne $c_path) {
                                             If ($c_owner -ne $b_owner) {
 
@@ -481,20 +504,6 @@ Function Compare-ACLReports {
                                                     -ComputerName $Current_Computer -Share $Current_Share `
                                                     -Difference "$([ACLReportTools.PermissionTypeEnum]$current_file_acl.Type) $c_path owner changed from '$b_owner' to '$c_owner'."
                                                 $changes = $true
-                                            } # If
-
-                                            If ($c_group -ne $b_group) {
-
-                                                # The Permission Group are different
-                                                Write-Verbose "$([ACLReportTools.PermissionTypeEnum]$current_file_acl.Type) $c_path group changed from '$b_group' to '$c_group'."
-                                                $Comparison += New-PermissionDiffObject `
-                                                    -Type ($current_file_acl.Type) `
-                                                    -Path $c_path `
-                                                    -DiffType ([ACLReportTools.PermissionDiffEnum]::'Group Changed') `
-                                                    -ComputerName $Current_Computer -Share $Current_Share `
-                                                    -Difference "$([ACLReportTools.PermissionTypeEnum]$current_file_acl.Type) $c_path group changed from '$b_group' to '$c_group'."
-                                                $changes = $true
-
                                             } # If
 
                                             $last_path = $c_path
@@ -522,8 +531,8 @@ Function Compare-ACLReports {
                                             -ComputerName $Current_Computer -Share $Current_Share `
                                             -Difference "$([ACLReportTools.PermissionTypeEnum]$current_file_acl.Type) $c_path permission rights changed from '$b_filesystemrights' to '$c_filesystemrights' for '$c_identityreference'."                                        
                                         $changes = $true
-
-                                    } Elseif ($c_accesscontroltype -ne $b_accesscontroltype) {
+                                    } # If
+									If ($c_accesscontroltype -ne $b_accesscontroltype) {
 
                                         # The Permission access control type is different
                                         Write-Verbose "$([ACLReportTools.PermissionTypeEnum]$current_file_acl.Type) $c_path permission access control type changed from '$b_accesscontroltype' to '$c_accesscontroltype' for '$c_identityreference'."
@@ -556,23 +565,19 @@ Function Compare-ACLReports {
                             Foreach ($baseline_file_acl in $baseline_file_acls) {
                                 [string]$b_path = $baseline_file_acl.Path
                                 [string]$b_owner = $baseline_file_acl.Owner
-                                [string]$b_group = $baseline_file_acl.Group
-                                [string]$b_SDDL = $baseline_file_acl.SDDL
                                 $b_access = $baseline_file_acl.Access
                                 [string]$b_accesscontroltype = $b_access.AccessControlType
-                                [string]$b_filesystemrights = Convert-FileSystemAccessToString -FileSystemAccess $b_access.FileSystemRights
-                                [string]$b_identityreference = $b_access.IdentityReference.ToString()
+                                [string]$b_filesystemrights = $b_access.AccessRights
+                                [string]$b_identityreference = $b_access.Account
                                 [string]$b_appliesto = Convert-FileSystemAppliesToString -InheritanceFlags $b_access.InheritanceFlags -PropagationFlags $b_access.PropagationFlags
                                 [boolean]$acl_found = $false
                                 Foreach ($current_file_acl in $current_file_acls) {
                                     [string]$c_path = $current_file_acl.Path
                                     [string]$c_owner = $current_file_acl.Owner
-                                    [string]$c_group = $current_file_acl.Group
-                                    [string]$c_SDDL = $current_file_acl.SDDL
                                     $c_access = $current_file_acl.Access
                                     [string]$c_accesscontroltype = $c_access.AccessControlType
-                                    [string]$c_filesystemrights = Convert-FileSystemAccessToString -FileSystemAccess $c_access.FileSystemRights
-                                    [string]$c_identityreference = $c_access.IdentityReference.ToString()
+                                    [string]$c_filesystemrights = $c_access.AccessRights
+                                    [string]$c_identityreference = $c_access.Account
                                     [string]$c_appliesto = Convert-FileSystemAppliesToString -InheritanceFlags $c_access.InheritanceFlags -PropagationFlags $c_access.PropagationFlags
                                     If (($c_path -eq $b_path) -and ($c_identityreference -eq $b_identityreference) -and ($c_appliesto -eq $b_appliesto)) {
                                         $acl_found = $true
@@ -582,13 +587,13 @@ Function Compare-ACLReports {
                                 If (-not $acl_found) {
 
                                     # The IdentityReference (user) and path exists in the Baseline but not in the Current
-                                    Write-Verbose "$([ACLReportTools.PermissionTypeEnum]$baseline_file_acl.Type) $b_path permission '$b_filesystemrights, $b_accesscontroltype, $b_appliesto' removed for '$c_identityreference'."
+                                    Write-Verbose "$([ACLReportTools.PermissionTypeEnum]$baseline_file_acl.Type) $b_path permission '$b_filesystemrights, $b_accesscontroltype, $b_appliesto' removed for '$b_identityreference'."
                                     $Comparison += New-PermissionDiffObject `
                                         -Type ($baseline_file_acl.Type) `
                                         -Path $b_path `
                                         -DiffType ([ACLReportTools.PermissionDiffEnum]::'Permission Removed') `
                                         -ComputerName $Current_Computer -Share $Current_Share `
-                                        -Difference "$([ACLReportTools.PermissionTypeEnum]$baseline_file_acl.Type) $b_path permission '$b_filesystemrights, $b_accesscontroltype, $b_appliesto' removed for '$c_identityreference'."
+                                        -Difference "$([ACLReportTools.PermissionTypeEnum]$baseline_file_acl.Type) $b_path permission '$b_filesystemrights, $b_accesscontroltype, $b_appliesto' removed for '$b_identityreference'."
                                     $changes = $true
 
                                 } # If
@@ -626,12 +631,10 @@ Function Compare-ACLReports {
                             Foreach ($current_file_acl in $current_file_acls) {
                                 [string]$c_path = $current_file_acl.Path
                                 [string]$c_owner = $current_file_acl.Owner
-                                [string]$c_group = $current_file_acl.Group
-                                [string]$c_SDDL = $current_file_acl.SDDL
                                 $c_access = $current_file_acl.Access
                                 [string]$c_accesscontroltype = $c_access.AccessControlType
-                                [string]$c_filesystemrights = Convert-FileSystemAccessToString($c_access.FileSystemRights)
-                                [string]$c_identityreference = $c_access.IdentityReference.ToString()
+                                [string]$c_filesystemrights = $c_access.AccessRights
+                                [string]$c_identityreference = $c_access.Account
 
                                 # Because this is a new share, the permission has always been added
                                 Write-Verbose "$($current_file_acl.Type) $c_path permission '$c_filesystemrights, $c_accesscontroltype, $c_appliesto' added for '$c_identityreference'."
@@ -707,7 +710,7 @@ Function Compare-ACLReports {
 Function Get-ACLShare {
 <#
 .SYNOPSIS
-	Gets all the Shares on a specified computer.
+	Gets a list of the Shares on a specified computer(s) with specified inclusions or exclusions.
 
 .DESCRIPTION 
 	This function will pull a list of shares that are set up on the specified computer. Shares can also be included or excluded from the share list by setting the Include or Exclude properties.
@@ -871,7 +874,7 @@ function Get-ACLShareACL {
 function Get-ACLShareFileACL {
 <#
 .SYNOPSIS
-	Gets all the non inherited file/folder ACLs definited within a specified Share.
+	Gets all the non-inherited file/folder ACLs definited within a specified Share. A recursive search is optional.
 
 .DESCRIPTION 
 	This function will return a list of non inherited file/folder ACLs for the specified share. If the Recurse switch is used then files/folder ACLs will be scanned recursively.
@@ -921,37 +924,40 @@ function Get-ACLShareFileACL {
             $ComputerName = $_.ComputerName
             $ShareName = $_.Name
         }
-        # Now generate the root file/folder ACLs 
-        $root_file_acl = Get-Acl -Path "\\$ComputerName\$ShareName"   
-        Foreach ($access in $root_file_acl.Access) {
-            # Write each non-inherited ACL from the root into the array of ACL's 
-            $purepath = $root_file_acl.Path.Substring($root_file_acl.Path.IndexOf("::\\")+2)
-            $owner = $root_file_acl.Owner
-            $group = $root_file_acl.Group
-            $SDDL = $root_file_acl.SDDL
-            $type = [ACLReportTools.PermissionTypeEnum]::Folder
-            $acl_object =  New-PermissionObject -Type $type -ComputerName $ComputerName -Path $purepath -Share $ShareName -Owner $owner -Group $group -SDDL $SDDL -Access $access
-            $file_acls += $acl_object
+        # Now generate the root file/folder ACLs
+		$Path = "\\$ComputerName\$ShareName"   
+		[Security2.FileSystemAccessRule2[]]$root_file_acl = Get-NTFSAccess -Path $path
+		[String]$owner = (Get-NTFSOwner -Path $path).Owner.AccountName
+        Foreach ($access in $root_file_acl) {
+			# Write each non-inherited ACL from the root into the array of ACL's 
+			$file_acls += New-PermissionObject -ComputerName $ComputerName -Type ([ACLReportTools.PermissionTypeEnum]::Folder) -Path $Path -Owner $owner -Access $access -Share $ShareName
+			Write-Verbose "Get-ACLShareFileACL: Root ACL for $ShareName path $Path owner $Owner`n$(Convert-AccessToString($Access))"
         } # Foreach
         If ($Recurse) {
             # Generate any non-inferited file/folder ACLs for subfolders and/or files containined within the share recursively
-            $node_file_acls = Get-ChildItem -Path "\\$ComputerName\$ShareName\" -Recurse |
-                 Get-ACL |
-                 Select-Object -Property @{ l='PurePath';e={$_.Path.Substring($_.Path.IndexOf("::\\")+2)} },Owner,Group,Access,SDDL
-            Foreach ($node_file_acl in $node_file_acls) {
-                Foreach ($access in $node_file_acl.Access) {
-                    If (-not $access.IsInherited) {
-                        # Write each non-inherited ACL from the file/folder into the array of ACL's 
-                        If ($node_file_acl.PSChildName -eq '') { $type = [ACLReportTools.PermissionTypeEnum]::Folder } else { $type = [ACLReportTools.PermissionTypeEnum]::File }
-                        $purepath = $node_file_acl.PurePath
-                        $owner = $node_file_acl.Owner
-                        $group = $node_file_acl.Group
-                        $SDDL = $node_file_acl.SDDL
-                        $acl_object =  New-PermissionObject -Type $type -ComputerName $ComputerName -Path $purepath -Share $ShareName -Owner $owner -Group $group -SDDL $SDDL -Access $access
-                        $file_acls += $acl_object
-                    } # If
-                } # Foreach
-            } # Foreach
+	        $node_file_acls = Get-childitem -Path $Path -recurse | Get-NTFSAccessInheritance | Where-Object -Property InheritanceEnabled -eq $False | Get-NTFSAccess
+	        $lastPath = ''
+			Foreach ($access in $node_file_acls) {
+				# Write each non-inherited ACL from the file/folder into the array of ACL's 
+				$Path = $access.FullName
+				If ($lastPath -ne $Path) {
+					Try {
+						[Boolean]$IsFolder = ((Get-Item -Path $Path -ErrorAction "Stop") -is [System.IO.DirectoryInfo])
+					} Catch {
+						Write-Warning "Get-ACLPathFileACL: Access Denied to $Path"
+						$IsFolder = $True
+					}
+					If ($IsFolder) {
+						$type = [ACLReportTools.PermissionTypeEnum]::Folder
+					} else {
+						$type = [ACLReportTools.PermissionTypeEnum]::File
+					}
+					[String]$Owner = (Get-NTFSOwner -Path $Path).Owner.AccountName
+					$lastPath = $access.FullName
+				}            
+				$file_acls += New-PermissionObject -ComputerName $ComputerName -Type $type -Path $Path -Owner $owner -Access $access -Share $ShareName
+				Write-Verbose "Get-ACLShareFileACL: ACL for $ShareName path $Path owner $Owner`n$(Convert-AccessToString($Access))"
+			} # Foreach
         } # If
     } # Process
     End {
@@ -964,7 +970,7 @@ function Get-ACLShareFileACL {
 function Get-ACLPathFileACL {
 <#
 .SYNOPSIS
-	Gets all the non inherited file/folder ACLs definited within a specified Path.
+	Gets all the non-inherited file/folder ACLs defined within a specified Path. A recursive search is optional.
 
 .DESCRIPTION 
 	This function will return a list of non inherited file/folder ACLs for the specified share. If the Recurse switch is used then files/folder ACLs will be scanned recursively.
@@ -980,7 +986,7 @@ function Get-ACLPathFileACL {
 	Returns the file/folder ACLs for the root of C:\Users folder.
 
 .EXAMPLE 
-	Get-ACLPathFileACL -ShareName MyShre -Recurse
+	Get-ACLPathFileACL -Path C:\Users -Recurse
 	Returns the file/folder ACLs for all files/folders recursively inside the C:\Users folder.
 #>    
     [CmdLetBinding()]
@@ -993,38 +999,41 @@ function Get-ACLPathFileACL {
     ) # param
 
     # Create an empty array to store all the non inherited file/folder ACLs.
-    [array]$file_acls = $null
+    [ACLReportTools.Permission[]]$file_acls = $null
+	[String]$ComputerName = $ENV:ComputerName
 
-    # Now generate the root file/folder ACLs 
-    $root_file_acl = Get-Acl -Path $path
-    $purepath = $root_file_acl.Path.Substring($root_file_acl.Path.IndexOf("::")+2)
-    $owner = $root_file_acl.Owner
-    $group = $root_file_acl.Group
-    $SDDL = $root_file_acl.SDDL
-    Foreach ($access in $root_file_acl.Access) {
+    # Now generate the root file/folder ACLs
+	[Security2.FileSystemAccessRule2[]]$root_file_acl = Get-NTFSAccess -Path $path
+    [String]$owner = (Get-NTFSOwner -Path $path).Owner.AccountName
+    Foreach ($access in $root_file_acl) {
         # Write each non-inherited ACL from the root into the array of ACL's 
-        $type = [ACLReportTools.PermissionTypeEnum]::Folder
-        $acl_object = New-PermissionObject -ComputerName LocalHost -Type $type -Path $purepath -Owner $owner -Group $group -SDDL $SDDL -Access $access
-        $file_acls += $acl_object
+        $file_acls += New-PermissionObject -ComputerName $ComputerName -Type ([ACLReportTools.PermissionTypeEnum]::Folder) -Path $Path -Owner $owner -Access $access
+		Write-Verbose "Get-ACLPathFileACL: Root ACL for $Path owner $Owner`n$(Convert-AccessToString($Access))"
     } # Foreach
     If ($Recurse) {
-        # Generate any non-inferited file/folder ACLs for subfolders and/or files containined within the share recursively
-        $node_file_acls = Get-ChildItem -Path $path -Recurse |
-             Get-ACL |
-             Select-Object -Property @{ l='PurePath';e={$_.Path.Substring($_.Path.IndexOf("::")+2)} },Owner,Group,Access,SDDL
-        Foreach ($node_file_acl in $node_file_acls) {
-            $purepath = $node_file_acl.PurePath
-            $owner = $node_file_acl.Owner
-            $group = $node_file_acl.Group
-            $SDDL = $node_file_acl.SDDL
-            Foreach ($access in $node_file_acl.Access) {
-                If (-not $access.IsInherited) {
-                    # Write each non-inherited ACL from the file/folder into the array of ACL's 
-                    If ($node_file_acl.PSChildName -eq '') { $type = [ACLReportTools.PermissionTypeEnum]::Folder } else { $type = [ACLReportTools.PermissionTypeEnum]::File }
-                    $acl_object = New-PermissionObject -ComputerName LocalHost -Type $type -Path $purepath -Owner $owner -Group $group -SDDL $SDDL -Access $access
-                    $file_acls += $acl_object
-                } # If
-            } # Foreach
+        # Generate any non-inferited file/folder ACLs for subfolders and/or files containined within the share recursively	
+		$node_file_acls = Get-childitem -Path $Path -recurse | Get-NTFSAccessInheritance | Where-Object -Property InheritanceEnabled -eq $False | Get-NTFSAccess
+        $LastPath = ''
+		Foreach ($access in $node_file_acls) {
+			# Write each non-inherited ACL from the file/folder into the array of ACL's 
+	        $Path = $access.FullName
+			If ($LastPath -ne $Path) {
+				Try {
+					[Boolean]$IsFolder = ((Get-Item -Path $Path -ErrorAction "Stop") -is [System.IO.DirectoryInfo])
+				} Catch {
+					Write-Warning "Get-ACLPathFileACL: Access Denied to $Path"
+					$IsFolder = $True
+				}
+				If ($IsFolder) {
+					$type = [ACLReportTools.PermissionTypeEnum]::Folder
+				} else {
+					$type = [ACLReportTools.PermissionTypeEnum]::File
+				}
+				[String]$Owner = (Get-NTFSOwner -Path $Path).Owner.AccountName
+				$LastPath = $Path
+			}            
+			Write-Verbose "Get-ACLPathFileACL: ACL for $Path owner $Owner`n$(Convert-AccessToString($Access))"
+			$file_acls += New-PermissionObject -ComputerName $ComputerName -Type $type -Path $Path -Owner $Owner -Access $Access
         } # Foreach
     } # If
     return $file_acls
@@ -1150,6 +1159,12 @@ function Initialize-Module {
         [String]$ModuleName = 'ACLReportTools'
     ) # Param
 
+    # Do we need to define the Module?
+    If ( (Get-Module -ListAvailable NTFSSecurity | Measure-Object).Count -eq 0) {
+		Throw "NTFSSecurity Module is not available. Please download it from https://gallery.technet.microsoft.com/scriptcenter/1abd77a5-9c0b-4a2b-acef-90dbb2b84e85"
+	} # If
+	Import-Module NTFSSecurity	
+
     $Domain = [AppDomain]::CurrentDomain
 
     If (($Domain.GetAssemblies() | Where-Object -FilterScript { $_.FullName -eq "$ModuleName, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null" } | Measure-Object).Count-eq 0) {
@@ -1175,9 +1190,7 @@ function Initialize-Module {
         $TypeBuilder.DefineField('Share', [string], 'Public') | Out-Null
         $TypeBuilder.DefineField('Path', [string], 'Public') | Out-Null
         $TypeBuilder.DefineField('Owner', [string], 'Public') | Out-Null
-        $TypeBuilder.DefineField('Group', [string], 'Public') | Out-Null
-        $TypeBuilder.DefineField('SDDL', [string], 'Public') | Out-Null
-        $TypeBuilder.DefineField('Access', [Security.AccessControl.AccessRule], 'Public') | Out-Null
+        $TypeBuilder.DefineField('Access', [Security2.FileSystemAccessRule2], 'Public') | Out-Null
         $TypeBuilder.CreateType() | Out-Null
 
         # Define the ACLReportTools.Share Class
@@ -1200,7 +1213,6 @@ function Initialize-Module {
         $EnumBuilder.DefineLiteral('Permission Rights Changed', [Int]7)
         $EnumBuilder.DefineLiteral('Permission Access Control Changed', [Int]8)
         $EnumBuilder.DefineLiteral('Owner Changed', [Int]9)
-        $EnumBuilder.DefineLiteral('Group Changed', [Int]10)
         $PermissionDiffEnumType = $EnumBuilder.CreateType()
 
         # Define the ACLReportTools.PermissionDiff Class
@@ -1214,12 +1226,6 @@ function Initialize-Module {
         $TypeBuilder.DefineField('Difference', [String], 'Public') | Out-Null
         $TypeBuilder.CreateType() | Out-Null
     } # If
-
-    # Do we need to define the Module?
-    If ( (Get-Module -ListAvailable NTFSSecurity | Measure-Object).Count -eq 0) {
-		Throw "NTFSSecurity Module is not available. Please download it from https://gallery.technet.microsoft.com/scriptcenter/1abd77a5-9c0b-4a2b-acef-90dbb2b84e85"
-	} # If
-	Import-Module NTFSSecurity	
 } # Function Initialize-Module
 ##########################################################################################################################################
 
@@ -1274,13 +1280,9 @@ function New-PermissionObject {
 
         [String]$Owner='',
         
-        [String]$Group='',
-        
-        [String]$SDDL='',
-
         [Parameter(Mandatory=$true)]
         [ValidateNotNull()]
-        [Security.AccessControl.AccessRule]$Access
+        [Security2.FileSystemAccessRule2]$Access
     ) # Param
 
     # Need to correct the $Access objects to ensure the FileSystemRights values correctly converted to string
@@ -1290,9 +1292,7 @@ function New-PermissionObject {
     $permission_object.ComputerName = $ComputerName
     $permission_object.Path = $Path
     $permission_object.Share = $Share
-    $permission_object.Owner = $OWner
-    $permission_object.Group = $Group
-    $permission_object.SDDL = $SDDL
+    $permission_object.Owner = $Owner
     $permission_object.Access = $Access
     return $permission_object
 } # function New-PermissionObject
@@ -1338,27 +1338,6 @@ function New-PermissionDiffObject {
 ##########################################################################################################################################
 
 ##########################################################################################################################################
-function Convert-FileSystemAccessToString {
-<#
-.SYNOPSIS
-
-.DESCRIPTION 
-#>
-    [CmdLetBinding()]
-    Param(
-        [Parameter(Mandatory=$true)]
-        [String]$FileSystemAccess
-    ) # Param
-    If ($FileSystemAccess.StartsWith('-')) {
-        # This contains Generic High Bits
-        Return "Special Generic Rights $FileSystemAccess"
-    } Else {
-        Return $FileSystemAccess
-    }
-} # function Convert-FileSystemAccessToString
-##########################################################################################################################################
-
-##########################################################################################################################################
 function Convert-FileSystemAppliesToString {
 <#
 .SYNOPSIS
@@ -1391,6 +1370,27 @@ function Convert-FileSystemAppliesToString {
 ##########################################################################################################################################
 
 ##########################################################################################################################################
+function Convert-AccessToString {
+<#
+.SYNOPSIS
+
+.DESCRIPTION 
+#>
+    [CmdLetBinding()]
+    Param(
+        [Parameter(Mandatory=$true)]
+        [Object]$Access
+    ) # Param
+    [string]$rights=$Access.AccessRights
+    [string]$controltype=$Access.AccessControlType
+    [string]$IdentityReference=$Access.IdentityReference
+    [string]$IsInherited=$Access.IsInherited
+    [string]$AppliesTo=Convert-FileSystemAppliesToString -InheritanceFlags $Access.InheritanceFlags -PropagationFlags $Access.PropagationFlags
+    Return "AccessRights  : $rights`nAccessControlType : $controltype`nIdentityReference : $IdentityReference`nIsInherited       : $IsInherited`nAppliesTo         : $AppliesTo`n"
+} # function Convert-AccessToString
+##########################################################################################################################################
+
+##########################################################################################################################################
 function Convert-ACEToString {
 <#
 .SYNOPSIS
@@ -1402,33 +1402,11 @@ function Convert-ACEToString {
         [Parameter(Mandatory=$true)]
         [Object]$ACE
     ) # Param
-    [string]$rights=Convert-FileSystemAccessToString -FileSystemAccess $ace.FileSystemRights
-    [string]$controltype=$ace.AccessControlType
-    [string]$IdentityReference=$ace.IdentityReference
-    [string]$IsInherited=$ace.IsInherited
-    [string]$AppliesTo=Convert-FileSystemAppliesToString -InheritanceFlags $ace.InheritanceFlags -PropagationFlags $ace.PropagationFlags
-    Return "FileSystemRights  : $rights`nAccessControlType : $controltype`nIdentityReference : $IdentityReference`nIsInherited       : $IsInherited`nAppliesTo         : $AppliesTo`n"
+    [string]$path=$ACE.path
+    [string]$owner=$ACE.owner
+    [string]$acccessstring=Convert-ACEToString($ACE.access)
+    Return "Path              : $path`nOwner             : $owner`n$acccessstring"
 } # function Convert-ACEToString
-##########################################################################################################################################
-
-##########################################################################################################################################
-function Convert-FileSystemACLToString {
-<#
-.SYNOPSIS
-
-.DESCRIPTION 
-#>
-    [CmdLetBinding()]
-    Param(
-        [Parameter(Mandatory=$true)]
-        [Object]$ACL
-    ) # Param
-    [string]$path=$acl.path
-    [string]$owner=$acl.owner
-    [string]$group=$acl.group
-    [string]$acestring=Convert-ACEToString($acl.access)
-    Return "Path              : $path`nOwner             : $owner`nGroup             : $group`n$acestring"
-} # function Convert-FileSystemACLToString
 ##########################################################################################################################################
 
 ##########################################################################################################################################
