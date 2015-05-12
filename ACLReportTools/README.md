@@ -10,6 +10,7 @@ The intended purpose of this module is to allow an Admininstrator to report on h
 Basically it allows administrators to easily see what ACL changes are being made so they keep an eye on any secuity issues arising. The process of creating/updating the baseline and producing the ACL Difference report could be easily automated. If performing SMB share comparisons, the report generation can be performed remotely (from a desktop PC for example).
 
 The process that is normally followed using this module is:
+
 1. Produce a baseline ACL Report from a set of Folders or Shares (even on multiple computers).
 2. Export the baseline ACL Report as a file.
 3. ... Sometime later ...
@@ -29,7 +30,7 @@ An ACL Difference report is a list of all ACL differences between two ACL report
 
 ACL Reports produced for Shares rather than folders differ in that the Share name is provided in each [ACLReportTools.Permission] object and that the SMB Share ACL is also provided in the [ACLReportTools.Permission] array.
 
-IMPORTANT NOTES:
+### Important Notes
 When performing a comparison, make sure the baseline report used covers the same set of folders/shares you want to compare now. E.g. Don't try and compare ACLs for c:\windows and c:\wwwroot - that would make no sense.
 
 If shares or folders that are being compared have large numbers of non-inherited ACLs (perhaps because some junior admin doesn't understand inheritance) then a comparison can take a LONG time (hours) and really hog your CPU. If this is the case, run on another machine using Share mode or run after hours - or better yet, teach junior admins about inheritance! :)
