@@ -92,12 +92,15 @@ Function Test-ACLReportToolsPathFiles {
 
     # Compare the Baseline to the current ACLs on the File Folders (should always be DIFFERENT).
     $DifferencesPathFile = Compare-ACLReports -Baseline $BaselinePathFile2 -Path (1..$Script:MaxShares | Foreach-Object {Join-Path -Path $Script:TestPath -ChildPath "Share$($_)"} )
-    If ($DifferencesPathFile.Count -ne 7) {
-        Write-Error "The Compare-ACLReports returned $($DifferencesPathFile.Count) Differences to Path/File ACLs - Expected 7"
+    If ($DifferencesPathFile.Count -ne 8) {
+        Write-Error "The Compare-ACLReports returned $($DifferencesPathFile.Count) Differences to Path/File ACLs - Expected 8"
     }
     "Differences for Path/File Report" | Out-Default
     "--------------------------------" | Out-Default
     $DifferencesPathFile | fl *
+	$DifferencesPathFile | Export-ACLDiffReport -Path "$ENV:Temp\ACLReportTools.Difference.PathFile.Report.acr" -Force
+	$Comparison = Import-ACLDiffReport -Path "$ENV:Temp\ACLReportTools.Difference.PathFile.Report.acr"
+	$DifferencesPathFile | Export-ACLPermissionDiffHTML -Path "$ENV:Temp\ACLReportTools.Difference.PathFile.Report.htm" -Force
 } # Function Test-ACLReportToolsPathFiles
 ##########################################################################################################################################
 
@@ -129,6 +132,9 @@ Function Test-ACLReportToolsShares {
     "Differences for Shares Report" | Out-Default
     "-----------------------------" | Out-Default
     $DifferencesShares | fl *
+	$DifferencesShares | Export-ACLDiffReport -Path "$ENV:Temp\ACLReportTools.Difference.Shares.Report.acr" -Force
+	$Comparison = Import-ACLDiffReport -Path "$ENV:Temp\ACLReportTools.Difference.Shares.Report.acr"
+	$DifferencesShares | Export-ACLPermissionDiffHTML -Path "$ENV:Temp\ACLReportTools.Difference.Shares.Report.htm" -Force
 } # Function Test-ACLReportToolsShares
 ##########################################################################################################################################
 

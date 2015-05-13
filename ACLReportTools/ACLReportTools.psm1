@@ -3,19 +3,23 @@
 ##########################################################################################################################################
 # Data Sections
 ##########################################################################################################################################
-$Html_Header = Data {
+$Script:Html_Header = Data {
 @'
 <!doctype html><html><head><title>{0}</title>
 <style type="text/css">
-h1, h2, h3, h4, h5, h6, p, a, ul, li, ol, td, label, input, span, div {font-weight:normal !important; font-family:Tahoma, Arial, Helvetica, sans-serif;}
-.sharebad {color: red; font-weight: bold;}
-.shareadded {color: green; font-weight: bold;}
-.shareremoved {color: red; font-weight: bold;}
-.permissionremoved {color: red; font-weight: bold;}
-.permissionchanged {color: orange; font-weight: bold;}
-.permissionadded { color: green; font-weight: bold;}
-.nochange { color: gray; font-style: italic;}
-.typelabel { color: cyan;}
+h1, h2, h3, h4, h5, h6, p, a, ul, li, ol, td, label, input, span, div {{font-weight:normal !important; font-family:Tahoma, Arial, Helvetica, sans-serif;}}
+.nochange {{ color: gray; font-style: italic;}}
+.computeradded {{color: green; font-weight: bold;}}
+.computerremoved {{color: red; font-weight: bold;}}
+.shareremoved {{color: red; font-weight: bold;}}
+.shareadded {{color: green; font-weight: bold;}}
+.shareremoved {{color: red; font-weight: bold;}}
+.permissionremoved {{color: red; font-weight: bold;}}
+.permissionchanged {{color: orange; font-weight: bold;}}
+.permissionadded {{ color: green; font-weight: bold;}}
+.typelabel {{ color: gray; font-weight: heavy;}}
+.h2 {{ color: black; font-weight: heavy;}}
+.h3 {{ color: black; font-weight: heavy; font-style: italic;}}
 </style>
 </head>
 <body>
@@ -23,11 +27,30 @@ h1, h2, h3, h4, h5, h6, p, a, ul, li, ol, td, label, input, span, div {font-weig
 '@
 }
 
-$Html_Footer = Data {
+$Script:Html_Footer = Data {
 @'
 </body></html>
 '@
 }
+
+$Script:Html_ComputerName = Data {
+@'
+<h2>Differences on Computer {0}</h2>
+'@
+}
+
+$Script:Html_ShareName = Data {
+@'
+<h3>Differences in Share {0}</h3>
+'@
+}
+
+$Script:Html_DifferenceLine = Data {
+@'
+<span class='typelabel'>{0}:&nbsp;</span><span class='{1}'>{2}</span><br>
+'@
+}
+
 ##########################################################################################################################################
 # Main CmdLets
 ##########################################################################################################################################
@@ -37,7 +60,7 @@ Function New-ACLShareReport {
 	Creates a list of Share, File and Folder ACLs for the specified shares/computers.
 
 .DESCRIPTION 
-	Produces an array of [ACLReportTools.Permissions] objects for the computers provided. Specific shares can be specified or excluded using the Include/Exclude parameters.
+	Produces an array of [ACLReportTools.Permission] objects for the computers provided. Specific shares can be specified or excluded using the Include/Exclude parameters.
 
 	The report can be stored for use as a comparison in either a variable or as a file using the Export-ACLReport cmdlet (found in this module). For example:
 
@@ -96,7 +119,7 @@ Function New-ACLPathFileReport {
 	Creates a list of File and Folder ACLs for the provided path(s).
 
 .DESCRIPTION 
-	Produces an array of [ACLReportTools.Permissions] objects for the list of paths provided.
+	Produces an array of [ACLReportTools.Permission] objects for the list of paths provided.
 
 	The report can be stored for use as a comparison in either a variable or as a file using the Export-ACLReport cmdlet (found in this module). For example:
 
@@ -139,13 +162,13 @@ function Export-ACLReport {
 .DESCRIPTION 
 	This Cmdlet will save whatever ACL Report that is in the pipeline to a file.
 
-	This cmdlet just calls Export-ACLItem although at some point will add additional functionality.
+	This cmdlet just calls Export-ACLPermission although at some point will add additional functionality.
      
 .PARAMETER Path
-	This is the path to the ACL Share Report output file. This parameter is required.
+	This is the path to the ACL Permission Report output file. This parameter is required.
 
 .PARAMETER InputObject
-	Specifies the Permissions objects to export to the file. Enter a variable that contains the objects or type a command or expression that gets the objects. You can also pipe ACLReportTools.Permissions objects to Export-ACLReport.
+	Specifies the Permissions objects to export to the file. Enter a variable that contains the objects or type a command or expression that gets the objects. You can also pipe ACLReportTools.Permission objects to this cmdlet.
 
 .PARAMETER Force
 	Causes the file to be overwritten if it exists.
@@ -191,9 +214,64 @@ function Export-ACLReport {
 	}
 	End {
 		[Void]$PSBoundParameters.Remove('InputObject')
-		$InputObjectNew | Export-ACLItem @PSBoundParameters
+		$InputObjectNew | Export-ACLPermission @PSBoundParameters
 	}
 } # Function Export-ACLReport
+##########################################################################################################################################
+
+##########################################################################################################################################
+function Export-ACLDiffReport {
+<#
+.SYNOPSIS
+	Export an ACL Permission Diff Report as a file.
+
+.DESCRIPTION 
+	This Cmdlet will save whatever ACL Permission Diff Report that is in the pipeline to a file.
+
+	This cmdlet just calls Export-ACLPermissionDiff although at some point will add additional functionality.
+     
+.PARAMETER Path
+	This is the path to the ACL Permission Diff Report output file. This parameter is required.
+
+.PARAMETER InputObject
+	Specifies the Permissions objects to export to the file. Enter a variable that contains the objects or type a command or expression that gets the objects. You can also pipe ACLReportTools.PermissionDiff objects to Export-ACLReport.
+
+.PARAMETER Force
+	Causes the file to be overwritten if it exists.
+
+.EXAMPLE 
+	Compare-ACLReports -Baseline (Import-ACLReports -Path c:\ACLReports\CLIENT01_2014_11_14.acl) -With (Get-ACLReport -ComputerName CLIENT01) | Export-ACLDiffReport -Path "$HOME\Documents\Compare.acr"
+	This will perform a comparison of the current share ACL report from computer CLIENT01 with the stored share ACL report in file c:\ACLReports\CLIENT01_2014_11_14.acl and then export the report file
+	to $HOME\Documents\Compare.acr
+#>    
+    [CmdLetBinding()]
+    Param(
+        [Parameter(Mandatory=$true)]
+        [ValidateNotNullOrEmpty()]
+        [String]$Path,
+
+        [Parameter(Mandatory=$true,
+            ValueFromPipeline=$true,
+            ValueFromPipelineByPropertyName=$true)]
+        [ValidateScript({$_.GetType().FullName -ne 'ACLReportTools.PermissionDiff[]'})]
+        [ACLReportTools.PermissionDiff[]]$InputObject,
+
+        [Switch]$Force
+
+    ) # param
+    Begin {
+		[ACLReportTools.PermissionDiff[]]$InputObjectNew = $Null
+	}
+	Process {
+		Foreach ($I in $InputObject) {
+			$InputObjectNew += $I
+		}
+	}
+	End {
+		[Void]$PSBoundParameters.Remove('InputObject')
+		$InputObjectNew | Export-ACLPermissionDiff @PSBoundParameters
+	}
+} # Function Export-ACLDiffReport
 ##########################################################################################################################################
 
 ##########################################################################################################################################
@@ -203,27 +281,59 @@ function Import-ACLReport {
 	Import the ACL Report that is in a file.
 
 .DESCRIPTION 
-	This Cmdlet will import all the ACL Share Report (ACLReportTools.Permissions) records from a specified file into the pipeline.
+	This Cmdlet will import all the ACL Report (ACLReportTools.Permission) objects from a specified file into the pipeline.
 
-	This cmdlet just calls Import-ACLItem although at some point will add additional functionality.
+	This cmdlet just calls Import-ACLPermission although at some point will add additional functionality.
      
 .PARAMETER Path
-	This is the path to the ACL Share Report file to import. This parameter is required.
+	This is the path to the ACL Permission Report file to import. This parameter is required.
 
 .EXAMPLE 
 	Import-ACLReport -Path C:\ACLReports\server01.acl
 	Imports the ACL Share Report from the file C:\ACLReports\server01.acl and puts it into the pipeline
 #>    
     [CmdLetBinding()]
+#	[OutputType([ACLReportTools.Permission])]
     Param(
         [Parameter(Mandatory=$true)]
         [ValidateNotNullOrEmpty()]
         [String]$Path
     ) # param
    
-    Import-ACLItem @PSBoundParameters
+    Import-ACLPermission @PSBoundParameters
 
 } # Function Import-ACLReport
+##########################################################################################################################################
+
+##########################################################################################################################################
+function Import-ACLDiffReport {
+<#
+.SYNOPSIS
+	Import the ACL Difference Report that is in a file.
+
+.DESCRIPTION 
+	This Cmdlet will import all the ACL Difference Report (ACLReportTools.PermissionDiff) objects from a specified file into the pipeline.
+
+	This cmdlet just calls Import-ACLPermissionDiff although at some point will add additional functionality.
+     
+.PARAMETER Path
+	This is the path to the ACL Permission Report file to import. This parameter is required.
+
+.EXAMPLE 
+	Import-ACLDiffReport -Path C:\ACLReports\server01.acr
+	Imports the ACL Share Report from the file C:\ACLReports\server01Permission and puts it into the pipeline
+#>    
+    [CmdLetBinding()]
+#	[OutputType([ACLReportTools.PermissionDiff])]
+    Param(
+        [Parameter(Mandatory=$true)]
+        [ValidateNotNullOrEmpty()]
+        [String]$Path
+    ) # param
+   
+    Import-ACLPermissionDiff @PSBoundParameters
+
+} # Function Import-ACLDiffReport
 ##########################################################################################################################################
 
 ##########################################################################################################################################
@@ -1041,32 +1151,37 @@ function Get-ACLPathFileACL {
 ##########################################################################################################################################
 
 ##########################################################################################################################################
-function Export-ACLItem {
+function Export-ACLPermission {
 <#
 .SYNOPSIS
-	Export the ACLs that are in the pipeline as a file.
+	Export the ACL Permissions objects that are provided as a file.
 
 .DESCRIPTION 
-	This Cmdlet will save what ever ACLs (ACLReportTools.Permissions) to a file.
+	This Cmdlet will save what ever ACLs (ACLReportTools.Permission) to a file.
      
 .PARAMETER Path
-	This is the path to the ACL output file. This parameter is required.
+	This is the path to the ACL Permissions file output file. This parameter is required.
 
 .PARAMETER InputObject
-	Specifies the Permissions objects to export to th file. Enter a variable that contains the objects or type a command or expression that gets the objects. You can also pipe ACLReportTools.Permissions objects to Export-ACLItem.
+	Specifies the ACL Permissions objects to export to the file. Enter a variable that contains the objects or type a command or expression that gets the objects. You can also pipe ACLReportTools.Permission objects to cmdlet.
 
 .PARAMETER Force
 	Causes the file to be overwritten if it exists.
 
 .EXAMPLE 
-	Export-ACLItem -Path C:\ACLReports\server01.acl -InputObject $Acls
+	New-ACLPathFileReport -Path e:\Shares | Export-ACLPermission -Path C:\ACLReports\server01.acl
 
-	Saves the ACLs in the $Acls variable to the file C:\ACLReports\server01.acl.  If the file exists it will be overwritten if the Force switch is set.
+	Creates a new ACL Permission report for e:\Shares and saves it to the file C:\ACLReports\server01.acl.
 
 .EXAMPLE 
-	Export-ACLItem -Path C:\ACLReports\server01.acl -InputObject (Get-ACLShare -ComputerName SERVER01 | Get-ACLShareFileACL -Recurse)
+	Export-ACLPermission -Path C:\ACLReports\server01.acl -InputObject $Acls
 
-	Saves the file ACLs for all shares on the compuer SERVER01 to the file C:\ACLReports\server01.acl. If the file exists it will be overwritten if the Force switch is set.
+	Saves the ACL Permissions in the $Acls variable to the file C:\ACLReports\server01.acl.
+
+.EXAMPLE 
+	Export-ACLPermission -Path C:\ACLReports\server01.acl -InputObject (Get-ACLShare -ComputerName SERVER01 | Get-ACLShareFileACL -Recurse)
+
+	Saves the file ACLs for all shares on the compuer SERVER01 to the file C:\ACLReports\server01.acl.
 #>    
     [CmdLetBinding()]
     Param(
@@ -1100,29 +1215,91 @@ function Export-ACLItem {
         Try {
             $Output | Export-Clixml -Path $Path -Force
         } Catch {
-            Write-Error "Unable to export the ACL file $Path."
+            Write-Error "Unable to export the ACL Permissions file $Path."
         }
     } # End
-} # Function Export-ACLItem
+} # Function Export-ACLPermission
 ##########################################################################################################################################
 
 ##########################################################################################################################################
-function Import-ACLItem {
+function Export-ACLPermissionDiff {
 <#
 .SYNOPSIS
-	Import the ACLs that are in a file back into the pipeline.
+	Export the ACL Difference Objects that are provided as a file.
 
-.DESCRIPTION
-	This Cmdlet will load all the ACLs (ACLReportTools.Permissions) records from a specified file.
+.DESCRIPTION 
+	This Cmdlet will export an array of provided Permission Difference [ACLReportTools.PermissionDiff] records to a file.
      
 .PARAMETER Path
-	This is the path to the ACL output file. This parameter is required.
+	This is the path to the ACL Permission Diff file. This parameter is required.
+
+.PARAMETER InputObject
+	Specifies the Permissions objects to export to th file. Enter a variable that contains the objects or type a command or expression that gets the objects. You can also pipe ACLReportTools.PermissionDiff objects to this cmdlet.
+
+.PARAMETER Force
+	Causes the file to be overwritten if it exists.
 
 .EXAMPLE 
-	Import-ACLItem -Path C:\ACLReports\server01.acl
+	Export-ACLPermissionDiff -Path C:\ACLReports\server01.acr -InputObject $DiffReport
+
+	Saves the ACL Difference objects in the $DiffReport variable to the file C:\ACLReports\server01.acr.  If the file exists it will be overwritten if the Force switch is set.
+#>    
+    [CmdLetBinding()]
+    Param(
+        [Parameter(Mandatory=$true)]
+        [ValidateNotNullOrEmpty()]
+        [String]$Path,
+
+        [Parameter(Mandatory=$true,
+            ValueFromPipeline=$true,
+            ValueFromPipelineByPropertyName=$true)]
+        [ValidateScript({$_.GetType().FullName -ne 'ACLReportTools.PermissionDiff[]'})]
+        [ACLReportTools.PermissionDiff[]]$InputObject,
+
+        [Switch]$Force
+
+    ) # param
+
+    Begin {
+        If ((Test-Path -Path $Path -PathType Leaf) -and ($force -eq $false)) {
+            Write-Error "The file $Path already exists. Use Force to overwrite it."
+            return
+        }
+        [array]$Output = $null
+    } # Begin
+    Process {
+        Foreach ($PermissionDiff in $InputObject) {
+            $Output += $PermissionDiff
+        } # Foreach
+    } # Process
+    End {
+        Try {
+            $Output | Export-Clixml -Path $Path -Force
+        } Catch {
+            Write-Error "Unable to export the ACL Permission Diff $Path."
+        }
+    } # End
+} # Function Export-ACLPermissionDiff
+##########################################################################################################################################
+
+##########################################################################################################################################
+function Import-ACLPermission {
+<#
+.SYNOPSIS
+	Import the a File containing serialized ACL Permission objects that are in a file back into the pipeline.
+
+.DESCRIPTION
+	This Cmdlet will load all the ACLs (ACLReportTools.Permission) records from a specified file.
+     
+.PARAMETER Path
+	This is the path to the file containing ACL Permission objects. This parameter is required.
+
+.EXAMPLE 
+	Import-ACLPermission -Path C:\ACLReports\server01.acl
 	Loads the ACLs in the file C:\ACLReports\server01.acl.
 #>    
     [CmdLetBinding()]
+#	[OutputType([ACLReportTools.Permission])]
     Param(
         [Parameter(Mandatory=$true)]
         [ValidateNotNullOrEmpty()]
@@ -1139,7 +1316,117 @@ function Import-ACLItem {
     } catch { 
         Write-Error "Unable to import the ACL file $Path."
     } # Try
-} # Function Import-ACLItem
+} # Function Import-ACLPermission
+##########################################################################################################################################
+
+##########################################################################################################################################
+function Import-ACLPermissionDiff {
+<#
+.SYNOPSIS
+	Import the a File containing serialized ACL Permission Diff objects that are in a file back into the pipeline.
+
+.DESCRIPTION
+	This Cmdlet will load all the ACLs (ACLReportTools.PermissionDiff) records from a specified file.
+     
+.PARAMETER Path
+	This is the path to the file containing ACL Permission Diff objects. This parameter is required.
+
+.EXAMPLE 
+	Import-ACLPermissionDiff -Path C:\ACLReports\server01.acr
+	Loads the ACL Permission Diff objects in the file C:\ACLReports\server01.acr.
+#>    
+    [CmdLetBinding()]
+#	[OutputType([ACLReportTools.PermissionDiff])]
+    Param(
+        [Parameter(Mandatory=$true)]
+        [ValidateNotNullOrEmpty()]
+        [String]$Path
+    ) # param
+
+    If ((Test-Path -Path $Path -PathType Leaf) -eq $false) {
+        Write-Error "The file $Path does not exist."
+        return
+    }
+
+    Try {
+        Import-Clixml -Path $Path
+    } catch { 
+        Write-Error "Unable to import the ACL file $Path."
+    } # Try
+} # Function Import-ACLPermissionDiff
+##########################################################################################################################################
+
+##########################################################################################################################################
+function Export-ACLPermissionDiffHTML {
+<#
+.SYNOPSIS
+	Export the ACL Difference Objects that are provided as an HTML file.
+
+.DESCRIPTION 
+	This Cmdlet will export an array of provided Permission Difference [ACLReportTools.PermissionDiff] records to an HTML file for easy viewing and reporting.
+     
+.PARAMETER Path
+	This is the path to the HTML output file. This parameter is required.
+
+.PARAMETER InputObject
+	Specifies the Permissions DIff objects to export to the as HTML. Enter a variable that contains the objects or type a command or expression that gets the objects. You can also pipe ACLReportTools.PermissionDiff objects to this cmdlet.
+
+.PARAMETER Force
+	Causes the file to be overwritten if it exists.
+
+.PARAMETER Title
+	Optional Title text to write into the report.
+
+.EXAMPLE 
+	Compare-ACLReports -Baseline (Import-ACLReports -Path c:\ACLReports\server01.acl) -With (Get-ACLReport -ComputerName Server01) | Export-ACLPermissionDiffHTML -Path C:\ACLReports\server01.htm
+
+	Performs a comparison using the Baseline file c:\ACLReports\Server01.acl and the shares on Server01 and outputs ACL Difference Report as an HTML file.
+#>    
+    [CmdLetBinding()]
+    Param(
+        [Parameter(Mandatory=$true)]
+        [ValidateNotNullOrEmpty()]
+        [String]$Path,
+
+        [Parameter(Mandatory=$true,
+            ValueFromPipeline=$true,
+            ValueFromPipelineByPropertyName=$true)]
+        [ValidateScript({$_.GetType().FullName -ne 'ACLReportTools.PermissionDiff[]'})]
+        [ACLReportTools.PermissionDiff[]]$InputObject,
+
+        [Switch]$Force,
+
+		[String]$Title = 'ACL Difference Report'
+
+    ) # param
+
+    Begin {
+        If ((Test-Path -Path $Path -PathType Leaf) -and ($force -eq $false)) {
+            Write-Error "The file $Path already exists. Use Force to overwrite it."
+            return
+        }
+		Set-Content -Path $Path -Value ( Create-HTMLReportHeader -Title $Title ) -Force 
+		[String]$LastComputer = ''
+		[String]$LastShare = ''
+    } # Begin
+    Process {
+        Foreach ($PermissionDiff in $InputObject) {
+			If (($ComputerName -ne '') -and ($PermissionDiff.ComputerName -ne $LastComputer)) {
+				$LastComputer = $PermissionDiff.ComputerName
+				Add-Content -Path $Path -Value ( Create-HTMLComputerNameLine -ComputerName $PermissionDiff.ComputerName ) -Force 			
+				
+			}
+			If (($PermissionDiff.Share -ne '') -and ($PermissionDiff.Share -ne $LastShare )) {
+				$LastShare = $PermissionDiff.Share
+				Add-Content -Path $Path -Value ( Create-HTMLShareNameLine -ShareName $PermissionDiff.Share ) -Force 			
+			}
+			Add-Content -Path $Path -Value ( Create-HTMLPermissionDiffLine -PermissionDiff $PermissionDiff ) -Force 
+        } # Foreach
+    } # Process
+    End {
+		Add-Content -Path $Path -Value ( Create-HTMLReportFooter ) -Force 
+    } # End
+} # Function Export-ACLPermissionDiffHTML
 ##########################################################################################################################################
 
 ##########################################################################################################################################
@@ -1415,16 +1702,50 @@ Function Create-HTMLReportHeader {
         [Parameter(Mandatory=$true)]
         [String]$Title
     ) # Param
-    return $Html_Header -f $Title
+    return $Script:Html_Header -f $Title
 } # Function Create-HTMLReportHeader
 ##########################################################################################################################################
 
 ##########################################################################################################################################
 Function Create-HTMLReportFooter {
-    return $Html_Footer
+    return $Script:Html_Footer
 } # Function Create-HTMLReportFooter
 ##########################################################################################################################################
 
+##########################################################################################################################################
+Function Create-HTMLComputerNameLine {
+    Param (
+        [Parameter(Mandatory=$true)]
+        [String]$ComputerName
+    ) # Param
+	return $Script:Html_ComputerName -f $ComputerName
+} # Function Create-HTMLComputerNameLine
+##########################################################################################################################################
+
+##########################################################################################################################################
+Function Create-HTMLShareNameLine {
+    Param (
+        [Parameter(Mandatory=$true)]
+        [String]$ShareName
+    ) # Param
+	return $Script:Html_ShareName -f $ShareName
+} # Function Create-HTMLShareNameLine
+##########################################################################################################################################
+
+##########################################################################################################################################
+Function Create-HTMLPermissionDiffLine {
+    Param (
+        [Parameter(Mandatory=$true)]
+        [ACLReportTools.PermissionDiff]$PermissionDiff
+    ) # Param
+
+    # This function takes a Permission Diff object and formats it as HTML for a report.
+	[string]$label = $PermissionDiff.Type.ToString()
+	[string]$class = $PermissionDiff.DiffType.ToString().ToLower() -replace " ",""
+	[string]$html = $PermissionDiff.Difference
+	return $Script:Html_DifferenceLine -f $Label,$Class,$Html
+} # Function Create-HTMLPermissionDiffLine
+##########################################################################################################################################
 
 ##########################################################################################################################################
 # Ensure all the custom classes are loaded in available
@@ -1434,5 +1755,11 @@ Initialize-Module
 
 ##########################################################################################################################################
 # Export the Module Cmdlets
-Export-ModuleMember -Function New-ACLShareReport,New-ACLPathFileReport,Import-ACLReport,Export-ACLReport,Compare-ACLReports,Get-ACLShare,Get-ACLShareACL,Get-ACLPathFileACL,Get-ACLShareFileACL,Import-ACLItem,Export-ACLItem
+Export-ModuleMember -Function New-ACLShareReport,New-ACLPathFileReport, `
+	Import-ACLReport,Export-ACLReport,Import-ACLDiffReport,Export-ACLDiffReport, `
+	Compare-ACLReports, `
+	Get-ACLShare, `
+	Get-ACLShareACL,Get-ACLPathFileACL,Get-ACLShareFileACL, `
+	Import-ACLPermission,Export-ACLPermission,Import-ACLPermissionDiff,Export-ACLPermissionDiff, `
+	Export-ACLPermissionDiffHTML
 ##########################################################################################################################################

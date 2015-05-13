@@ -16,7 +16,8 @@ The process that is normally followed using this module is:
 3. ... Sometime later ...
 4. Import the baseline ACL Report from a stored file.
 5. Produce a ACL Difference report comparing the imported baseline ACL Report with the current ACL state of the Folders or Shares.
-6. Repeat from step 1.
+6. Optionally export the ACL Difference report as HTML.
+7. Repeat from step 1.
 
 The above process could be easily automated in many ways (Task Scheduler is suggested).
 
@@ -45,6 +46,10 @@ You should also ensure that the account that is being used to generate the repor
 
 ### Version Info
 <pre>
+1.21  2015-05-13   Daniel Scott-Raynsford       Added Cmdlet for Exporting Diff Report as
+                                                HTML
+1.2   2015-05-13   Daniel Scott-Raynsford       Added Cmdlets for Importing/Exporting
+                                                Permission Difference reports.
 1.1   2015-05-12   Daniel Scott-Raynsford       Updated to use NTFSSecurity Module
                                                 Updated CmdLet names to follow standards
 1.0   2015-05-09   Daniel Scott-Raynsford       Initial Version
@@ -89,6 +94,13 @@ Import-Module ACLReportTools
 Compare-ACLReports -Baseline (Import-ACLReport -Path "$HOME\Documents\Baseline.acl") -ComputerName Client -Include Share1,Share2
 ```
 
+#### Example Usage: Exporting a Difference Report as an HTML File
+This example takes the output of the Compare-ACLReports cmdlet and formats it as HTML and saves it for easier review and storage.
+```powershell
+Import-Module ACLReportTools
+Compare-ACLReports -Baseline (Import-ACLReport -Path "$HOME\Documents\Baseline.acl") -ComputerName Client -Include Share1,Share2 | Export-ACLPermissionDiffHTML -Path "$HOME\Documents\Difference.htm"
+```
+
 ### CmdLets
 
 #### CmdLet New-ACLShareReport
@@ -119,12 +131,12 @@ Get-Help -Name New-ACLPathFileReport -Full
 ```
 For more information.
 
-#### CmdLet Export-ACLReport 
-Export an ACL Report as a file.
+#### CmdLet Export-ACLReport
+Export an ACL Permission Report as a file.
 
 For example:
 ```powershell
-Export-ACLReport -Path C:\ACLReports\server01.acl -InputObject $ShareReport
+Export-ACLReport -Path C:\ACLReports\server01.acl -InputObject $PermissionReport
 ```
 
 See:
@@ -134,7 +146,7 @@ Get-Help -Name Export-ACLReport -Full
 For more information.
 
 #### CmdLet Import-ACLReport
-This cmdlet imports an ACL Share Report from the file specified back and returns the objects in the pipeline.
+This cmdlet imports an ACL Permission Report from the file specified back and returns the objects in the pipeline.
 
 For example:
 ```powershell
@@ -144,6 +156,34 @@ Import-ACLReport -Path C:\ACLReports\server01.acl
 See:
 ```powershell
 Get-Help -Name Import-ACLReport -Full
+```
+For more information.
+
+#### CmdLet Export-ACLDiffReport
+Export an ACL Difference Report as a file.
+
+For example:
+```powershell
+Export-ACLDiffReport -Path C:\ACLReports\server01.acr -InputObject $DiffReport
+```
+
+See:
+```powershell
+Get-Help -Name Export-ACLDiffReport -Full
+```
+For more information.
+
+#### CmdLet Import-ACLDiffReport
+This cmdlet imports an ACL Difference Report from the file specified back and returns the objects in the pipeline.
+
+For example:
+```powershell
+Import-ACLDiffReport -Path C:\ACLReports\server01.acr
+```
+
+See:
+```powershell
+Get-Help -Name Import-ACLDiffReport -Full
 ```
 For more information.
 
@@ -161,30 +201,73 @@ Get-Help -Name Compare-ACLReports -Full
 ```
 For more information.
 
-#### CmdLet Export-ACLItem
-Export the ACLs that are in the pipeline as a file.
+#### CmdLet Export-ACLPermission
+Export the ACL Permissions objects that are provided as a file.
 
 For example:
 ```powershell
-Export-ACLItem -Path C:\ACLReports\server01.acl -InputObject $ShareReport
+Export-ACLPermission -Path C:\ACLReports\server01.acl -InputObject $ShareReport
 ```
 
 See:
 ```powershell
-Get-Help -Name Export-ACLItem -Full
+Get-Help -Name Export-ACLPermission -Full
 ```
 For more information.
 
-#### CmdLet Import-ACLItem
-Import the ACLs that are in a file back into the pipeline.
+#### CmdLet Import-ACLPermission
+Import the a File containing serialized ACL Permission objects that are in a file back into the pipeline.
+
 For example:
 ```powershell
-Import-ACLItem -Path c:\ACLs\CLIENT01.ACL)
+Import-ACLPermission -Path c:\ACLs\CLIENT01.ACL
 ```
 
 See:
 ```powershell
-Get-Help -Name Import-ACLItem -Full
+Get-Help -Name Import-ACLPermission -Full
+```
+For more information.
+
+#### CmdLet Export-ACLPermissionDiff
+Export the ACL Difference Objects that are provided as a file.
+
+For example:
+```powershell
+Export-ACLPermission -Path C:\ACLReports\server01.acl -InputObject $ShareReport
+```
+
+See:
+```powershell
+Get-Help -Name Export-ACLPermissionDiff -Full
+```
+For more information.
+
+#### CmdLet Import-ACLPermissionDiff
+Import the a File containing serialized ACL Permission Diff objects that are in a file back into the pipeline.
+
+For example:
+```powershell
+Import-ACLPermissionDiff -Path c:\ACLs\CLIENT01.ACR
+```
+
+See:
+```powershell
+Get-Help -Name Import-ACLPermissionDiff -Full
+```
+For more information.
+
+#### CmdLet Export-ACLPermissionDiffHTML
+Export the ACL Difference Objects that are provided as an HTML file.
+
+For example:
+```powershell
+Compare-ACLReports -Baseline (Import-ACLReports -Path c:\ACLReports\server01.acl) -With (Get-ACLReport -ComputerName Server01) | Export-ACLPermissionDiffHTML -Path C:\ACLReports\server01.htm
+```
+
+See:
+```powershell
+Get-Help -Name Export-ACLPermissionDiffHTML -Full
 ```
 For more information.
 
@@ -256,7 +339,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -265,4 +348,3 @@ See the License for the specific language governing permissions and
 limitations under the License.
 
 ### TODO
-1. Create a cmdlet that converts the result of the Compare-ACLShareReport into an HTML report file.
