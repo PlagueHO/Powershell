@@ -1,3 +1,5 @@
 *.bsl
 report.htm
 Compare-ShareACLs/Baseline-PLAGUE-PDC/Baseline.htm
+*.mof
+ACLReportTools/Package/ACLReportTools.zip

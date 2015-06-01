@@ -5,7 +5,7 @@ Powershell
 Creates a bootable VHD containing Windows Server Nano 2016.
 
 ### Overview
-Creates a bootable VHD containing Windows Server Nano 2016 using the publically available Windows Server 2016 Technical Preview 2 ISO.
+Creates a bootable VHD containing Windows Server Nano 2016 using the publicly available Windows Server 2016 Technical Preview 2 ISO.
 
 This script needs the Convert-WindowsImage.ps1 script to be in the same folder. It can be downloaded from:
 https://gallery.technet.microsoft.com/scriptcenter/Convert-WindowsImageps1-0fe23a8f
@@ -18,6 +18,18 @@ Please see the link for additional information.
 This script can be found:
 Github Repo: https://github.com/PlagueHO/Powershell/tree/master/New-NanoServerVHD
 Script Center: https://gallery.technet.microsoft.com/scriptcenter/DSC-Tools-c96e2c53
+
+
+### Known Issues
+2015-06-01: WIndows 10- If you are using Windows 10, there is a problem with the Convert-WindowsImage.ps1 script. It incorrectly reports that the OS is pre Windows 8 if it is run on Windows 10. To correct this (until an official fix is released), edit the Convert-WindowsImage.ps1 file and replace the line:
+<pre>
+$isWin8 = (($os.Version -ge 6.2) -and ($os.BuildNumber -ge $lowestSupportedBuild))
+</pre>
+with:
+<pre>
+$isWin8 = $true
+</pre>
+Thanks to @prabirshrestha for picking this one up!
 
 
 ### Minimum requirements
