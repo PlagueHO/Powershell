@@ -64,7 +64,7 @@ param(
     [Parameter(
         Position=3
         )]
-    [ValidateScript({ ( $_ -ne '' ) })]
+    [ValidateScript({ ( $_ -ne '' ) -and ( Test-Path $_ ) })]
     $LogPath,
 
     [Boolean]
@@ -84,10 +84,10 @@ Function Add-LogEntry ( [String]$Path ,[String]$Message)
 } # Function Add-LogEntry
 
 # If a Log Path was specified get up a log file name to write to.
-If ($LogPath -eq '') {
+If (($LogPath -eq '') -or ($LogPath -eq $null)) {
     [String]$LogFile = ''
 } else {
-    [String]$LogFile = Join-Path -Path $LogPath -ChildPath "$($ENV:computername).txt" 
+    [String]$LogFile = Join-Path -Path $LogPath -ChildPath "$($ENV:computername)_$KBID.txt" 
 } # ($LogPath -eq '')
 
 # Has this update already been installed?

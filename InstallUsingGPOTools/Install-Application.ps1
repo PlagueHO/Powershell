@@ -93,7 +93,7 @@ param(
     [Parameter(
         Position=6
         )]
-    [ValidateNotNullOrEmpty()]
+    [ValidateScript({ ( $_ -ne '' ) -and ( Test-Path $_ ) })]
     $LogPath
 ) # Param
  
@@ -107,7 +107,7 @@ Function Add-LogEntry ( [String]$Path ,[String]$Message)
 } # Function Add-LogEntry
 
 # If a Log Path was specified get up a log file name to write to.
-If ($LogPath -eq '') {
+If (($LogPath -eq '') -or ($LogPath -eq $null)) {
     [String]$LogFile = ''
 } else {
     [String]$LogFile = Join-Path -Path $LogPath -ChildPath "$($ENV:computername).txt" 
