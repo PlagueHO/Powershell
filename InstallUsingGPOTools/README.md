@@ -5,7 +5,9 @@ Powershell
 This project contains scripts for installing applications or updates via GPO.
 
 ### Overview
-This contains two PowerShell scripts that will install or uninstall specified Microsoft Office products using user defined Office installation configuration files (*.xml or *.msp). These scripts are intended to be used in GPOs to silently install or uninstall Microsoft Office 2013 products, but could be used in other methods to install or uninstall these products.
+This contains two PowerShell scripts that will install either an Application or an Microsoft QFE Update. These scripts are designed to be used with Startup/Logon GPO scripts to install these updates. The registry or WMI will be checked to see if the Application or Update is already installed. If it is installed then the process will be skipped.
+
+I wrote these scripts to initally to automate the process of installing Notepad++ and the WMF 5.0 preview in my lab environemt. It is based loosely on the code I wrote in the OfficeTools scripts (for installing Office via GPO).
 
 ### Install-Application
 Installs an Application from a local or network media source if a registry key/value is not set.
