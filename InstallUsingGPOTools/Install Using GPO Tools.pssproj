@@ -27,10 +27,14 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <Folder Include="Package\" />
+  </ItemGroup>
   <ItemGroup>
     <Compile Include="Install-Application.ps1" />
     <Compile Include="Install-Update.ps1" />
+    <Compile Include="Install Using GPO Tools.Package.ps1" />
+    <Compile Include="Package\InstallUsingGPOTools.zip" />
     <Compile Include="README.md" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />

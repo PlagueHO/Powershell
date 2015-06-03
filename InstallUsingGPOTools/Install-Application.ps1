@@ -30,10 +30,10 @@
   
   .EXAMPLE
   Install Notepad++ 6.7.8.2 without creating a logfile:
-  Install-Application -InstallerPath \\server\Software$\Notepad++\npp.6.7.8.2.Installer.exe -RegistryKey HKLM:\SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\Notepad++ -RegistryName DisplayVersion -RegistryValue 6.7.8.2 -InstallerParameters '/S'
+  Install-Application -InstallerPath '\\server\Software$\Notepad++\npp.6.7.8.2.Installer.exe' -RegistryKey 'HKLM:\SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\Notepad++' -RegistryName 'DisplayVersion' -RegistryValue '6.7.8.2' -InstallerParameters '/S'
 
   Install Notepad++ 6.7.8.2 creating log files for each machine it is installed on in \\Server\Software$\logfiles\ folder:
-  Install-Application -InstallerPath \\server\Software$\Notepad++\npp.6.7.8.2.Installer.exe -RegistryKey HKLM:\SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\Notepad++ -RegistryName DisplayVersion -RegistryValue 6.7.8.2 -InstallerParameters '/S' -LogPath \\Server\Software$\logfiles\
+  Install-Application -InstallerPath '\\server\Software$\Notepad++\npp.6.7.8.2.Installer.exe' -RegistryKey 'HKLM:\SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\Notepad++' -RegistryName 'DisplayVersion' -RegistryValue '6.7.8.2' -InstallerParameters '/S' -LogPath \\Server\Software$\logfiles\
 
   .OUTPUTS
 
@@ -110,7 +110,7 @@ Function Add-LogEntry ( [String]$Path ,[String]$Message)
 If (($LogPath -eq '') -or ($LogPath -eq $null)) {
     [String]$LogFile = ''
 } else {
-    [String]$LogFile = Join-Path -Path $LogPath -ChildPath "$($ENV:computername).txt" 
+	[String]$LogFile = Join-Path -Path $LogPath -ChildPath "$($ENV:computername)_$([System.IO.Path]::GetFileNameWithoutExtension($InstallerPath)).txt" 
 } # ($LogPath -eq '')
 
 # Perform registry checks to see if app is already installed
@@ -144,14 +144,14 @@ If (-not $Installed) {
     Add-LogEntry -Path $LogFile -Message "Install Application using $Command started."
     If ($PSCmdlet.ShouldProcess("Install Application using $Command started")) {
         # Call the product Install.
-        & cmd.exe /c "$Command && exit 0 || exit 1"
+        & cmd.exe /c "$Command"
         [Int]$ErrorCode = $LASTEXITCODE
     } # ShouldProcess
-    If ($ErrorCode -eq 0) {
-        Add-LogEntry -Path $LogFile -Message "Install Application using $Command completed successfully."
-    } Else {
-        Add-LogEntry -Path $LogFile -Message "Install Application using $Command failed with error code $ErrorCode."
-    } # ($ErrorCode -eq 0)
+    Switch ($ErrorCode) {
+		0 { Add-LogEntry -Path $LogFile -Message "Install $Type using $Command completed successfully." }
+		1641 { Add-LogEntry -Path $LogFile -Message "Install $Type using $Command completed successfully and computer is rebooting." }
+		default { Add-LogEntry -Path $LogFile -Message "Install $Type using $Command failed with error code $ErrorCode." }
+    } # ($ErrorCode)
 } Else {
     Write-Verbose -Message "Application is already installed."
 } # (-not $Installed)

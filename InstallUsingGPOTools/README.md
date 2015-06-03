@@ -5,9 +5,9 @@ Powershell
 This project contains scripts for installing applications or updates via GPO.
 
 ### Overview
-This contains two PowerShell scripts that will install either an Application or an Microsoft QFE Update. These scripts are designed to be used with Startup/Logon GPO scripts to install these updates. The registry or WMI will be checked to see if the Application or Update is already installed. If it is installed then the process will be skipped.
+This contains two PowerShell scripts that will install either an Application or an Windows QFE Update. These scripts are designed to be used with Startup/Logon GPO scripts to install these updates. The registry or WMI will be checked to see if the Application or Update is already installed. If it is installed then the process will be skipped.
 
-I wrote these scripts to initally to automate the process of installing Notepad++ and the WMF 5.0 preview in my lab environemt. It is based loosely on the code I wrote in the OfficeTools scripts (for installing Office via GPO).
+I wrote these scripts initally to automate the process of installing Notepad++ and the WMF 5.0 preview in my lab environemt. It is based loosely on the code I wrote in the OfficeTools scripts (for installing Office via GPO).
 
 ### Install-Application
 Installs an Application from a local or network media source if a registry key/value is not set.
@@ -22,12 +22,12 @@ This script would normally be used with the Windows Server 2012 GPO PowerShell S
 ####Examples
 Install Notepad++ 6.7.8.2 without creating a logfile:
 ```powershell
-Install-Application -InstallerPath \\server\Software$\Notepad++\npp.6.7.8.2.Installer.exe -RegistryKey HKLM:\SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\Notepad++ -RegistryName DisplayVersion -RegistryValue 6.7.8.2 -InstallerParameters '/S'
+Install-Application -InstallerPath '\\server\Software$\Notepad++\npp.6.7.8.2.Installer.exe' -RegistryKey 'HKLM:\SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\Notepad++' -RegistryName 'DisplayVersion' -RegistryValue '6.7.8.2' -InstallerParameters '/S'
 ```
 
 Install Notepad++ 6.7.8.2 creating log files for each machine it is installed on in \\Server\Software$\logfiles\ folder:
 ```powershell
-Install-Application -InstallerPath \\server\Software$\Notepad++\npp.6.7.8.2.Installer.exe -RegistryKey HKLM:\SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\Notepad++ -RegistryName DisplayVersion -RegistryValue 6.7.8.2 -InstallerParameters '/S' -LogPath \\Server\Software$\logfiles\
+Install-Application -InstallerPath '\\server\Software$\Notepad++\npp.6.7.8.2.Installer.exe' -RegistryKey 'HKLM:\SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\Notepad++' -RegistryName 'DisplayVersion' -RegistryValue '6.7.8.2' -InstallerParameters '/S' -LogPath \\Server\Software$\logfiles\
 ```
 
 See:
@@ -38,7 +38,7 @@ For more information.
 
 
 ### Install-Update
-Installs a Microsoft Office Product from a local or network media source.
+Installs a Windows QFE Update from a local or network media source.
 
 ####Description
 Installs a Windows QFE Update from a specified media source by executing the update installer (.EXE) or Microsoft Update (.MSU) file.
@@ -50,12 +50,12 @@ Normally WSUS would be used to distribute and install QFE updates, but some upda
 ####Examples
 To install the Windows Management Framework 5.0 April 2015 update with no log file creation:
 ```powershell
-Install-Update -InstallerPath '\\Server\Software$\Updates\WindowsBlue-KB3055381-x64.msu' -KBID 'KB3055381'
+Install-Update -InstallerPath \\Server\Software$\Updates\WindowsBlue-KB3055381-x64.msu -KBID KB3055381
 ```
 
 To install the Windows Management Framework 5.0 April 2015 update creating log files for each machine it is installed on in \\Server\Software$\logfiles\ folder:
 ```powershell
-Install-Update -InstallerPath '\\Server\Software$\Updates\WindowsBlue-KB3055381-x64.msu' -KBID 'KB3055381' -LogPath \\Server\Software$\logfiles\
+Install-Update -InstallerPath \\Server\Software$\Updates\WindowsBlue-KB3055381-x64.msu -KBID KB3055381 -LogPath \\Server\Software$\logfiles\
 ```
 
 See:

@@ -13,7 +13,7 @@
   The location of the update executable or MSU. Can be a local or network path. If an MSU file is specified then it will be automatically be installed by the WUSA.EXE with the appropraite parameters to ensure unattended installation. If an EXE file is specified then the appropriate quiet mode parameters are used.
 
   .PARAMETER KBID
-  This is the KB ID for this QFE Update. It must match that of the update specified in the Installer path because it is used to detect if this update has already been installed. The KBID is usually found in the update filename.
+  This is the KB ID for this Windows QFE Update. It must match that of the update specified in the Installer path because it is used to detect if this update has already been installed. The KBID is usually found in the update filename.
 
   .PARAMETER LogPath
   Optional parameter specifying where the installation log file should be written to. If not specified, an installation log file will not be written.
@@ -21,11 +21,11 @@
   
   .EXAMPLE
   To install the Windows Management Framework 5.0 April 2015 update with no log file creation:
-  Install-Update -InstallerPath '\\Server\Software$\Updates\WindowsBlue-KB3055381-x64.msu' -KBID 'KB3055381'
+  Install-Update -InstallerPath \\Server\Software$\Updates\WindowsBlue-KB3055381-x64.msu -KBID KB3055381
 
   .EXAMPLE
-  To install the Windows Management Framework 5.0 April 2015 update creating log files for each machine it is installed on in \\Server\Software$\logfiles\ folder:
-  Install-Update -InstallerPath '\\Server\Software$\Updates\WindowsBlue-KB3055381-x64.msu' -KBID 'KB3055381' -LogPath \\Server\Software$\logfiles\
+  To install the Windows Management Framework 5.0 April 2015 update creating log files for each machine it is installed on in \\Server\Logfiles$\ folder:
+  Install-Update -InstallerPath \\Server\Software$\Updates\WindowsBlue-KB3055381-x64.msu -KBID KB3055381 -LogPath \\Server\Logfiles$\
 
   .OUTPUTS
 
@@ -109,14 +109,14 @@ If (-not $Installed) {
     Add-LogEntry -Path $LogFile -Message "Install $Type using $Command started."
     If ($PSCmdlet.ShouldProcess("Install $Type using $Command started")) {
         # Call the product Install.
-        & cmd.exe /c "$Command && exit 0 || exit 1"
+        & cmd.exe /c "$Command"
         [Int]$ErrorCode = $LASTEXITCODE
     } # ShouldProcess
-    If ($ErrorCode -eq 0) {
-        Add-LogEntry -Path $LogFile -Message "Install $Type using $Command completed successfully."
-    } Else {
-        Add-LogEntry -Path $LogFile -Message "Install $Type using $Command failed with error code $ErrorCode."
-    } # ($ErrorCode -eq 0)
+    Switch ($ErrorCode) {
+		0 { Add-LogEntry -Path $LogFile -Message "Install $Type using $Command completed successfully." }
+		1641 { Add-LogEntry -Path $LogFile -Message "Install $Type using $Command completed successfully and computer is rebooting." }
+		default { Add-LogEntry -Path $LogFile -Message "Install $Type using $Command failed with error code $ErrorCode." }
+    } # ($ErrorCode)
 } Else {
     Write-Verbose -Message "$Type is already installed."
 } # (-not $Installed)
