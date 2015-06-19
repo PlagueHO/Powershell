@@ -2,13 +2,15 @@ Powershell
 ==========
 
 ## New-NanoServerVHD
-Creates a bootable VHD containing Windows Server Nano 2016.
+Creates a bootable VHD/VHDx containing Windows Server Nano 2016.
 
 ### Overview
-Creates a bootable VHD containing Windows Server Nano 2016 using the publicly available Windows Server 2016 Technical Preview 2 ISO.
+Creates a bootable VHD/VHDx containing Windows Server Nano 2016 using the publicly available Windows Server 2016 Technical Preview 2 ISO.
 
 This script needs the Convert-WindowsImage.ps1 script to be in the same folder. It can be downloaded from:
 https://gallery.technet.microsoft.com/scriptcenter/Convert-WindowsImageps1-0fe23a8f
+
+Please make sure you have the 2015-06-16 version of the Convert-WindowsImage.ps1 script. Earlier versions will no longer work!
 
 This function turns the instructions on the following link into a repeatable script:
 https://technet.microsoft.com/en-us/library/mt126167.aspx
@@ -19,18 +21,12 @@ This script can be found:
 Github Repo: https://github.com/PlagueHO/Powershell/tree/master/New-NanoServerVHD
 Script Center: https://gallery.technet.microsoft.com/scriptcenter/DSC-Tools-c96e2c53
 
-
-### Known Issues
-2015-06-01: WIndows 10- If you are using Windows 10, there is a problem with the Convert-WindowsImage.ps1 script. It incorrectly reports that the OS is pre Windows 8 if it is run on Windows 10. To correct this (until an official fix is released), edit the Convert-WindowsImage.ps1 file and replace the line:
-<pre>
-$isWin8 = (($os.Version -ge 6.2) -and ($os.BuildNumber -ge $lowestSupportedBuild))
-</pre>
-with:
-<pre>
-$isWin8 = $true
-</pre>
-Thanks to @prabirshrestha for picking this one up!
-
+### Change Log
+2015-06-19: Updated to support changes in Convert-WindowsImage on 2015-06-16.
+2015-06-19: Added VHDFormat parameter to allow VHDx files to be created.
+2015-06-19: Added Edition parameter (defaults to CORESYSTEMSERVER_INSTALL) so that the Name of the edition in the NanoServer.WIM can be specified. 
+2015-06-19: Because of changes in Convert-WindowsImage, VHDx files are always created using the GPT partition format. VHD files are still created using MBR partition format.
+2015-06-05: Fix to Unattend.xml to correctly set Server Name in OfflineServicing phase.
 
 ### Minimum requirements
 

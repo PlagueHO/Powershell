@@ -28,6 +28,7 @@
   </PropertyGroup>
   <ItemGroup />
   <ItemGroup>
+    <Compile Include="Convert-WindowsImage.ps1" />
     <Compile Include="New-NanoServerVHD.ps1" />
     <Compile Include="README.md" />
   </ItemGroup>

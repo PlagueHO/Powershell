@@ -1,9 +1,9 @@
 ﻿<#   
     .SYNOPSIS
-        Creates a bootable VHD containing Windows Server Nano 2016.
+        Creates a bootable VHD/VHDx containing Windows Server Nano 2016.
 
     .DESCRIPTION
-        Creates a bootable VHD containing Windows Server Nano 2016 using the publically available Windows Server 2016 Technical Preview 2 ISO.
+        Creates a bootable VHD/VHDx containing Windows Server Nano 2016 using the publically available Windows Server 2016 Technical Preview 2 ISO.
 
 		This script needs the Convert-WindowsImage.ps1 script to be in the same folder. It can be downloaded from:
 		https://gallery.technet.microsoft.com/scriptcenter/Convert-WindowsImageps1-0fe23a8f
@@ -22,6 +22,9 @@
 
     .PARAMETER DestVHD
     This is the path and name of the new Nano Server VHD.
+
+    .PARAMETER VHDFormat
+    Specifies whether to create a VHD or VHDX formatted Virtual Hard Disk. The default is VHD.
 
     .PARAMETER Packages
     This is a list of the packages to install in this Nano Server. There are only 6 available currently:
@@ -52,6 +55,13 @@
     .PARAMETER UnattendedContent
     Allows the content of the Unattended.XML file to be overridden. Provide the content of a new Unattended.XML file in this parameter.
 
+    .PARAMETER Edition
+    This is the index name of the edition to install from the NanoServer.WIM. It defaults to CORESYSTEMSERVER_INSTALL and should not need to be changed.
+    
+    As of TP2, there are two editions found inside the NanoServer.WIM:
+    CORESYSTEMSERVER_INSTALL
+    CORESYSTEMSERVER_BOOT
+
     .EXAMPLE
         .\New-NanoServerVHD.ps1 `
             -ServerISO 'D:\ISOs\Windows Server 2016 TP2\10074.0.150424-1350.fbl_impressive_SERVER_OEMRET_X64FRE_EN-US.ISO' `
@@ -64,6 +74,20 @@
 
         This command will create a new VHD containing a Nano Server machine with the name NANOTEST01. It will contain only the Storage, OEM-Drivers and Guest packages.
 		It will set the Administrator password to P@ssword!1 and set the IP address of the first ethernet NIC to 192.168.1.65.
+
+    .EXAMPLE
+        .\New-NanoServerVHD.ps1 `
+            -ServerISO 'D:\ISOs\Windows Server 2016 TP2\10074.0.150424-1350.fbl_impressive_SERVER_OEMRET_X64FRE_EN-US.ISO' `
+            -DestVHD D:\Temp\NanoServer02.vhdx `
+            -VHDFormat VHDX `
+            -ComputerName NANOTEST02 `
+            -AdministratorPassword 'P@ssword!1' `
+            -Packages 'Storage','OEM-Drivers','Guest' `
+            -IPAddress '192.168.1.66' `
+            -Verbose
+
+        This command will create a new VHDx (for Generation 2 VMs) containing a Nano Server machine with the name NANOTEST02. It will contain only the Storage, OEM-Drivers and Guest packages.
+		It will set the Administrator password to P@ssword!1 and set the IP address of the first ethernet NIC to 192.168.1.66.
 
     .LINK
     https://www.microsoft.com/en-us/evalcenter/evaluate-windows-server-technical-preview
@@ -82,6 +106,10 @@ Param (
     [Parameter(Mandatory = $true)]
     [ValidateNotNullOrEmpty()]
     [String]$DestVHD,
+
+    [ValidateNotNullOrEmpty()]
+    [ValidateSet("VHD", "VHDX")]
+    [String]$VHDFormat  = "VHD",
 
     [ValidateSet('Compute','OEM-Drivers','Storage','FailoverCluster','ReverseForwarders','Guest')]
     [String[]]$Packages = @('OEM-Drivers','Storage','Guest'),
@@ -105,8 +133,10 @@ Param (
     [String]$RegisteredCorporation = "Contoso",
 
     [ValidateNotNullOrEmpty()]
-    [String]$UnattendedContent
-    
+    [String]$UnattendedContent,
+
+    [ValidateNotNullOrEmpty()]
+    [String]$Edition = 'CORESYSTEMSERVER_INSTALL'
 )
 
 If (-not (Test-Path -Path .\Convert-WindowsImage.ps1 -PathType Leaf)) {
@@ -116,8 +146,11 @@ If (-not (Test-Path -Path .\Convert-WindowsImage.ps1 -PathType Leaf)) {
 [String]$WorkFolder = Join-Path -Path $ENV:Temp -ChildPath 'NanoServer' 
 [String]$DismFolder = Join-Path -Path $WorkFolder -ChildPath "DISM"
 [String]$MountFolder = Join-Path -Path $WorkFolder -ChildPath "Mount"
-[String]$VHDType = 'VHD'
-[String]$TempVHDName = "NanoServer.$VHDType"
+[String]$TempVHDName = "NanoServer.$VHDFormat"
+Switch ($VHDFormat) {
+    'VHD' { [String]$VHDPartitionStyle = 'MBR' }
+    'VHDx' { [String]$VHDPartitionStyle = 'GPT' }
+}
 
 # Create working folder
 Write-Verbose 'Creating Working Folders'
@@ -141,7 +174,11 @@ Copy-Item -Path "$($DriveLetter):\Sources\*provider*" -Destination $DismFolder -
 
 # Use Convert-WindowsImage.ps1 to convert the NanoServer.WIM into a VHD
 Write-Verbose 'Creating base Nano Server Image from WIM file'
-.\Convert-WindowsImage.ps1 -Sourcepath "$($DriveLetter):\NanoServer\NanoServer.wim" -VHD (Join-Path -Path $WorkFolder -ChildPath $TempVHDName ) –VHDformat $VHDType -Edition 1
+
+# As of 2015-06-16 Convert-WindowsImage contains a function instead of being a standalone script.
+# . source the Convert-WindowsImage.ps1 so it can be called
+. .\Convert-WindowsImage
+Convert-WindowsImage -Sourcepath "$($DriveLetter):\NanoServer\NanoServer.wim" -VHD (Join-Path -Path $WorkFolder -ChildPath $TempVHDName ) –VHDFormat $VHDFormat -Edition $Edition -VHDPartitionStyle $VHDPartitionStyle
 
 If (-not (Test-Path -Path $MountFolder -PathType Container)) {
     New-Item -Path $MountFolder -ItemType Directory
