@@ -121,7 +121,7 @@ If ($Installed) {
     Add-LogEntry -Path $LogFile -Message "Uninstall $ProductId using $Command started."
     If ($PSCmdlet.ShouldProcess("Uninstall $ProductId using $Command")) {
         # Call the product Uninstall.
-        & cmd.exe /c "$Command && exit 0 || exit 1"
+        & cmd.exe /c "$Command"
         [Int]$ErrorCode = $LASTEXITCODE
     } # ShouldProcess
     If ($ErrorCode -eq 0) {

@@ -154,7 +154,7 @@ If (-not $Installed) {
     Add-LogEntry -Path $LogFile -Message "Install $ProductId using $Command started."
     If ($PSCmdlet.ShouldProcess("Install $ProductId using $Command started")) {
         # Call the product Install.
-        & cmd.exe /c "$Command && exit 0 || exit 1"
+        & cmd.exe /c "$Command"
         [Int]$ErrorCode = $LASTEXITCODE
     } # ShouldProcess
     If ($ErrorCode -eq 0) {
