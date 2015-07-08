@@ -163,7 +163,7 @@ Function Update-DSCTools {
 
 		# Download the module zip file DSCTools.zip
 		[String]$TempPath = Join-Path -Path $ENV:TEMP -ChildPath DSCTools.zip
-		Write-Verbose "Update-DSCTools: Downloading $Script:DSCTools_ModuleDownloadURL to $TempPath"
+		Write-Verbose -Verbose  "Update-DSCTools: Downloading $Script:DSCTools_ModuleDownloadURL to $TempPath"
 		Try {
 			Invoke-WebRequest $Script:DSCTools_ModuleDownloadURL -OutFile $TempPath	    
 		} Catch {
@@ -172,17 +172,17 @@ Function Update-DSCTools {
 		
 		# Unzip the Module
 		[String]$ModuleDest = Split-Path $PSScriptRoot
-		Write-Verbose "Update-DSCTools: Unzipping $TempPath to $ModuleDest"
+		Write-Verbose -Verbose "Update-DSCTools: Unzipping $TempPath to $ModuleDest"
 		UnzipFile -ZipFileName $TempPath -DestinationPath $ModuleDest
 
 		# Reload the module
-		Write-Verbose "Update-DSCTools: Unloading current DSCTools Module"
+		Write-Verbose -Verbose "Update-DSCTools: Unloading current DSCTools Module"
 		Remove-Module DSCTools
 
-		Write-Verbose "Update-DSCTools: Loading new DSCTools Module"
+		Write-Verbose -Verbose "Update-DSCTools: Loading new DSCTools Module"
 		Import-Module (Join-Path -Path $PSScriptRoot -ChildPath 'DSCTools.psm1')
 
-		Write-Verbose "Update-DSCTools: Deleting Module Package $TempPath"
+		Write-Verbose -Verbose "Update-DSCTools: Deleting Module Package $TempPath"
 		Import-Module (Join-Path -Path $PSScriptRoot -ChildPath 'DSCTools.psm1')
 	}
 } # Function Update-DSCTools
@@ -245,7 +245,7 @@ Function Invoke-DSCCheck {
 
     Begin {}
     Process {
-        If ($ComputerName -eq $null) {
+        If ($null -eq $ComputerName) {
 			# Load all the nodes into the computername array.
             $ComputerName = @()
 			Foreach ($Node In $Nodes) {
@@ -257,7 +257,7 @@ Function Invoke-DSCCheck {
 			# use Invoke-CimMethod on the remote host.
 			If (IsLocalHost($Computer)) {
 				If ($Script:PSVersion -lt 5) {
-					Write-Verbose "Invoke-DSCCheck: Invoking Method PerformRequiredConfigurationChecks on Localhost"
+					Write-Verbose -Verbose "Invoke-DSCCheck: Invoking Method PerformRequiredConfigurationChecks on Localhost"
 					# For some reason using the Invoke-CimMethod cmdlet with the -ComputerName parameter doesn't work
 					# So the Invoke-Command is used instead to execute the command on the destination computer.
 					Invoke-CimMethod `
@@ -266,13 +266,13 @@ Function Invoke-DSCCheck {
 						-MethodName 'PerformRequiredConfigurationChecks' `
 						-Arguments @{ Flags = [uint32]1 }
 				} Else {
-					Write-Verbose "Invoke-DSCCheck: Calling Update-DscConfigration on Localhost"
+					Write-Verbose -Verbose "Invoke-DSCCheck: Calling Update-DscConfigration on Localhost"
 					Update-DscConfiguration
 				} # If
 			} Else {
 				If (($SkipConnectionCheck) -or (Test-Connection -ComputerName $Computer -Count 1 -Quiet)) {
 					If ($Script:PSVersion -lt 5) {
-						Write-Verbose "Invoke-DSCCheck: Invoking Method PerformRequiredConfigurationChecks on node $Computer"
+						Write-Verbose -Verbose "Invoke-DSCCheck: Invoking Method PerformRequiredConfigurationChecks on node $Computer"
 						# For some reason using the Invoke-CimMethod cmdlet with the -ComputerName parameter doesn't work
 						# So the Invoke-Command is used instead to execute the command on the destination computer.
 						Invoke-Command -ComputerName $Computer { `
@@ -283,7 +283,7 @@ Function Invoke-DSCCheck {
 								-Arguments @{ Flags = [uint32]1 }
 						} # Invoke-Command
 					} Else {
-						Write-Verbose "Invoke-DSCCheck: Calling Update-DscConfigration on node $Computer"
+						Write-Verbose -Verbose "Invoke-DSCCheck: Calling Update-DscConfigration on node $Computer"
 						Update-DscConfiguration -ComputerName $Computer
 					} # If
 				} Else {
@@ -374,47 +374,47 @@ Function Publish-DSCPullResources {
 
     Process {
         Foreach ($Path in $ModulePath) {
-            Write-Verbose "Publish-DSCPullResources: Examining $Path for Resource Folders"
+            Write-Verbose -Verbose "Publish-DSCPullResources: Examining $Path for Resource Folders"
             If (Test-Path -Path $Path -PathType Container) {
                 # This path in the source path array is a folder
-                Write-Verbose "Publish-DSCPullResources: Folder $Path Found"        
+                Write-Verbose -Verbose "Publish-DSCPullResources: Folder $Path Found"        
 
 				# Get all the subfolders
                 $Resources = Get-ChildItem -Path $Path -Attributes Directory
                 Foreach ($Resource in $Resources) {
-                    Write-Verbose "Publish-DSCPullResources: Possible Resource Folder $Resource Found"
+                    Write-Verbose -Verbose "Publish-DSCPullResources: Possible Resource Folder $Resource Found"
 
                     # A folder was found inside the source path - does it contain a resource?
                     $ResourcePath = Join-Path -Path $Path -ChildPath $Resource
                     $Manifest = Join-Path -Path $ResourcePath -ChildPath "$Resource.psd1"
                     $DSCResourcesFolder = Join-Path -Path $ResourcePath -ChildPath DSCResources
                     If ((Test-Path -Path $Manifest -PathType Leaf) -and (Test-Path -Path $DSCResourcesFolder -PathType Container)) {
-                        Write-Verbose "Publish-DSCPullResources: Resource $Resource in Resource Folder $ResourcePath Found"
+                        Write-Verbose -Verbose "Publish-DSCPullResources: Resource $Resource in Resource Folder $ResourcePath Found"
 
                         # This folder appears to contain a valid DSC Resource
                         # Get the version number out of the manifest file
                         $ManifestContent = Invoke-Expression -Command (Get-Content -Path $Manifest -Raw)
                         $ModuleVersion = $ManifestContent.ModuleVersion
-                        Write-Verbose "Publish-DSCPullResources: Resource $Resource is Version $ModuleVersion"
+                        Write-Verbose -Verbose "Publish-DSCPullResources: Resource $Resource is Version $ModuleVersion"
 
                         # Generate the Zip file name (including the destination to the pull server folder)
                         $ZipFileName = Join-Path -Path $PullServerResourcePath -ChildPath "$($Resource)_$($ModuleVersion).zip"
 
                         # Zip up the resource straight into the pull server resources path
 						If (Test-Path -Path $ZipFileName) {
-	                        Write-Verbose "Publish-DSCPullResources: Deleting Existing Resource File $ZipFileName" 
+	                        Write-Verbose -Verbose "Publish-DSCPullResources: Deleting Existing Resource File $ZipFileName" 
 							Remove-Item -Path $ZipFileName
 						}
-                        Write-Verbose "Publish-DSCPullResources: Zipping $ResourcePath to $ZipFileName" 
+                        Write-Verbose -Verbose "Publish-DSCPullResources: Zipping $ResourcePath to $ZipFileName" 
 						ZipFolder -ZipFileName $ZipFileName -SourcePath $ResourcePath
 
                         # Generate the checksum for the zip file
                         New-DSCCheckSum -ConfigurationPath $ZipFileName -Force | Out-Null
-                        Write-Verbose "Publish-DSCPullResources: Checksum for Resource File $ZipFileName Created"
+                        Write-Verbose -Verbose "Publish-DSCPullResources: Checksum for Resource File $ZipFileName Created"
                     } # If
                 } # Foreach ($Resource in $Resources)
             } Else {
-                Write-Verbose "Publish-DSCPullResources: File $Path Is Ignored"
+                Write-Verbose -Verbose "Publish-DSCPullResources: File $Path Is Ignored"
             } # If
         } # Foreach ($Path in $ModulePath)
     } # Process
@@ -494,9 +494,9 @@ This is the URL to use to download the DSC Resource Kit from. It defaults to the
 	# Attempt to download the Resource kit file to the temp folder.
 	$TempPath = "$Env:TEMP\DSCResourceKit.zip"
 	If ((Test-Path -Path $TempPath) -and ($UseCache)) {
-		Write-Verbose "Install-DSCResourceKit: Using Cached Resource Kit File $TempPath"
+		Write-Verbose -Verbose "Install-DSCResourceKit: Using Cached Resource Kit File $TempPath"
 	} Else {
-		Write-Verbose "Install-DSCResourceKit: Downloading $ResourceKitURL to $TempPath"
+		Write-Verbose -Verbose "Install-DSCResourceKit: Downloading $ResourceKitURL to $TempPath"
 		Try {
 			Invoke-WebRequest $ResourceKitURL -OutFile $TempPath	    
 		} Catch {
@@ -505,7 +505,7 @@ This is the URL to use to download the DSC Resource Kit from. It defaults to the
 	}
 
 	# Unzip the Resouce Kit File
-	Write-Verbose "Install-DSCResourceKit: Extracting $TempPath to $ModulePath"
+	Write-Verbose -Verbose "Install-DSCResourceKit: Extracting $TempPath to $ModulePath"
 	Try {
 		UnzipFile -ZipFileName $TempPath -DestinationPath $ModulePath
 	} Catch {
@@ -516,12 +516,12 @@ This is the URL to use to download the DSC Resource Kit from. It defaults to the
 	{ 
 		# Publish the Resources from the Resource Kit
 	
-		Write-Verbose "Install-DSCResourceKit: Publishing Resources from $ModulePath to $PullServerResourcePath"
+		Write-Verbose -Verbose "Install-DSCResourceKit: Publishing Resources from $ModulePath to $PullServerResourcePath"
 		Publish-DSCPullResources -ModulePath (Join-Path -Path $ModulePath -ChildPath "All Resources") -PullServerResourcePath $PullServerResourcePath
 	} # If
 
 	If ($UseCache -eq $false) {
-		Write-Verbose "Install-DSCResourceKit: Deleting Resource Kit File $TempPath"
+		Write-Verbose -Verbose "Install-DSCResourceKit: Deleting Resource Kit File $TempPath"
 		Remove-Item -Path $TempPath
 	} # If
 } # Function Install-DSCResourceKit
@@ -674,7 +674,7 @@ Function Enable-DSCPullServer {
     
 	# Set up a temporary path
 	$TempPath = "$Env:TEMP\Enable-DSCPullServer"
-	Write-Verbose "Enable-DSCPullServer: Creating Temporary Folder $TempPath."
+	Write-Verbose -Verbose "Enable-DSCPullServer: Creating Temporary Folder $TempPath."
 	New-Item -Path $TempPath -ItemType 'Directory' -Force | Out-Null
 
 	If (-not $Nodes) {
@@ -696,14 +696,14 @@ Function Enable-DSCPullServer {
 	Foreach ($Node In $Nodes) {
 		# Create the Pull Mode MOF that will configure the elements on this computer needed for Pull Mode
 		[String]$NodeName = $Node.Name
-		If (($NodeName -eq '') -or ($NodeName -eq $null)) {
+		If (($NodeName -eq '') -or ($null -eq $NodeName)) {
 			$NodeName = $ENV:COMPUTERNAME
 		} # If
 
 		# Get the Pull Server Protocol
 		[String]$PullServerProtocol = $Node.PullServerProtocol
-		If (($PullServerProtocol -eq '') -or ($PullServerProtocol -eq $null)) { $PullServerProtocol = $Script:DSCTools_DefaultPullServerProtocol }
-        Write-Verbose "Enable-DSCPullServer: Enabling $PullServerProtocol Pull Server $NodeName"
+		If (($PullServerProtocol -eq '') -or ($null -eq $PullServerProtocol)) { $PullServerProtocol = $Script:DSCTools_DefaultPullServerProtocol }
+        Write-Verbose -Verbose "Enable-DSCPullServer: Enabling $PullServerProtocol Pull Server $NodeName"
 
 		# Get the credentials that need to be used to apply the DSC Config to the Pull Server
 		[PSCredential]$Credential = $Node.Credential
@@ -712,7 +712,7 @@ Function Enable-DSCPullServer {
 			# An HTTP/HTTPS Pull Server is required
 			[String]$CertificateThumbprint = $Node.CertificateThumbprint
 			# Get the certificate thumbprint
-			If (($CertificateThumbprint -eq '') -or ($CertificateThumbprint -eq $null)) { 
+			If (($CertificateThumbprint -eq '') -or ($null -eq $CertificateThumbprint)) { 
 				# If the pull server is HTTPS and no certificate thumbprint was provided then throw an error.
 				If ($PullServerProtocol -match 'https') {
 					Throw "A certificate thumbprint must be provided if the Pull Server protocol is set to HTTPS"
@@ -721,23 +721,23 @@ Function Enable-DSCPullServer {
 			}
 			# Get all the Pull Server properties from the node or use defaults.
 			[Int]$PullServerPort = $Node.PullServerPort
-			If (($PullServerPort -eq 0) -or ($PullServerPort -eq $null)) { $PullServerPort = $Script:DSCTools_DefaultPullServerPort }
+			If (($PullServerPort -eq 0) -or ($null -eq $PullServerPort)) { $PullServerPort = $Script:DSCTools_DefaultPullServerPort }
 			[Int]$ComplianceServerPort = $Node.ComplianceServerPort
-			If (($ComplianceServerPort -eq 0) -or ($ComplianceServerPort -eq $null)) { $ComplianceServerPort = $Script:DSCTools_DefaultComplianceServerPort }
+			If (($ComplianceServerPort -eq 0) -or ($null -eq $ComplianceServerPort)) { $ComplianceServerPort = $Script:DSCTools_DefaultComplianceServerPort }
 			[String]$PullServerEndpointName = $Node.PullServerEndpointName
-			If (($PullServerEndpointName -eq '') -or ($PullServerEndpointName -eq $null)) { $PullServerEndpointName = $Script:DSCTools_DefaultPullServerEndpointName }
+			If (($PullServerEndpointName -eq '') -or ($null -eq $PullServerEndpointName)) { $PullServerEndpointName = $Script:DSCTools_DefaultPullServerEndpointName }
 			[String]$PullServerResourcePath = $Node.PullServerResourcePath
-			If (($PullServerResourcePath -eq '') -or ($PullServerResourcePath -eq $null)) { $PullServerResourcePath = $Script:DSCTools_DefaultPullServerResourcePath }
+			If (($PullServerResourcePath -eq '') -or ($null -eq $PullServerResourcePath)) { $PullServerResourcePath = $Script:DSCTools_DefaultPullServerResourcePath }
 			[String]$PullServerConfigurationPath = $Node.PullServerConfigurationPath
-			If (($PullServerConfigurationPath -eq '') -or ($PullServerConfigurationPath -eq $null)) { $PullServerConfigurationPath = $Script:DSCTools_DefaultPullServerConfigurationPath }
+			If (($PullServerConfigurationPath -eq '') -or ($null -eq $PullServerConfigurationPath)) { $PullServerConfigurationPath = $Script:DSCTools_DefaultPullServerConfigurationPath }
 			[String]$PullServerPhysicalPath = $Node.PullServerPhysicalPath
-			If (($PullServerPhysicalPath -eq '') -or ($PullServerPhysicalPath -eq $null)) { $PullServerPhysicalPath = $Script:DSCTools_DefaultPullServerPhysicalPath }
+			If (($PullServerPhysicalPath -eq '') -or ($null -eq $PullServerPhysicalPath)) { $PullServerPhysicalPath = $Script:DSCTools_DefaultPullServerPhysicalPath }
 			[String]$ComplianceServerEndpointName = $Node.ComplianceServerEndpointName
-			If (($ComplianceServerEndpointName -eq '') -or ($ComplianceServerEndpointName -eq $null)) { $ComplianceServerEndpointName = $Script:DSCTools_DefaultComplianceServerEndpointName }
+			If (($ComplianceServerEndpointName -eq '') -or ($null -eq $ComplianceServerEndpointName)) { $ComplianceServerEndpointName = $Script:DSCTools_DefaultComplianceServerEndpointName }
 			[String]$ComplianceServerPhysicalPath = $Node.ComplianceServerPhysicalPath
-			If (($ComplianceServerPhysicalPath -eq '') -or ($ComplianceServerPhysicalPath -eq $null)) { $ComplianceServerPhysicalPath = $Script:DSCTools_DefaultComplianceServerPhysicalPath }
+			If (($ComplianceServerPhysicalPath -eq '') -or ($null -eq $ComplianceServerPhysicalPath)) { $ComplianceServerPhysicalPath = $Script:DSCTools_DefaultComplianceServerPhysicalPath }
 			Try {
-				Write-Verbose "Enable-DSCPullServer: HTTP Pull Server MOF $TempPath\$NodeName.MOF for $NodeName Begin Creation"
+				Write-Verbose -Verbose "Enable-DSCPullServer: HTTP Pull Server MOF $TempPath\$NodeName.MOF for $NodeName Begin Creation"
 
 				# Load the CreatePullServer Configuration into memory (dot source it)
 				# The file should be in Configuration folder beneath the folder the module is in.
@@ -758,15 +758,15 @@ Function Enable-DSCPullServer {
 			} Catch {
 				Throw
 			}
-			Write-Verbose "Enable-DSCPullServer: HTTP Pull Server MOF $TempPath\$NodeName.MOF for $NodeName Created Successfully"
+			Write-Verbose -Verbose "Enable-DSCPullServer: HTTP Pull Server MOF $TempPath\$NodeName.MOF for $NodeName Created Successfully"
 		} Else {
 			[String]$PullServerConfigurationPath = $Node.PullServerConfigurationPath
-			If (($PullServerConfigurationPath -eq '') -or ($PullServerConfigurationPath -eq $null)) { $PullServerConfigurationPath = $Script:DSCTools_DefaultPullServerConfigurationPath }
+			If (($PullServerConfigurationPath -eq '') -or ($null -eq $PullServerConfigurationPath)) { $PullServerConfigurationPath = $Script:DSCTools_DefaultPullServerConfigurationPath }
 			[String]$PullServerEndpointName = $Node.PullServerEndpointName
-			If (($PullServerEndpointName -eq '') -or ($PullServerEndpointName -eq $null)) { $PullServerEndpointName = $Script:DSCTools_DefaultPullServerEndpointName }
+			If (($PullServerEndpointName -eq '') -or ($null -eq $PullServerEndpointName)) { $PullServerEndpointName = $Script:DSCTools_DefaultPullServerEndpointName }
 
 			Try {
-				Write-Verbose "Enable-DSCPullServer: SMB Pull Server MOF $TempPath\$NodeName.MOF for $NodeName Begin Creation"
+				Write-Verbose -Verbose "Enable-DSCPullServer: SMB Pull Server MOF $TempPath\$NodeName.MOF for $NodeName Begin Creation"
 
 				# Load the CreatePullServer Configuration into memory (dot source it)
 				# The file should be in Configuration folder beneath the folder the module is in.
@@ -780,7 +780,7 @@ Function Enable-DSCPullServer {
 			} Catch {
 				Throw
 			}
-			Write-Verbose "Enable-DSCPullServer: SMB Pull Server MOF $TempPath\$NodeName.MOF for $NodeName Created Successfully"
+			Write-Verbose -Verbose "Enable-DSCPullServer: SMB Pull Server MOF $TempPath\$NodeName.MOF for $NodeName Created Successfully"
 
 		}
 
@@ -791,9 +791,9 @@ Function Enable-DSCPullServer {
 				Write-Warning "Enable-DSCPullServer: Warning Applying MOF $TempPath\$NodeName.MOF may fail because an FQDN name was used for Pull Server."
 			}
 			Try {
-				Write-Verbose "Enable-DSCPullServer: Applying Pull Server MOF $TempPath\$NodeName.MOF to Localhost"
+				Write-Verbose -Verbose "Enable-DSCPullServer: Applying Pull Server MOF $TempPath\$NodeName.MOF to Localhost"
 				Start-DSCConfiguration -Path $TempPath -Wait -Force
-				Write-Verbose "Enable-DSCPullServer: Pull Server MOF $TempPath\$NodeName.MOF Applied to Localhost Successfully"
+				Write-Verbose -Verbose "Enable-DSCPullServer: Pull Server MOF $TempPath\$NodeName.MOF Applied to Localhost Successfully"
 			} Catch {
 			    Write-Warning "Enable-DSCPullServer: Error Applying Pull Server MOF $TempPath\$NodeName.MOF to Localhost"
 				Throw
@@ -802,13 +802,13 @@ Function Enable-DSCPullServer {
 			# Apply the LCM MOF File to a remote node
 			If (($SkipConnectionCheck) -or (Test-Connection -ComputerName $NodeName -Count 1 -Quiet)) {
 				Try {
-					Write-Verbose "Enable-DSCPullServer: Applying Pull Server MOF $TempPath\$NodeName.MOF to $NodeName"
+					Write-Verbose -Verbose "Enable-DSCPullServer: Applying Pull Server MOF $TempPath\$NodeName.MOF to $NodeName"
 					If ($Credential) {
 						Start-DSCConfiguration -Path $TempPath -ComputerName $NodeName -Credential $Credential -Wait -Force
 					} Else {
 						Start-DSCConfiguration -Path $TempPath -ComputerName $NodeName -Wait -Force
 					} # If
-					Write-Verbose "Enable-DSCPullServer: Pull Server MOF $TempPath\$NodeName.MOF Applied to $NodeName Successfully"
+					Write-Verbose -Verbose "Enable-DSCPullServer: Pull Server MOF $TempPath\$NodeName.MOF Applied to $NodeName Successfully"
 				} Catch {
 					Write-Warning "Enable-DSCPullServer: Error Applying Pull Server MOF $TempPath\$NodeName.MOF to $NodeName"
 					Throw
@@ -820,11 +820,11 @@ Function Enable-DSCPullServer {
 
 		# Reove the LCM MOF File
 		Remove-Item -Path "$TempPath\$NodeName.MOF" -Force
-		Write-Verbose "Enable-DSCPullServer: MOF $TempPath\$NodeName.MOF for $NodeName Deleted"
+		Write-Verbose -Verbose "Enable-DSCPullServer: MOF $TempPath\$NodeName.MOF for $NodeName Deleted"
 	} # Foreach
 	
 	Remove-Item -Path $TempPath -Recurse -Force
-	Write-Verbose "Enable-DSCPullServer: Temporary Folder $TempPath Deleted"
+	Write-Verbose -Verbose "Enable-DSCPullServer: Temporary Folder $TempPath Deleted"
 } # Enable-DSCPullServer
 ##########################################################################################################################################
 
@@ -905,7 +905,7 @@ Function Set-DSCPullServerLogging {
 
 		# Was a computer name provided?
 		[String]$NodeName = $Node.Name
-		If (($NodeName -eq '') -or ($NodeName -eq $null) -or (IsLocalHost($NodeName))) {
+		If (($NodeName -eq '') -or ($null -eq $NodeName) -or (IsLocalHost($NodeName))) {
 			# None was provided or localhost was used.			
 		} Else {
 			$Parameters += @{ComputerName=$NodeName;}
@@ -921,13 +921,13 @@ Function Set-DSCPullServerLogging {
 		If (($Node.AnalyticLog) -or ($AnalyticLog)) {
 			Try {
 				Update-xDscEventLogStatus -Channel Analytic -Status Enabled @Parameters
-				Write-Verbose "Set-DSCPullServerLogging: Pull Server $NodeName Analytic Logging Enabled"
+				Write-Verbose -Verbose "Set-DSCPullServerLogging: Pull Server $NodeName Analytic Logging Enabled"
 			} Catch {
 				Write-Error "Set-DSCPullServerLogging: Error Enabling Analytic Logging on $NodeName"
 			}
 		} Else {
 			Try {
-				Write-Verbose "Set-DSCPullServerLogging: Pull Server $NodeName Analytic Logging Disabled"
+				Write-Verbose -Verbose "Set-DSCPullServerLogging: Pull Server $NodeName Analytic Logging Disabled"
 				Update-xDscEventLogStatus -Channel Analytic -Status Disabled @Parameters
 			} Catch {
 				Write-Error "Set-DSCPullServerLogging: Error Disabling Analytic Logging on $NodeName"
@@ -937,14 +937,14 @@ Function Set-DSCPullServerLogging {
 		# Enable/Disable the Debug Log
 		If (($Node.DebugLog) -or ($DebugLog)) {
 			Try {
-				Write-Verbose "Set-DSCPullServerLogging: Pull Server $NodeName Debug Logging Enabled"
+				Write-Verbose -Verbose "Set-DSCPullServerLogging: Pull Server $NodeName Debug Logging Enabled"
 				Update-xDscEventLogStatus -Channel Debug -Status Enabled @Parameters
 			} Catch {
 				Write-Error "Set-DSCPullServerLogging: Error Enabling Debug Logging on $NodeName"
 			}
 		} Else {
 			Try {
-				Write-Verbose "Set-DSCPullServerLogging: Pull Server $NodeName Debug Logging Disabled"
+				Write-Verbose -Verbose "Set-DSCPullServerLogging: Pull Server $NodeName Debug Logging Disabled"
 				Update-xDscEventLogStatus -Channel Debug -Status Disabled @Parameters
 			} Catch {
 				Write-Error "Set-DSCPullServerLogging: Error Disabling Debug Logging on $NodeName"
@@ -954,14 +954,14 @@ Function Set-DSCPullServerLogging {
 		# Enable/Disable the Operational Log
 		If (($Node.OperationalLog) -or ($OperationalLog)) {
 			Try {
-				Write-Verbose "Set-DSCPullServerLogging: Pull Server $NodeName Operational Logging Enabled"
+				Write-Verbose -Verbose "Set-DSCPullServerLogging: Pull Server $NodeName Operational Logging Enabled"
 				Update-xDscEventLogStatus -Channel Operational -Status Enabled @Parameters
 			} Catch {
 				Write-Error "Set-DSCPullServerLogging: Error Enabling Operational Logging on $NodeName"
 			}
 		} Else {
 			Try {
-				Write-Verbose "Set-DSCPullServerLogging: Pull Server $NodeName Operational Logging Disabled"
+				Write-Verbose -Verbose "Set-DSCPullServerLogging: Pull Server $NodeName Operational Logging Disabled"
 				Update-xDscEventLogStatus -Channel Operational -Status Disabled @Parameters 
 			} Catch {
 				Write-Error "Set-DSCPullServerLogging: Error Disabling Operational Logging on $NodeName"
@@ -1100,23 +1100,23 @@ Function Update-DSCNodeConfiguration {
         If ($NodeGuid -eq '') {
             Throw "Guid for node $NodeName is empty."
         } # If
-        Write-Verbose "Update-DSCNodeConfiguration: Updating $NodeName Guid $NodeGuid with Pull Mode configuration"
+        Write-Verbose -Verbose "Update-DSCNodeConfiguration: Updating $NodeName Guid $NodeGuid with Pull Mode configuration"
 
 		# This is the certificate thumbrint that will be used to encrypt any credentials in this configuration.
 		[String]$Cert = $Node.CertificateThumbprint
-        If (($Cert -eq $null) -or ($Cert -eq '')) {
+        If (($null -eq $Cert) -or ($Cert -eq '')) {
             $Cert = $CertificateThumbprint
         } # If
 
 		# If the node doesn't have a specific MOF path specified then see if we can figure it out
         # Based on other parameters specified - or even create it.
         [String]$MofFile = $Node.MofFile
-        If ($MofFile -eq $null) {
+        If ($null -eq $MofFile) {
             $SourceMof = "$NodeConfigSourceFolder\$NodeName.mof"
         } Else {
             $SourceMof = $MofFile
         } # If
-        Write-Verbose "Update-DSCNodeConfiguration: $NodeName Will Use Configuration MOF $SourceMof"
+        Write-Verbose -Verbose "Update-DSCNodeConfiguration: $NodeName Will Use Configuration MOF $SourceMof"
 
         # If the MOF doesn't throw an error?
         If (-not (Test-Path -PathType Leaf -Path $SourceMof)) {
@@ -1129,15 +1129,15 @@ Function Update-DSCNodeConfiguration {
             # Create and/or Move the Node Configuration file to the Pull server
             $DestMof = Join-Path -Path $PullServerConfigurationPath -ChildPath "$NodeGuid.mof"
             Copy-Item -Path $SourceMof -Destination $DestMof -Force
-            Write-Verbose "Update-DSCNodeConfiguration: Node $NodeName Configuration MOF $SourceMof Copied to $DestMof"
+            Write-Verbose -Verbose "Update-DSCNodeConfiguration: Node $NodeName Configuration MOF $SourceMof Copied to $DestMof"
             New-DSCChecksum -ConfigurationPath $DestMof -Force
-            Write-Verbose "Update-DSCNodeConfiguration: Node $NodeName Configuration MOF Checksum Created for $DestMof"
+            Write-Verbose -Verbose "Update-DSCNodeConfiguration: Node $NodeName Configuration MOF Checksum Created for $DestMof"
 			If ($InvokeCheck) {
 				Invoke-DSCCheck -ComputerName $NodeName
 			} # If
 		} # If
 
-		Write-Verbose "Update-DSCNodeConfiguration: Node $NodeName Pull Mode configuration update complete"
+		Write-Verbose -Verbose "Update-DSCNodeConfiguration: Node $NodeName Pull Mode configuration update complete"
     } # Foreach
 } # Update-DSCNodeConfiguration
 ##########################################################################################################################################
@@ -1289,7 +1289,7 @@ Function Start-DSCPullMode {
     
     # Set up a temporary path
     $TempPath = "$Env:TEMP\Start-DSCPullMode"
-    Write-Verbose "Start-DSCPullMode: Creating Temporary Folder $TempPath"
+    Write-Verbose -Verbose "Start-DSCPullMode: Creating Temporary Folder $TempPath"
     New-Item -Path $TempPath -ItemType 'Directory' -Force | Out-Null
 
     If ($ComputerName) {
@@ -1318,7 +1318,7 @@ Function Start-DSCPullMode {
         If ($NodeName -eq '') {
             Throw 'Node name is empty.'
         } # If
-        Write-Verbose "Start-DSCPullMode: Configuring $NodeName for Pull Mode"
+        Write-Verbose -Verbose "Start-DSCPullMode: Configuring $NodeName for Pull Mode"
 
         [String]$NodeGuid = $Node.Guid
         If ($NodeGuid -eq '') {
@@ -1334,7 +1334,7 @@ Function Start-DSCPullMode {
         If (($Mode -eq $null) -or ($Mode -eq '')) {
             $Mode = $ConfigurationMode
         } # If
-		Write-Verbose "Start-DSCPullMode: $NodeName Will Use GUID $NodeGuid with Configuration Mode $Mode $(@{$true='and will Reboot If Needed';$false=''}[$RebootIfNeeded])"
+		Write-Verbose -Verbose "Start-DSCPullMode: $NodeName Will Use GUID $NodeGuid with Configuration Mode $Mode $(@{$true='and will Reboot If Needed';$false=''}[$RebootIfNeeded])"
 
         # Were credentials supplied to allow the LCM to be applied to the node?
 		[PSCredential]$Cred = $Node.Credential
@@ -1355,7 +1355,7 @@ Function Start-DSCPullMode {
         } Else {
             $SourceMof = $MofFile
         } # If
-        Write-Verbose "Start-DSCPullMode: $NodeName Will Use Configuration MOF $SourceMof"
+        Write-Verbose -Verbose "Start-DSCPullMode: $NodeName Will Use Configuration MOF $SourceMof"
 
         # If the MOF doesn't throw an error?
         If (-not (Test-Path -PathType Leaf -Path $SourceMof)) {
@@ -1368,12 +1368,12 @@ Function Start-DSCPullMode {
             # Create and/or Move the Node Configuration file to the Pull server
             $DestMof = Join-Path -Path $PullServerConfigurationPath -ChildPath "$NodeGuid.mof"
             Copy-Item -Path $SourceMof -Destination $DestMof -Force
-            Write-Verbose "Start-DSCPullMode: Node $NodeName Configuration MOF $SourceMof Copied to $DestMof"
+            Write-Verbose -Verbose "Start-DSCPullMode: Node $NodeName Configuration MOF $SourceMof Copied to $DestMof"
             New-DSCChecksum -ConfigurationPath $DestMof -Force
-            Write-Verbose "Start-DSCPullMode: Node $NodeName Configuration MOF Checksum Created for $DestMof"
+            Write-Verbose -Verbose "Start-DSCPullMode: Node $NodeName Configuration MOF Checksum Created for $DestMof"
 
             # Create the LCM MOF File to set the nodes LCM to pull mode
-            Write-Verbose "Start-DSCPullMode: Node $NodeName LCM MOF $TempPath\$NodeName.MOF Start Creation"
+            Write-Verbose -Verbose "Start-DSCPullMode: Node $NodeName LCM MOF $TempPath\$NodeName.MOF Start Creation"
 			. "$(Join-Path -Path $PSScriptRoot -ChildPath 'Configuration\Config_SetLCMPullMode.ps1')"
             If ($PullServerCredential -eq $null) {
 				Config_SetLCMPullMode `
@@ -1399,14 +1399,14 @@ Function Start-DSCPullMode {
 					-Output $TempPath `
 					| Out-Null
 			} # If
-            Write-Verbose "Start-DSCPullMode: Node $NodeName LCM MOF $TempPath\$NodeName.MOF Created Successfully"
+            Write-Verbose -Verbose "Start-DSCPullMode: Node $NodeName LCM MOF $TempPath\$NodeName.MOF Created Successfully"
         
             If (IsLocalHost($NodeName)) {
 				# Apply the LCM MOF File to the local node
 				Try {
-					Write-Verbose "Start-DSCPullMode: Setting Localhost to use LCM MOF $TempPath"
+					Write-Verbose -Verbose "Start-DSCPullMode: Setting Localhost to use LCM MOF $TempPath"
 					Set-DSCLocalConfigurationManager -Path $TempPath
-					Write-Verbose "Start-DSCPullMode: Node Localhost set to use LCM MOF $TempPath"
+					Write-Verbose -Verbose "Start-DSCPullMode: Node Localhost set to use LCM MOF $TempPath"
 				} Catch {
 			        Write-Error "Start-DSCPullMode: Error Setting Localhost to use LCM MOF $TempPath"
 				} # Try
@@ -1414,13 +1414,13 @@ Function Start-DSCPullMode {
 				# Apply the LCM MOF File to a remote node
 				If (($SkipConnectionCheck) -or (Test-Connection -ComputerName $NodeName -Count 1 -Quiet)) {
 					Try {
-						Write-Verbose "Start-DSCPullMode: Setting $NodeName to use LCM MOF $TempPath"
+						Write-Verbose -Verbose "Start-DSCPullMode: Setting $NodeName to use LCM MOF $TempPath"
 						If ($Cred) {
 							Set-DSCLocalConfigurationManager -Path $TempPath -ComputerName $NodeName -Credential $Cred 
 						} Else {
 							Set-DSCLocalConfigurationManager -Path $TempPath -ComputerName $NodeName
 						} # If
-						Write-Verbose "Start-DSCPullMode: Node $NodeName set to use LCM MOF $TempPath"
+						Write-Verbose -Verbose "Start-DSCPullMode: Node $NodeName set to use LCM MOF $TempPath"
 					} Catch {
 						Write-Error "Start-DSCPullMode: Error Setting $NodeName to use LCM MOF $TempPath"
 					} # Try
@@ -1432,14 +1432,14 @@ Function Start-DSCPullMode {
 
             # Reove the LCM MOF File
             Remove-Item -Path "$TempPath\$NodeName.meta.MOF"
-            Write-Verbose "Start-DSCPullMode: Node $NodeName LCM MOF $TempPath\$NodeName.meta.MOF Removed"
+            Write-Verbose -Verbose "Start-DSCPullMode: Node $NodeName LCM MOF $TempPath\$NodeName.meta.MOF Removed"
         } # If
 
-    Write-Verbose "Start-DSCPullMode: Node $NodeName Processing Complete"
+    Write-Verbose -Verbose "Start-DSCPullMode: Node $NodeName Processing Complete"
     } # Foreach
 
     Remove-Item -Path $TempPath -Recurse -Force
-    Write-Verbose "Start-DSCPullMode: Temporary Folder $TempPath Deleted"
+    Write-Verbose -Verbose "Start-DSCPullMode: Temporary Folder $TempPath Deleted"
 } # Start-DSCPullMode
 ##########################################################################################################################################
 
@@ -1529,7 +1529,7 @@ Function Start-DSCPushMode {
     
     # Set up a temporary path
     $TempPath = "$Env:TEMP\Start-DSCPushMode"
-    Write-Verbose "Start-DSCPushMode: Creating Temporary Folder $TempPath"
+    Write-Verbose -Verbose "Start-DSCPushMode: Creating Temporary Folder $TempPath"
     New-Item -Path $TempPath -ItemType 'Directory' -Force | Out-Null
 
     If ($ComputerName) {
@@ -1548,18 +1548,18 @@ Function Start-DSCPushMode {
         If ($NodeName -eq '') {
             Throw 'Node name is empty.'
         }
-        Write-Verbose "Start-DSCPushMode: Configuring $NodeName for Push Mode"
+        Write-Verbose -Verbose "Start-DSCPushMode: Configuring $NodeName for Push Mode"
 
 		[Switch]$Reboot = $Node.RebootIfNeeded
-        If ($Reboot -eq $null) {
+        If ($null -eq $Reboot) {
             $Reboot = $RebootIfNeeded
 		} # If
 
         [String]$Mode = $Node.ConfigurationMode
-        If (($Mode -eq $null) -or ($Mode -eq '')) {
+        If (($null -eq $Mode) -or ($Mode -eq '')) {
             $Mode = $ConfigurationMode
         } # If
-		Write-Verbose "Start-DSCPushMode: $NodeName set to Configuration Mode $Mode $(@{$true='and will Reboot If Needed';$false=''}[$RebootIfNeeded])"
+		Write-Verbose -Verbose "Start-DSCPushMode: $NodeName set to Configuration Mode $Mode $(@{$true='and will Reboot If Needed';$false=''}[$RebootIfNeeded])"
 
         # If the node doesn't have a specific MOF path specified then see if we can figure it out
         # Based on other parameters specified - or even create it.
@@ -1569,7 +1569,7 @@ Function Start-DSCPushMode {
         } Else {
             $SourceMof = $MofFile
         }
-        Write-Verbose "Start-DSCPushMode: Node $NodeName Will Use Configuration MOF $SourceMof"
+        Write-Verbose -Verbose "Start-DSCPushMode: Node $NodeName Will Use Configuration MOF $SourceMof"
 
         # If the MOF doesn't throw an error?
         If (-not (Test-Path -PathType Leaf -Path $SourceMof)) {
@@ -1587,7 +1587,7 @@ Function Start-DSCPushMode {
 
 		If (-not $NodeError) {
             # Create the LCM MOF File to set the nodes LCM to push mode
-            Write-Verbose "Start-DSCPushMode: Node $NodeName LCM MOF $TempPath\$NodeName.MOF Start Creation"
+            Write-Verbose -Verbose "Start-DSCPushMode: Node $NodeName LCM MOF $TempPath\$NodeName.MOF Start Creation"
 			. "$(Join-Path -Path $PSScriptRoot -ChildPath 'Configuration\Config_SetLCMPushMode.ps1')"
             Config_SetLCMPushMode `
                 -NodeName $NodeName `
@@ -1595,15 +1595,15 @@ Function Start-DSCPushMode {
                 -ConfigurationMode $Mode `
                 -Output $TempPath `
                 | Out-Null
-            Write-Verbose "Start-DSCPushMode: Node $NodeName LCM MOF $TempPath\$NodeName.MOF Created Successfully"
+            Write-Verbose -Verbose "Start-DSCPushMode: Node $NodeName LCM MOF $TempPath\$NodeName.MOF Created Successfully"
         
             # Apply the LCM MOF File to the node
             If  (IsLocalHost($NodeName)) {
 				# Apply the LCM MOF File to the local node
 				Try {
-					Write-Verbose "Start-DSCPushMode: Setting Localhost to use LCM MOF $TempPath"
+					Write-Verbose -Verbose "Start-DSCPushMode: Setting Localhost to use LCM MOF $TempPath"
 					Set-DSCLocalConfigurationManager -Path $TempPath
-					Write-Verbose "Start-DSCPushMode: Localhost set to use LCM MOF $TempPath"
+					Write-Verbose -Verbose "Start-DSCPushMode: Localhost set to use LCM MOF $TempPath"
 				} Catch {
 			        Write-Error "Start-DSCPushMode: Error Setting Localhost to use LCM MOF $TempPath"
 				} # Try
@@ -1611,13 +1611,13 @@ Function Start-DSCPushMode {
 				# Apply the LCM MOF File to a remote node
 				If (($SkipConnectionCheck) -or (Test-Connection -ComputerName $NodeName -Count 1 -Quiet)) {
 					Try {
-						Write-Verbose "Start-DSCPushMode: Setting $NodeName to use LCM MOF $TempPath"
+						Write-Verbose -Verbose "Start-DSCPushMode: Setting $NodeName to use LCM MOF $TempPath"
 						If ($Cred) {
 							Set-DSCLocalConfigurationManager -Path $TempPath -ComputerName $NodeName -Credential $Cred 
 						} Else {
 							Set-DSCLocalConfigurationManager -Path $TempPath -ComputerName $NodeName
 						} # If
-			            Write-Verbose "Start-DSCPushMode: Node $NodeName set to use LCM MOF $TempPath"
+			            Write-Verbose -Verbose "Start-DSCPushMode: Node $NodeName set to use LCM MOF $TempPath"
 					} Catch {
 			            Write-Error "Start-DSCPushMode: Error Setting $NodeName to use LCM MOF $TempPath"					
 					} # Try
@@ -1628,14 +1628,14 @@ Function Start-DSCPushMode {
 
             # Reove the LCM MOF File
             Remove-Item -Path "$TempPath\$NodeName.meta.MOF"
-            Write-Verbose "Start-DSCPushMode: Node $NodeName LCM MOF $TempPath\$NodeName.meta.MOF Removed"
+            Write-Verbose -Verbose "Start-DSCPushMode: Node $NodeName LCM MOF $TempPath\$NodeName.meta.MOF Removed"
         } # If
 
-    Write-Verbose "Start-DSCPushMode: Node $NodeName Processing Complete"
+    Write-Verbose -Verbose "Start-DSCPushMode: Node $NodeName Processing Complete"
     } # Foreach
 
     Remove-Item -Path $TempPath -Recurse -Force
-    Write-Verbose "Start-DSCPushMode: Temporary folder $TempPath deleted"
+    Write-Verbose -Verbose "Start-DSCPushMode: Temporary folder $TempPath deleted"
 } # Start-DSCPushMode
 ##########################################################################################################################################
 
@@ -1728,9 +1728,9 @@ Function Get-xDscConfiguration {
 					[Void]$PSBoundParameters.Remove('Credential')
 					$cimSessionParameters += @{Credential=$Credential}
 				} # if
-				Write-Verbose "Get-xDscConfiguration: Connecting to $ComputerName"
+				Write-Verbose -Verbose "Get-xDscConfiguration: Connecting to $ComputerName"
 				$cimSession = New-CimSession -ComputerName $ComputerName @CimSessionParameters
-				Write-Verbose "Get-xDscConfiguration: Calling Get-DscConfiguration"
+				Write-Verbose -Verbose "Get-xDscConfiguration: Calling Get-DscConfiguration"
 				$scriptCmd = {& $wrappedCmd @PSBoundParameters -CimSession $cimSession }
 			} else {
 				$scriptCmd = {& $wrappedCmd @PSBoundParameters }
@@ -1754,7 +1754,7 @@ Function Get-xDscConfiguration {
         try {
             $steppablePipeline.End()
 			if ($ComputerName -and $cimSession) {
-				Write-Verbose "Get-xDscConfiguration: Disconnecting from $ComputerName"
+				Write-Verbose -Verbose "Get-xDscConfiguration: Disconnecting from $ComputerName"
 				Remove-CimSession -CimSession $cimSession
 			} # if
         } catch {
@@ -1853,9 +1853,9 @@ Function Get-xDscLocalConfigurationManager {
 					[Void]$PSBoundParameters.Remove('Credential')
 					$cimSessionParameters += @{Credential=$Credential}
 				} # if
-				Write-Verbose "Get-xDscLocalConfigurationManager: Connecting to $ComputerName"
+				Write-Verbose -Verbose "Get-xDscLocalConfigurationManager: Connecting to $ComputerName"
 				$cimSession = New-CimSession -ComputerName $ComputerName @CimSessionParameters
-				Write-Verbose "Get-xDscLocalConfigurationManager: Calling Get-DscLocalConfigurationManager"
+				Write-Verbose -Verbose "Get-xDscLocalConfigurationManager: Calling Get-DscLocalConfigurationManager"
 				$scriptCmd = {& $wrappedCmd @PSBoundParameters -CimSession $cimSession }
 			} else {
 				$scriptCmd = {& $wrappedCmd @PSBoundParameters }
@@ -1879,7 +1879,7 @@ Function Get-xDscLocalConfigurationManager {
         try {
             $steppablePipeline.End()
 			if ($ComputerName -and $cimSession) {
-				Write-Verbose "Get-xDscLocalConfigurationManager: Disconnecting from $ComputerName"
+				Write-Verbose -Verbose "Get-xDscLocalConfigurationManager: Disconnecting from $ComputerName"
 				Remove-CimSession -CimSession $cimSession
 			} # if
         } catch {
