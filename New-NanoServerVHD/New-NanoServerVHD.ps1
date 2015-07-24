@@ -271,12 +271,20 @@ Set-Content -Path $UnattendFile -Value $UnattendedContent
 New-Item -Path "$MountFolder\windows\panther" -ItemType Directory
 Copy-Item -Path $UnattendFile -Destination "$MountFolder\windows\panther"
 
-If ($IPaddress -ne $null) {
+# Generate the file content for the Setup Complete script that runs on the VM
+[String]$SetupComplete = "@ECHO OFF`n"
+If (($IPaddress -ne $null) -and ($IPAddress -ne '')) {
 	# Set a static IP Address on the machine
-    $SetupComplete += 'powershell.exe -command "Import-Module C:\windows\system32\windowspowershell\v1.0\Modules\Microsoft.PowerShell.Utility\Microsoft.PowerShell.Utility.psd1; Import-Module C:\windows\system32\WindowsPowerShell\v1.0\Modules\NetAdapter\NetAdapter.psd1; $ifa = (Get-NetAdapter -Name Ethernet).ifalias; netsh interface ip set address $ifa static ' + $IPaddress + '"'
-    New-Item "$MountFolder\Windows\Setup\Scripts" -ItemType Directory
-    Set-Content -Path "$MountFolder\Windows\Setup\Scripts\SetupComplete.cmd" -Value $SetupComplete
-}
+    $SetupComplete += 'powershell.exe -command "Import-Module C:\windows\system32\windowspowershell\v1.0\Modules\Microsoft.PowerShell.Utility\Microsoft.PowerShell.Utility.psd1; Import-Module C:\windows\system32\WindowsPowerShell\v1.0\Modules\NetAdapter\NetAdapter.psd1; netsh interface ip set address $((Get-NetAdapter -Name Ethernet).ifalias) static ' + $IPaddress + '"'+"`n"
+} # If
+$SetupComplete += "schtasks /Create /TN IPBootDisplay /SC ONSTART /RU SYSTEM /Delay 0000:30 /TR ipconfig > nul`n"
+$SetupComplete += "ping localhost -n 30 > nul`n"
+$SetupComplete += "cls`n"
+$SetupComplete += "hostname`n"
+$SetupComplete += "ipconfig`n"
+# Write the Setup Complete script to the image
+New-Item "$MountFolder\Windows\Setup\Scripts" -ItemType Directory
+Set-Content -Path "$MountFolder\Windows\Setup\Scripts\SetupComplete.cmd" -Value $SetupComplete
 
 # Dismount the image after adding the Packages to it and configuring it
 Write-Verbose 'Dismounting Nano Server Image'
