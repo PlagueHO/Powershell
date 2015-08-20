@@ -4,8 +4,10 @@ Powershell
 ## New-NanoServerVHD
 Creates a bootable VHD/VHDx containing Windows Server Nano 2016.
 
+Note: As of Windows Server 2016 Technical Preview 3, the NanoServer folder in the ISO contains a new-nanoserverimage.ps1 PowerShell script that can also be used to create new Nano Server VHD/VHDx files. This script is the official one provided by Microsoft and so it should be used in any new scripts. I have updated the new-nanoservervhd.ps1 script to support TP3 so that if you have already got scripts using it then you don't have to rewrite them to use the official one (although you probably should).
+
 ### Overview
-Creates a bootable VHD/VHDx containing Windows Server Nano 2016 using the publicly available Windows Server 2016 Technical Preview 2 ISO.
+Creates a bootable VHD/VHDx containing Windows Server Nano 2016 using the publicly available Windows Server 2016 Technical Preview 3 ISO.
 
 This script needs the Convert-WindowsImage.ps1 script to be in the same folder. It can be downloaded from:
 https://gallery.technet.microsoft.com/scriptcenter/Convert-WindowsImageps1-0fe23a8f
@@ -22,6 +24,7 @@ Github Repo: https://github.com/PlagueHO/Powershell/tree/master/New-NanoServerVH
 Script Center: https://gallery.technet.microsoft.com/scriptcenter/DSC-Tools-c96e2c53
 
 ### Change Log
+2015-08-20: Updated to support packages available in Windows Server 2016 TP3.
 2015-07-24: Updated setup complete script to create a task that shows the IP Address of the Nano Server in the console window 30 seconds after boot.
 2015-06-19: Updated to support changes in Convert-WindowsImage on 2015-06-16.
 2015-06-19: Added VHDFormat parameter to allow VHDx files to be created.
@@ -54,7 +57,7 @@ limitations under the License.
 ### Example Usage
 <pre>
 .\New-NanoServerVHD.ps1 `
-    -ServerISO 'D:\ISOs\Windows Server 2016 TP2\10074.0.150424-1350.fbl_impressive_SERVER_OEMRET_X64FRE_EN-US.ISO' `
+    -ServerISO 'D:\ISOs\Windows Server 2016 TP3\10514.0.150808-1529.TH2_RELEASE_SERVER_OEMRET_X64FRE_EN-US.ISO' `
     -DestVHD D:\Temp\NanoServer01.vhd `
     -ComputerName NANOTEST01 `
     -AdministratorPassword 'P@ssword!1' `
