@@ -10,9 +10,13 @@
 		Compute
 
 		The following things had to be changed:
-		1. Support for NAT removed (Nano Server doesn't have the NAT PS Module).
-		2. All instances where a file is downloaded from the internet were removed becase WGET
+		1. All instances where a file is downloaded from the internet were removed because WGET
 			(Invoke-WebRequest) isn't available.
+		
+		Known Issues:
+		1. Creating either a DHCP or NAT switch throws errors, but the NAT switch appears to 
+		   partially create (atthough the NAT binding fails).
+		2. The Docker NSSM Service doesn't get created (possibly because of the switch failure).
     
     .SYNOPSIS
         Installs the prerequisites for creating Windows containers on Windows Nano Server TP3
@@ -28,7 +32,10 @@
 
     .PARAMETER SkipDocker
         If passed, skip Docker install
-            
+
+    .PARAMETER $UseDHCP
+        If passed, use DHCP configuration
+		            
     .PARAMETER WimPath
         Path to .wim file that contains the base package image
 
@@ -43,6 +50,9 @@ param(
   
     [string]
     $ExternalNetAdapter,
+
+    [string]
+    $NATSubnetPrefix = "172.16.0.0/12",
          
     [switch]
     $NoRestart,
@@ -54,6 +64,9 @@ param(
     [Parameter(ParameterSetName="Staging", Mandatory=$true)]
     [switch]
     $Staging,
+
+    [switch]
+    $UseDHCP,
 
     [string]
     [ValidateNotNullOrEmpty()]
@@ -86,7 +99,38 @@ New-ContainerDhcpSwitch
     }
 
     Write-Output "Creating container switch (DHCP)..."
-    New-VmSwitch $global:SwitchName -NetAdapterName $netAdapter.Name | Out-Null
+    # This fails on Nano:
+	# New-VmSwitch $global:SwitchName -NetAdapterName $netAdapter.Name | Out-Null
+}
+
+function
+New-ContainerNatSwitch
+{
+    [CmdletBinding()]
+    param(
+        [string]
+        [ValidateNotNullOrEmpty()]
+        $SubnetPrefix
+    )
+
+    Write-Output "Creating container switch (NAT)..."
+    New-VmSwitch $global:SwitchName -SwitchType NAT -NatSubnetAddress $SubnetPrefix | Out-Null
+}
+
+
+function
+New-ContainerNat
+{
+    [CmdletBinding()]
+    param(
+        [string]
+        [ValidateNotNullOrEmpty()]
+        $SubnetPrefix
+    )
+
+    Write-Output "Creating NAT for $SubnetPrefix..."
+	# This fails on Nano because the module doesn't exist.
+    # New-NetNat -Name ContainerNAT -InternalIPInterfaceAddressPrefix $SubnetPrefix | Out-Null
 }
 
 function
@@ -103,10 +147,19 @@ Install-ContainerHost
 
         if ($switchCollection.Count -eq 0)
         {
-            Write-Output "Enabling container networking..."
+           Write-Output "Enabling container networking..."
             
-            New-ContainerDhcpSwitch
-        }
+            if ($UseDHCP)
+            {
+                New-ContainerDhcpSwitch
+            }
+            else
+            {   
+                New-ContainerNatSwitch $NATSubnetPrefix
+
+                New-ContainerNat $NATSubnetPrefix
+            }    
+		}
         else
         {
             Write-Output "Networking is already configured.  Confirming configuration..."
