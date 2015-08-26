@@ -16,7 +16,7 @@ New-Item -Path "$VMPath\$ComputerName\Virtual Hard Disks\" -Force -ItemType Dire
 Mount-DiskImage -ImagePath $TP3ISOPath
 [String]$DriveLetter = (Get-Diskimage -ImagePath $TP3ISOPath | Get-Volume).DriveLetter
 Copy-Item -Path "$($DriveLetter):\NanoServer\NanoServer.wim" -Destination $NanoServerWIMPath -Force
-Dismount-DiskImage -ImagePath $ServerISO
+Dismount-DiskImage -ImagePath $TP3ISOPath
 
 # Create the Container Host VM
 Set-Location $WorkPath
