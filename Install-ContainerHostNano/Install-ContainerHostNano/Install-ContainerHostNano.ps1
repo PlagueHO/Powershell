@@ -8,6 +8,11 @@
 		OEM-Drivers
 		Containers
 		Compute
+
+		The following things had to be changed:
+		1. Support for NAT removed (Nano Server doesn't have the NAT PS Module).
+		2. All instances where a file is downloaded from the internet were removed becase WGET
+			(Invoke-WebRequest) isn't available.
     
     .SYNOPSIS
         Installs the prerequisites for creating Windows containers on Windows Nano Server TP3
@@ -15,9 +20,6 @@
     .DESCRIPTION
         Installs the prerequisites for creating Windows containers on Windows Nano Server TP3
                         
-    .PARAMETER DockerPath
-        Path to Docker.exe, can be local or URI
-            
     .PARAMETER ExternalNetAdapter
         Specify a specific network adapter to bind to a DHCP switch
             
@@ -27,9 +29,6 @@
     .PARAMETER SkipDocker
         If passed, skip Docker install
             
-    .PARAMETER $UseDHCP
-        If passed, use DHCP configuration
-
     .PARAMETER WimPath
         Path to .wim file that contains the base package image
 
@@ -41,16 +40,10 @@
 
 [CmdletBinding(DefaultParameterSetName="IncludeDocker")]
 param(
-    [string]
-    [ValidateNotNullOrEmpty()]
-    $DockerPath = "http://aka.ms/ContainerTools",
-      
+  
     [string]
     $ExternalNetAdapter,
          
-    [string]
-    $NATSubnetPrefix = "192.168.10.0/24",
-       
     [switch]
     $NoRestart,
 
@@ -62,12 +55,9 @@ param(
     [switch]
     $Staging,
 
-    [switch]
-    $UseDHCP,
-
     [string]
     [ValidateNotNullOrEmpty()]
-    $WimPath = "http://aka.ms/ContainerOSImage"
+    $WimPath = "NanoServer.wim"
 )
 
 $global:RebootRequired = $false
@@ -100,35 +90,6 @@ New-ContainerDhcpSwitch
 }
 
 function
-New-ContainerNatSwitch
-{
-    [CmdletBinding()]
-    param(
-        [string]
-        [ValidateNotNullOrEmpty()]
-        $SubnetPrefix
-    )
-
-    Write-Output "Creating container switch (NAT)..."
-    New-VmSwitch $global:SwitchName -SwitchType NAT -NatSubnetAddress $SubnetPrefix | Out-Null
-}
-
-function
-New-ContainerNat
-{
-    [CmdletBinding()]
-    param(
-        [string]
-        [ValidateNotNullOrEmpty()]
-        $SubnetPrefix
-    )
-
-    Write-Output "Creating NAT for $SubnetPrefix..."
-    New-NetNat -Name ContainerNAT -InternalIPInterfaceAddressPrefix $SubnetPrefix | Out-Null
-}
-
-
-function
 Install-ContainerHost
 {
     "If this file exists when Install-ContainerHost.ps1 exits, the script failed!" | Out-File -FilePath $global:ErrorFile
@@ -144,70 +105,24 @@ Install-ContainerHost
         {
             Write-Output "Enabling container networking..."
             
-            if ($UseDHCP)
-            {
-                New-ContainerDhcpSwitch
-            }
-            else
-            {   
-                New-ContainerNatSwitch $NATSubnetPrefix
-
-                New-ContainerNat $NATSubnetPrefix
-            }    
+            New-ContainerDhcpSwitch
         }
         else
         {
             Write-Output "Networking is already configured.  Confirming configuration..."
 
-            if ($UseDHCP)
-            {
-                $dhcpSwitchCollection = $switchCollection |? { $_.SwitchType -eq "External" }
+            $dhcpSwitchCollection = $switchCollection |? { $_.SwitchType -eq "External" }
 
-                if ($dhcpSwitchCollection -eq $null)
-                {
-                    Write-Output "We didn't find a configured external switch; configuring now..."
-                    New-ContainerDhcpSwitch
-                }
-                else
-                {
-                    if ($($dhcpSwitchCollection |? { $_.SwitchName -eq $global:SwitchName }) -eq $null)
-                    {
-                        throw "One or more external switches are configured, but none match the expected switch name ($global:SwitchName)"
-                    }
-                }
+            if ($dhcpSwitchCollection -eq $null)
+            {
+                Write-Output "We didn't find a configured external switch; configuring now..."
+                New-ContainerDhcpSwitch
             }
             else
             {
-                $subnetPrefix = $NATSubnetPrefix
-                $natSwitchExists = $false
-
-                foreach ($switch in $($switchCollection |? { $_.SwitchType -eq "NAT" }))
+                if ($($dhcpSwitchCollection |? { $_.SwitchName -eq $global:SwitchName }) -eq $null)
                 {
-                    if (($switch.Name -eq $global:SwitchName) -and
-                        ($switch.NATSubnetAddress -ne ""))
-                    {
-                        $subnetPrefix = $switch.NATSubnetAddress
-                        $natSwitchExists = $true
-                        break
-                    }
-                }
-
-                if (-not $natSwitchExists)
-                {
-                    Write-Output "We didn't find a configured NAT switch; configuring now..."
-                    New-ContainerNatSwitch $subnetPrefix
-                }
-
-                $existingNat = Get-NetNat
-
-                if ($existingNat -eq $null)
-                {
-                    Write-Output "We didn't find a configured NAT; configuring now..."
-                    New-ContainerNat $subnetPrefix
-                }
-                elseif ($existingNat.InternalIPInterfaceAddressPrefix -ne $subnetPrefix)
-                {
-                    throw "Unexpected NAT configuration.  Switch subnet ($subnetPrefix) does not match NAT subnet ($($existingNat.InternalIPInterfaceAddressPrefix))"
+                    throw "One or more external switches are configured, but none match the expected switch name ($global:SwitchName)"
                 }
             }
         }
@@ -228,26 +143,9 @@ Install-ContainerHost
             # .wim is present and local
             #            
         }
-        elseif (($WimPath -as [System.URI]).AbsoluteURI -ne $null)
-        {
-            #
-            # .wim is on a URI and must be downloaded
-            # 
-            $localWimPath = "$pwd\ContainerBaseImage.wim"
-            
-            #
-            # We disable progress display because it kills performance for large downloads (at least on 64-bit PowerShell)
-            #
-            $ProgressPreference = 'SilentlyContinue'
-            Write-Output "Downloading Container OS image (WIM) from $WimPath to $localWimPath..."
-            wget -Uri $WimPath -OutFile $localWimPath -UseBasicParsing
-            $ProgressPreference = 'Continue'   
-
-            $WimPath = $localWimPath
-        }
         else
         {
-            throw "Cannot copy from invalid WimPath $WimPath"
+            throw "Path to existing local Wim File must be provided."
         }
 
         Install-ContainerOsImage -WimPath $WimPath -Force
@@ -291,23 +189,8 @@ Install-ContainerHost
             Write-Output "Docker is already installed."
         }
         else
-        {
-            Test-Admin
-
-            Write-Output "Installing Docker..."
-
-            if (Test-Path $DockerPath)
-            {
-                Copy-Item -Path $DockerPath -Destination $env:windir\System32\
-            }
-            elseif (($DockerPath -as [System.URI]).AbsoluteURI -ne $null)
-            {
-                wget -Uri $DockerPath -OutFile $env:windir\System32\docker.exe -UseBasicParsing
-            }
-            else
-            {
-                throw "Cannot copy from $DockerPath"
-            }
+		{
+            throw "$env:windir\System32\docker.exe was not found."
         }
 
         $serviceName = "Docker"
@@ -395,7 +278,7 @@ Install-ContainerHost
     
     Remove-Item $global:ErrorFile
     Write-Output "Script complete!"
-}$global:AdminPriviledges = $false
+} $global:AdminPriviledges = $false
 
 
 function 
@@ -437,24 +320,19 @@ Get-Nsmm
     
     Write-Output "This script uses a third party tool: NSSM service manager. For more information, see https://nssm.cc/usage"       
     Write-Output "Downloading NSSM..."
-
-    $nssmUri = "http://nssm.cc/release/nssm-2.24.zip"            
-    $nssmZip = "$($env:temp)\$(Split-Path $nssmUri -Leaf)"
-            
+           
     Write-Verbose "Creating working directory..."
     $tempDirectory = New-Item -ItemType Directory -Force -Path "$($env:temp)\nssm"     
             
-    wget -Uri "http://nssm.cc/release/nssm-2.24.zip" -Outfile $nssmZip -UseBasicParsing
-    #TODO Check for errors
-            
+           
     Write-Output "Extracting NSSM from archive..."
     if ($PSVersionTable.PSVersion.Major -ge 5)
     {
-        Expand-Archive -Path $nssmZip -DestinationPath $tempDirectory
+        Expand-Archive -Path .\nssm.zip -DestinationPath $tempDirectory
     }
     else
     {
-        Expand-ArchivePrivate -Path $nssmZip -DestinationPath $tempDirectory
+        Expand-ArchivePrivate -Path .\nssm.zip -DestinationPath $tempDirectory
     }
     Remove-Item $nssmZip
 
