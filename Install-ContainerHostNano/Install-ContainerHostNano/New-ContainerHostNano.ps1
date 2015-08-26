@@ -41,7 +41,7 @@ choco install docker
 
 # Download NSSM
 wget -Uri "http://nssm.cc/release/nssm-2.24.zip" -Outfile $NSSMPath -UseBasicParsing
-New-Item -Path "$WorkPath\NSSM" -ItemType Directory
+New-Item -Path "$WorkPath\NSSM" -ItemType Directory -Force -ErrorAction SilentlyContinue
 Expand-Archive -Path $NSSMPath -DestinationPath "$WorkPath\NSSM\" -Force
 
 # Set Credentials
