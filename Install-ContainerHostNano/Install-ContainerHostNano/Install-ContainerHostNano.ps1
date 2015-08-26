@@ -210,7 +210,7 @@ Install-ContainerHost
             }
             else
             {
-                Get-Nsmm -Destination "$($env:SystemRoot)\System32" -WorkingDir "$env:temp"
+                Throw "NSSM.exe was not found in $($env:SystemRoot)\System32\"
             }
 
             $dockerData = "$($env:ProgramData)\docker"
@@ -279,69 +279,6 @@ Install-ContainerHost
     Remove-Item $global:ErrorFile
     Write-Output "Script complete!"
 } $global:AdminPriviledges = $false
-
-
-function 
-Expand-ArchivePrivate
-{
-    [CmdletBinding()]
-    param 
-    (
-        [Parameter(Mandatory=$true)]
-        [string] 
-        $Path,
-
-        [Parameter(Mandatory=$true)]        
-        [string] 
-        $DestinationPath
-    )
-        
-    $shell = New-Object -com Shell.Application
-    $zipFile = $shell.NameSpace($Path)
-    
-    $shell.Namespace($DestinationPath).CopyHere($zipFile.items())
-}
-
-
-function
-Get-Nsmm
-{
-    [CmdletBinding()]
-    param(
-        [Parameter(Mandatory=$true)]
-        [string]
-        [ValidateNotNullOrEmpty()]
-        $Destination,
-
-        [string]
-        [ValidateNotNullOrEmpty()]
-        $WorkingDir = "$env:temp"
-    )
-    
-    Write-Output "This script uses a third party tool: NSSM service manager. For more information, see https://nssm.cc/usage"       
-    Write-Output "Downloading NSSM..."
-           
-    Write-Verbose "Creating working directory..."
-    $tempDirectory = New-Item -ItemType Directory -Force -Path "$($env:temp)\nssm"     
-            
-           
-    Write-Output "Extracting NSSM from archive..."
-    if ($PSVersionTable.PSVersion.Major -ge 5)
-    {
-        Expand-Archive -Path .\nssm.zip -DestinationPath $tempDirectory
-    }
-    else
-    {
-        Expand-ArchivePrivate -Path .\nssm.zip -DestinationPath $tempDirectory
-    }
-    Remove-Item $nssmZip
-
-    Write-Verbose "Copying NSSM to $Destination..."
-    Copy-Item -Path "$tempDirectory\nssm-2.24\win64\nssm.exe" -Destination "$Destination"
-
-    Write-Verbose "Removing temporary directory..."
-    Remove-Item $tempDirectory -Recurse
-}
 
 
 function 
