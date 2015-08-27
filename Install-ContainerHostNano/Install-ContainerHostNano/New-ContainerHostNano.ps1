@@ -15,7 +15,7 @@ $NSSMPath = "$WorkPath\NSSM.zip"
 $secpasswd = ConvertTo-SecureString $AdminPassword -AsPlainText -Force
 $mycreds = New-Object System.Management.Automation.PSCredential ("Administrator", $secpasswd)
 
-If (-not (Get-VM $ComputerName))
+If ((Get-VM | Where-Object -Property Name -EQ $ComputerName).Count -eq 0)
 {
     New-Item -Path "$VMPath\$ComputerName\Virtual Hard Disks\" -Force -ItemType Directory
 
