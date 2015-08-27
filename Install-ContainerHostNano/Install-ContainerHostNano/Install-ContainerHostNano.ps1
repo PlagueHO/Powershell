@@ -70,7 +70,7 @@ param(
 
     [string]
     [ValidateNotNullOrEmpty()]
-    $WimPath = "NanoServer.wim"
+    $WimPath = "*.wim"
 )
 
 $global:RebootRequired = $false
@@ -100,7 +100,7 @@ New-ContainerDhcpSwitch
 
     Write-Output "Creating container switch (DHCP)..."
     # This fails on Nano:
-	# New-VmSwitch $global:SwitchName -NetAdapterName $netAdapter.Name | Out-Null
+	New-VmSwitch $global:SwitchName -NetAdapterName $netAdapter.Name | Out-Null
 }
 
 function
@@ -130,7 +130,7 @@ New-ContainerNat
 
     Write-Output "Creating NAT for $SubnetPrefix..."
 	# This fails on Nano because the module doesn't exist.
-    # New-NetNat -Name ContainerNAT -InternalIPInterfaceAddressPrefix $SubnetPrefix | Out-Null
+    New-NetNat -Name ContainerNAT -InternalIPInterfaceAddressPrefix $SubnetPrefix | Out-Null
 }
 
 function
@@ -201,7 +201,7 @@ Install-ContainerHost
             throw "Path to existing local Wim File must be provided."
         }
 
-        Install-ContainerOsImage -WimPath $WimPath -Force
+        Get-ChildItem -Path $WimPath | % { Install-ContainerOsImage -WimPath $_.Name -Force } 
         
         while ($imageCollection -eq $null)
         {

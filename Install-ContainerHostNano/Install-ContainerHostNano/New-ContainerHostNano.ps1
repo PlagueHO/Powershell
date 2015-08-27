@@ -8,16 +8,10 @@ $VMSwitchName = "General Purpose External"
 $TP3ISOPath = "D:\ISOs\Windows Server 2016 TP3\10514.0.150808-1529.TH2_RELEASE_SERVER_OEMRET_X64FRE_EN-US.ISO"
 
 # Don't change these...
-$NanoServerWIMPath = "$WorkPath\NanoServer.wim"
+$WIMPath = "$WorkPath\*.wim"
 $NSSMPath = "$WorkPath\NSSM.zip"
 
 New-Item -Path "$VMPath\$ComputerName\Virtual Hard Disks\" -Force -ItemType Directory
-
-Mount-DiskImage -ImagePath $TP3ISOPath
-[String]$DriveLetter = (Get-Diskimage -ImagePath $TP3ISOPath | Get-Volume).DriveLetter
-Copy-Item -Path "$($DriveLetter):\NanoServer\NanoServer.wim" -Destination $NanoServerWIMPath -Force
-Set-ItemProperty -Path $NanoServerWIMPath -Name IsReadOnly -Value $False
-Dismount-DiskImage -ImagePath $TP3ISOPath
 
 # Create the Container Host VM
 Set-Location $WorkPath
@@ -52,7 +46,7 @@ $mycreds = New-Object System.Management.Automation.PSCredential ("Administrator"
 $Session = New-PSSession -ComputerName $IPAddress -Credential $mycreds
 
 # Copy the NanoServer.WIM and Docker.Exe to the Container Host
-Copy-Item -Path $NanoServerWIMPath -Destination c:\Users\Administrator\Documents\ -ToSession $Session
+Copy-Item -Path $WIMPath -Destination c:\Users\Administrator\Documents\ -ToSession $Session
 Copy-Item -Path C:\ProgramData\chocolatey\lib\docker\bin\Docker.exe -Destination c:\Windows\System32 -ToSession $Session
 Copy-Item -Path "$WorkPath\NSSM\nssm-2.24\win64\nssm.exe" -Destination c:\Windows\System32\ -ToSession $Session
 
