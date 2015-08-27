@@ -100,7 +100,7 @@ New-ContainerDhcpSwitch
 
     Write-Output "Creating container switch (DHCP)..."
     # This fails on Nano:
-	New-VmSwitch $global:SwitchName -NetAdapterName $netAdapter.Name | Out-Null
+	New-VmSwitch $global:SwitchName -NetAdapterName $netAdapter.Name -ErrorAction Continue | Out-Null
 }
 
 function
@@ -114,7 +114,7 @@ New-ContainerNatSwitch
     )
 
     Write-Output "Creating container switch (NAT)..."
-    New-VmSwitch $global:SwitchName -SwitchType NAT -NatSubnetAddress $SubnetPrefix | Out-Null
+    New-VmSwitch $global:SwitchName -SwitchType NAT -NatSubnetAddress $SubnetPrefix -ErrorAction Continue | Out-Null
 }
 
 
@@ -130,7 +130,7 @@ New-ContainerNat
 
     Write-Output "Creating NAT for $SubnetPrefix..."
 	# This fails on Nano because the module doesn't exist.
-    New-NetNat -Name ContainerNAT -InternalIPInterfaceAddressPrefix $SubnetPrefix | Out-Null
+    New-NetNat -Name ContainerNAT -InternalIPInterfaceAddressPrefix $SubnetPrefix -ErrorAction Continue | Out-Null
 }
 
 function
