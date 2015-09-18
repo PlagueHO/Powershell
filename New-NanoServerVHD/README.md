@@ -24,6 +24,7 @@ Github Repo: https://github.com/PlagueHO/Powershell/tree/master/New-NanoServerVH
 Script Center: https://gallery.technet.microsoft.com/scriptcenter/DSC-Tools-c96e2c53
 
 ### Change Log
+2015-09-18: Added support for setting IP Subnet Mask, Default Gateway and DNS Settings on first boot.
 2015-08-20: Updated to support packages available in Windows Server 2016 TP3.
 2015-07-24: Updated setup complete script to create a task that shows the IP Address of the Nano Server in the console window 30 seconds after boot.
 2015-06-19: Updated to support changes in Convert-WindowsImage on 2015-06-16.
@@ -55,7 +56,7 @@ limitations under the License.
 
 
 ### Example Usage
-<pre>
+```powershell
 .\New-NanoServerVHD.ps1 `
     -ServerISO 'D:\ISOs\Windows Server 2016 TP3\10514.0.150808-1529.TH2_RELEASE_SERVER_OEMRET_X64FRE_EN-US.ISO' `
     -DestVHD D:\Temp\NanoServer01.vhd `
@@ -63,5 +64,35 @@ limitations under the License.
     -AdministratorPassword 'P@ssword!1' `
     -Packages 'Compute','OEM-Drivers','Guest' `
     -Verbose
-</pre>
-This command will create a new VHD containing a Nano Server machine with the name NANOTEST01. It will contain only the Compute, OEM-Drivers and Guest packages.
+```
+This command will create a new VHD containing a Nano Server machine with the name NANOTEST01. It will contain only the Compute, OEM-Drivers and Guest packages. The IP Address will be configured using DHCP.
+
+```powershell
+.\New-NanoServerVHD.ps1 `
+	-ServerISO 'D:\ISOs\Windows Server 2016 TP3\10514.0.150808-1529.TH2_RELEASE_SERVER_OEMRET_X64FRE_EN-US.ISO' `
+	-DestVHD D:\Temp\NanoServer01.vhd `
+	-ComputerName NANOTEST01 `
+	-AdministratorPassword 'P@ssword!1' `
+	-Packages 'Storage','OEM-Drivers','Guest' `
+	-IPAddress '10.0.0.20' `
+    -SubnetMask '255.0.0.0' `
+    -GatewayAddress '10.0.0.1' `
+    -DNSAddresses '10.0.0.2','10,0,0,3' `
+	-Verbose
+```
+
+This command will create a new VHD containing a Nano Server machine with the name NANOTEST01. It will contain only the Storage, OEM-Drivers and Guest packages. It will set the Administrator password to P@ssword!1 and set the IP address of the first ethernet NIC to 10.0.0.20/255.0.0.0 with gateway of 10.0.0.1 and DNS set to '10.0.0.2','10,0,0,3'.
+
+```powershell
+.\New-NanoServerVHD.ps1 `
+	-ServerISO 'D:\ISOs\Windows Server 2016 TP3\10514.0.150808-1529.TH2_RELEASE_SERVER_OEMRET_X64FRE_EN-US' `
+	-DestVHD D:\Temp\NanoServer02.vhdx `
+	-VHDFormat VHDX `
+	-ComputerName NANOTEST02 `
+	-AdministratorPassword 'P@ssword!1' `
+	-Packages 'Storage','OEM-Drivers','Guest' `
+	-IPAddress '192.168.1.66' `
+	-Verbose
+```
+
+This command will create a new VHDx (for Generation 2 VMs) containing a Nano Server machine with the name NANOTEST02. It will contain only the Storage, OEM-Drivers and Guest packages. It will set the Administrator password to P@ssword!1 and set the IP address of the first ethernet NIC to 192.168.1.66/255.255.255.0 with no Gateway or DNS.

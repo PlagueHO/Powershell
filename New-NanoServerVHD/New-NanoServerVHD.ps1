@@ -46,6 +46,18 @@
 	.PARAMETER IPAddress
 	This is a Static IP address to assign to the first ethernet card in this Nano Server. If not passed it will use DHCP.
 
+	.PARAMETER SubnetMask
+	This is the the subnet mask to use with the static IP address to assign to the first ethernet card
+    in this Nano Server. Should only be passed if IPAddress is provided. Defaults to 255.255.255.0. 
+
+	.PARAMETER GatewayAddress
+	This is the gateway IP address to assign to the first ethernet card in this Nano Server if static IP Address is 
+    being used. Should only be passed if IPAddress is provided.
+
+	.PARAMETER DNSAddresses
+	These are the DNS Serverer addresses to assign to the first ethernet card in this Nano Server if static IP Address 
+    is being used. Should only be passed if IPAddress is provided.
+
 	.PARAMETER RegisteredOwner
 	This is the Registered Owner that will be set for the Nano Server (if the default Unattended.XML is used).
 
@@ -56,8 +68,9 @@
 	Allows the content of the Unattended.XML file to be overridden. Provide the content of a new Unattended.XML file in this parameter.
 
 	.PARAMETER Edition
-	This is the index name of the edition to install from the NanoServer.WIM. It defaults to CORESYSTEMSERVER_INSTALL and should not usually be changed.
-	
+	This is the index name of the edition to install from the NanoServer.WIM. It defaults to CORESYSTEMSERVER_INSTALL and should
+	not usually be changed.
+
 	As of TP3, there are two editions found inside the NanoServer.WIM:
 	CORESYSTEMSERVER_INSTALL
 	CORESYSTEMSERVER_BOOT
@@ -69,11 +82,15 @@
 			-ComputerName NANOTEST01 `
 			-AdministratorPassword 'P@ssword!1' `
 			-Packages 'Storage','OEM-Drivers','Guest' `
-			-IPAddress '192.168.1.65' `
+			-IPAddress '10.0.0.20' `
+            -SubnetMask '255.0.0.0' `
+            -GatewayAddress '10.0.0.1' `
+            -DNSAddresses '10.0.0.2','10,0,0,3'
 			-Verbose
 
 		This command will create a new VHD containing a Nano Server machine with the name NANOTEST01. It will contain only the Storage, OEM-Drivers and Guest packages.
-		It will set the Administrator password to P@ssword!1 and set the IP address of the first ethernet NIC to 192.168.1.65.
+		It will set the Administrator password to P@ssword!1 and set the IP address of the first ethernet NIC to 10.0.0.20/255.0.0.0 with gateway of 10.0.0.1 and DNS
+        set to '10.0.0.2','10,0,0,3'
 
 	.EXAMPLE
 		.\New-NanoServerVHD.ps1 `
@@ -87,7 +104,7 @@
 			-Verbose
 
 		This command will create a new VHDx (for Generation 2 VMs) containing a Nano Server machine with the name NANOTEST02. It will contain only the Storage, OEM-Drivers and Guest packages.
-		It will set the Administrator password to P@ssword!1 and set the IP address of the first ethernet NIC to 192.168.1.66.
+		It will set the Administrator password to P@ssword!1 and set the IP address of the first ethernet NIC to 192.168.1.66/255.255.255.0 with no Gateway or DNS.
 
 	.LINK
 	https://www.microsoft.com/en-us/evalcenter/evaluate-windows-server-technical-preview
@@ -127,6 +144,15 @@ Param (
 	[String]$IPAddress,
 
 	[ValidateNotNullOrEmpty()]
+	[String]$SubnetMask='255.255.255.0',
+
+	[ValidateNotNullOrEmpty()]
+	[String]$GatewayAddress,
+
+	[ValidateNotNullOrEmpty()]
+	[String[]]$DNSAddresses,
+
+	[ValidateNotNullOrEmpty()]
 	[String]$RegisteredOwner = "Nano Server User",
 
 	[ValidateNotNullOrEmpty()]
@@ -143,6 +169,44 @@ If (-not (Test-Path -Path .\Convert-WindowsImage.ps1 -PathType Leaf)) {
 	Write-Error "The Convert-WindowsImage.ps1 script was not found in the current folder. Please download it from https://gallery.technet.microsoft.com/scriptcenter/Convert-WindowsImageps1-0fe23a8f"
 	Return
 }
+
+# Generate the file content for the Setup Complete script that runs on the VM
+# Do this first because we can do address validation at the same time.
+[String]$SetupComplete = "@ECHO OFF`n"
+If ($IPaddress) {
+    if(!([System.Net.Ipaddress]::TryParse($IPaddress, [ref]0))) {
+        Throw "The IP Address '$IPaddress' is not in a valid format"
+    }
+    # Defining these as variables in case at some point need to allow them to be overridden.
+    $InterfaceAlias = 'Ethernet'
+    $AddressFamiyly = 'IPv4'
+    # For some reason setting this stuff via powershell doesn't work - so use NETSH.    
+    If ($GatewayAddress) {
+        if(!([System.Net.Ipaddress]::TryParse($GatewayAddress, [ref]0))) {
+            Throw "The Gateway Address '$GatewayAddress' is not in a valid format"
+        }
+        $IPAddressConfigString += "netsh interface ip set address $InterfaceAlias static addr=$IPaddress mask=$SubnetMask gateway=$GatewayAddress`n"
+    } else {
+        $IPAddressConfigString += "netsh interface ip set address $InterfaceAlias static addr=$IPaddress mask=$SubnetMask`n"
+    }
+    If ($DNSAddresses) {
+        $Count = 1
+        foreach ($DNSAddress in $DNSAddresses) {
+            if(!([System.Net.Ipaddress]::TryParse($DNSAddress, [ref]0))) {
+                Throw "The DNS Server Address '$DNSAddress' is not in a valid format"
+            }
+            If ($Count -eq 1) {
+                $IPAddressConfigString += "netsh interface ip set dns $InterfaceAlias static addr=$DNSAddress`n"
+            } Else {
+                $IPAddressConfigString += "netsh interface ip add dns $InterfaceAlias addr=$DNSAddress index=$Count`n"
+            }
+            $Count++
+        }
+    }
+	# Set a static IP Address on the machine
+	$SetupComplete += $IPAddressConfigString
+} # If
+
 [String]$WorkFolder = Join-Path -Path $ENV:Temp -ChildPath 'NanoServer' 
 [String]$DismFolder = Join-Path -Path $WorkFolder -ChildPath "DISM"
 [String]$MountFolder = Join-Path -Path $WorkFolder -ChildPath "Mount"
@@ -285,12 +349,6 @@ Set-Content -Path $UnattendFile -Value $UnattendedContent
 New-Item -Path "$MountFolder\windows\panther" -ItemType Directory
 Copy-Item -Path $UnattendFile -Destination "$MountFolder\windows\panther"
 
-# Generate the file content for the Setup Complete script that runs on the VM
-[String]$SetupComplete = "@ECHO OFF`n"
-If ($IPaddress) {
-	# Set a static IP Address on the machine
-	$SetupComplete += 'powershell.exe -command "Import-Module C:\windows\system32\windowspowershell\v1.0\Modules\Microsoft.PowerShell.Utility\Microsoft.PowerShell.Utility.psd1; Import-Module C:\windows\system32\WindowsPowerShell\v1.0\Modules\NetAdapter\NetAdapter.psd1; netsh interface ip set address $((Get-NetAdapter -Name Ethernet).ifalias) static ' + $IPaddress + '"'+"`n"
-} # If
 # Write the Setup Complete script to the image
 New-Item "$MountFolder\Windows\Setup\Scripts" -ItemType Directory
 Set-Content -Path "$MountFolder\Windows\Setup\Scripts\SetupComplete.cmd" -Value $SetupComplete
