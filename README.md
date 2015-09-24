@@ -23,4 +23,5 @@ This script has been deprecated. The ACLReportTools module replaces it.
 This module provides miscellaneous helper functions for Hyper-V Machines.
 
 ## OfficeTools
-This project contains scripts for installing and uninstalling Microsoft Office 2013 products.
+This module has been moved to a separate repository:
+[https://github.com/PlagueHO/OfficeTools](https://github.com/PlagueHO/OfficeTools)
