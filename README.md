@@ -20,7 +20,8 @@ the differences at a later date.
 This script has been deprecated. The ACLReportTools module replaces it.
 
 ## HyperVTools
-This module provides miscellaneous helper functions for Hyper-V Machines.
+This module has been moved to a separate repository:
+[https://github.com/PlagueHO/HyperVTools](https://github.com/PlagueHO/HyperVTools)
 
 ## OfficeTools
 This module has been moved to a separate repository:
