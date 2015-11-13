@@ -24,6 +24,7 @@ Github Repo: https://github.com/PlagueHO/Powershell/tree/master/New-NanoServerVH
 Script Center: https://gallery.technet.microsoft.com/scriptcenter/DSC-Tools-c96e2c53
 
 ### Change Log
+2015-11-13: Added Optional Timezone Parameter. Defaults to 'Pacific Standard Time'.
 2015-09-18: Added support for setting IP Subnet Mask, Default Gateway and DNS Settings on first boot.
 2015-08-20: Updated to support packages available in Windows Server 2016 TP3.
 2015-07-24: Updated setup complete script to create a task that shows the IP Address of the Nano Server in the console window 30 seconds after boot.
@@ -40,7 +41,7 @@ Script Center: https://gallery.technet.microsoft.com/scriptcenter/DSC-Tools-c96e
 
 ### License and Copyright
 
-Copyright 2014 Daniel Scott-Raynsford
+Copyright 2015 Daniel Scott-Raynsford
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -81,7 +82,7 @@ This command will create a new VHD containing a Nano Server machine with the nam
 	-Verbose
 ```
 
-This command will create a new VHD containing a Nano Server machine with the name NANOTEST01. It will contain only the Storage, OEM-Drivers and Guest packages. It will set the Administrator password to P@ssword!1 and set the IP address of the first ethernet NIC to 10.0.0.20/255.0.0.0 with gateway of 10.0.0.1 and DNS set to '10.0.0.2','10,0,0,3'.
+This command will create a new VHD containing a Nano Server machine with the name NANOTEST01. It will contain only the Storage, OEM-Drivers and Guest packages. It will set the Administrator password to P@ssword!1 and set the IP address of the first ethernet NIC to 10.0.0.20/255.0.0.0 with gateway of 10.0.0.1 and DNS set to '10.0.0.2','10,0,0,3'. It will also set the timezone to 'Russian Standard Time'.
 
 ```powershell
 .\New-NanoServerVHD.ps1 `
@@ -92,6 +93,7 @@ This command will create a new VHD containing a Nano Server machine with the nam
 	-AdministratorPassword 'P@ssword!1' `
 	-Packages 'Storage','OEM-Drivers','Guest' `
 	-IPAddress '192.168.1.66' `
+	-Timezone 'Russian Standard Time'
 	-Verbose
 ```
 

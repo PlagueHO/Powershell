@@ -163,6 +163,9 @@ Param (
 
 	[ValidateNotNullOrEmpty()]
 	[String]$Edition = 'CORESYSTEMSERVER_INSTALL'
+		
+	[ValidateNotNullOrEmpty()]
+	[String]$Timezone = 'Pacific Standard Time'
 )
 
 If (-not (Test-Path -Path .\Convert-WindowsImage.ps1 -PathType Leaf)) {
@@ -328,7 +331,7 @@ $UnattendedContent = [String] @"
 		   <PlainText>true</PlainText>
 		</AdministratorPassword>
 	  </UserAccounts>
-	  <TimeZone>Pacific Standard Time</TimeZone>
+	  <TimeZone>$Timezone</TimeZone>
 	</component>
   </settings>
 
