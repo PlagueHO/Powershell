@@ -128,18 +128,18 @@ Param (
 	[String]$DestVHD,
 
 	[ValidateNotNullOrEmpty()]
-	[ValidateSet("VHD", "VHDX")]
-	[String]$VHDFormat  = "VHD",
+	[ValidateSet('VHD', 'VHDX')]
+	[String]$VHDFormat  = 'VHD',
 
 	[ValidateSet('Compute','OEM-Drivers','Storage','FailoverCluster','ReverseForwarders','Guest','Containers','Defender')]
 	[String[]]$Packages = @('OEM-Drivers','Storage','Guest'),
 
 	[ValidateNotNullOrEmpty()]
-	[String]$ComputerName = "NanoServer01",
+	[String]$ComputerName = 'NanoServer01',
 
 	[Parameter(
 		Mandatory = $true,
-		HelpMessage="Enter the Administrator password of the new Nano Server."
+		HelpMessage='Enter the Administrator password of the new Nano Server.'
 		)]
 		[String]$AdministratorPassword,
 
@@ -156,23 +156,23 @@ Param (
 	[String[]]$DNSAddresses,
 
 	[ValidateNotNullOrEmpty()]
-	[String]$RegisteredOwner = "Nano Server User",
+	[String]$RegisteredOwner = 'Nano Server User',
 
 	[ValidateNotNullOrEmpty()]
-	[String]$RegisteredCorporation = "Contoso",
+	[String]$RegisteredCorporation = 'Contoso',
 
 	[ValidateNotNullOrEmpty()]
 	[String]$UnattendedContent,
 
-	[ValidateNotNullOrEmpty()],
-	[String]$Edition = 'CORESYSTEMSERVER_INSTALL'
+	[ValidateNotNullOrEmpty()]
+	[String]$Edition = 'CORESYSTEMSERVER_INSTALL',
 		
 	[ValidateNotNullOrEmpty()]
 	[String]$Timezone = 'Pacific Standard Time'
 )
 
 If (-not (Test-Path -Path .\Convert-WindowsImage.ps1 -PathType Leaf)) {
-	Write-Error "The Convert-WindowsImage.ps1 script was not found in the current folder. Please download it from https://gallery.technet.microsoft.com/scriptcenter/Convert-WindowsImageps1-0fe23a8f"
+	Write-Error 'The Convert-WindowsImage.ps1 script was not found in the current folder. Please download it from https://gallery.technet.microsoft.com/scriptcenter/Convert-WindowsImageps1-0fe23a8f'
 	Return
 }
 
@@ -214,8 +214,8 @@ If ($IPaddress) {
 } # If
 
 [String]$WorkFolder = Join-Path -Path $ENV:Temp -ChildPath 'NanoServer' 
-[String]$DismFolder = Join-Path -Path $WorkFolder -ChildPath "DISM"
-[String]$MountFolder = Join-Path -Path $WorkFolder -ChildPath "Mount"
+[String]$DismFolder = Join-Path -Path $WorkFolder -ChildPath 'DISM'
+[String]$MountFolder = Join-Path -Path $WorkFolder -ChildPath 'Mount'
 [String]$TempVHDName = "NanoServer.$VHDFormat"
 Switch ($VHDFormat) {
 	'VHD' { [String]$VHDPartitionStyle = 'MBR' }
@@ -255,60 +255,60 @@ If (-not (Test-Path -Path $MountFolder -PathType Container)) {
 }
 
 # Mount the VHD to load packages into it
-& "$DismFolder\Dism.exe" "/Mount-Image" "/ImageFile:$WorkFolder\$TempVHDName" "/Index:1" "/MountDir:$MountFolder"
+& "$DismFolder\Dism.exe" '/Mount-Image' "/ImageFile:$WorkFolder\$TempVHDName" '/Index:1' "/MountDir:$MountFolder"
 
 # Add the basic packages
 If ('Compute' -in $Packages) {
 	Write-Verbose 'Adding Package Microsoft-NanoServer-Compute-Package.cab to Image'
-	& "$DismFolder\Dism.exe" "/Add-Package" "/PackagePath:$($DriveLetter):\NanoServer\packages\Microsoft-NanoServer-Compute-Package.cab" "/Image:$MountFolder"
-	& "$DismFolder\Dism.exe" "/Add-Package" "/PackagePath:$($DriveLetter):\NanoServer\packages\en-us\Microsoft-NanoServer-Compute-Package.cab" "/Image:$MountFolder"
+	& "$DismFolder\Dism.exe" '/Add-Package' "/PackagePath:$($DriveLetter):\NanoServer\packages\Microsoft-NanoServer-Compute-Package.cab" "/Image:$MountFolder"
+	& "$DismFolder\Dism.exe" '/Add-Package' "/PackagePath:$($DriveLetter):\NanoServer\packages\en-us\Microsoft-NanoServer-Compute-Package.cab" "/Image:$MountFolder"
 }
 If ('OEM-Drivers' -in $Packages) {
 	Write-Verbose 'Adding Package Microsoft-NanoServer-OEM-Drivers-Package.cab to Image'
-	& "$DismFolder\Dism.exe" "/Add-Package" "/PackagePath:$($DriveLetter):\NanoServer\packages\Microsoft-NanoServer-OEM-Drivers-Package.cab" "/Image:$MountFolder"
-	& "$DismFolder\Dism.exe" "/Add-Package" "/PackagePath:$($DriveLetter):\NanoServer\packages\en-US\Microsoft-NanoServer-OEM-Drivers-Package.cab" "/Image:$MountFolder"
+	& "$DismFolder\Dism.exe" '/Add-Package' "/PackagePath:$($DriveLetter):\NanoServer\packages\Microsoft-NanoServer-OEM-Drivers-Package.cab" "/Image:$MountFolder"
+	& "$DismFolder\Dism.exe" '/Add-Package' "/PackagePath:$($DriveLetter):\NanoServer\packages\en-US\Microsoft-NanoServer-OEM-Drivers-Package.cab" "/Image:$MountFolder"
 }
 
 # Packages for Containers
 If ('Containers' -in $Packages) {
 	Write-Verbose 'Adding Package Microsoft-NanoServer-Containers-Package.cab to Image'
-	& "$DismFolder\Dism.exe" "/Add-Package" "/PackagePath:$($DriveLetter):\NanoServer\packages\Microsoft-NanoServer-Containers-Package.cab" "/Image:$MountFolder"
-	& "$DismFolder\Dism.exe" "/Add-Package" "/PackagePath:$($DriveLetter):\NanoServer\packages\en-us\Microsoft-NanoServer-Containers-Package.cab" "/Image:$MountFolder"
+	& "$DismFolder\Dism.exe" '/Add-Package' "/PackagePath:$($DriveLetter):\NanoServer\packages\Microsoft-NanoServer-Containers-Package.cab" "/Image:$MountFolder"
+	& "$DismFolder\Dism.exe" '/Add-Package' "/PackagePath:$($DriveLetter):\NanoServer\packages\en-us\Microsoft-NanoServer-Containers-Package.cab" "/Image:$MountFolder"
 }
 
 # Packages for Defender
 If ('Defender' -in $Packages) {
 	Write-Verbose 'Adding Package Microsoft-NanoServer-Defender-Package.cab to Image'
-	& "$DismFolder\Dism.exe" "/Add-Package" "/PackagePath:$($DriveLetter):\NanoServer\packages\Microsoft-NanoServer-Defender-Package.cab" "/Image:$MountFolder"
-	& "$DismFolder\Dism.exe" "/Add-Package" "/PackagePath:$($DriveLetter):\NanoServer\packages\en-us\Microsoft-NanoServer-Defender-Package.cab" "/Image:$MountFolder"
+	& "$DismFolder\Dism.exe" '/Add-Package' "/PackagePath:$($DriveLetter):\NanoServer\packages\Microsoft-NanoServer-Defender-Package.cab" "/Image:$MountFolder"
+	& "$DismFolder\Dism.exe" '/Add-Package' "/PackagePath:$($DriveLetter):\NanoServer\packages\en-us\Microsoft-NanoServer-Defender-Package.cab" "/Image:$MountFolder"
 }
 
 # Packages for Failover Cluster
 If ('FailoverCluster' -in $Packages) {
 	Write-Verbose 'Adding Package Microsoft-NanoServer-FailoverCluster-Package.cab to Image'
-	& "$DismFolder\Dism.exe" "/Add-Package" "/PackagePath:$($DriveLetter):\NanoServer\packages\Microsoft-NanoServer-FailoverCluster-Package.cab" "/Image:$MountFolder"
-	& "$DismFolder\Dism.exe" "/Add-Package" "/PackagePath:$($DriveLetter):\NanoServer\packages\en-US\Microsoft-NanoServer-FailoverCluster-Package.cab" "/Image:$MountFolder"
+	& "$DismFolder\Dism.exe" '/Add-Package' "/PackagePath:$($DriveLetter):\NanoServer\packages\Microsoft-NanoServer-FailoverCluster-Package.cab" "/Image:$MountFolder"
+	& "$DismFolder\Dism.exe" '/Add-Package' "/PackagePath:$($DriveLetter):\NanoServer\packages\en-US\Microsoft-NanoServer-FailoverCluster-Package.cab" "/Image:$MountFolder"
 }
 
 # Packages for Storage Server
 If ('Storage' -in $Packages) {
 	Write-Verbose 'Adding Package Microsoft-NanoServer-Storage-Package.cab to Image'
-	& "$DismFolder\Dism.exe" "/Add-Package" "/PackagePath:$($DriveLetter):\NanoServer\packages\Microsoft-NanoServer-Storage-Package.cab" "/Image:$MountFolder"
-	& "$DismFolder\Dism.exe" "/Add-Package" "/PackagePath:$($DriveLetter):\NanoServer\packages\en-US\Microsoft-NanoServer-Storage-Package.cab" "/Image:$MountFolder"
+	& "$DismFolder\Dism.exe" '/Add-Package' "/PackagePath:$($DriveLetter):\NanoServer\packages\Microsoft-NanoServer-Storage-Package.cab" "/Image:$MountFolder"
+	& "$DismFolder\Dism.exe" '/Add-Package' "/PackagePath:$($DriveLetter):\NanoServer\packages\en-US\Microsoft-NanoServer-Storage-Package.cab" "/Image:$MountFolder"
 }
 
 # Packages required to support some products not yet compiled with Nano Support built in.
 If ('ReverseForwarders' -in $Packages) {
 	Write-Verbose 'Adding Package Microsoft-OneCore-ReverseForwarders-Package.cab to Image'
-	& "$DismFolder\Dism.exe" "/Add-Package" "/PackagePath:$($DriveLetter):\NanoServer\packages\Microsoft-OneCore-ReverseForwarders-Package.cab" "/Image:$MountFolder"
-	& "$DismFolder\Dism.exe" "/Add-Package" "/PackagePath:$($DriveLetter):\NanoServer\packages\en-US\Microsoft-OneCore-ReverseForwarders-Package.cab" "/Image:$MountFolder"
+	& "$DismFolder\Dism.exe" '/Add-Package' "/PackagePath:$($DriveLetter):\NanoServer\packages\Microsoft-OneCore-ReverseForwarders-Package.cab" "/Image:$MountFolder"
+	& "$DismFolder\Dism.exe" '/Add-Package' "/PackagePath:$($DriveLetter):\NanoServer\packages\en-US\Microsoft-OneCore-ReverseForwarders-Package.cab" "/Image:$MountFolder"
 }
 
 # These are the packages to run the Nano server in a Hyper-V VM.
 If ('Guest' -in $Packages) {
 	Write-Verbose 'Adding Package Microsoft-NanoServer-Guest-Package.cab to Image'
-	& "$DismFolder\Dism.exe" "/Add-Package" "/PackagePath:$($DriveLetter):\NanoServer\packages\Microsoft-NanoServer-Guest-Package.cab" "/Image:$MountFolder"
-	& "$DismFolder\Dism.exe" "/Add-Package" "/PackagePath:$($DriveLetter):\NanoServer\packages\en-US\Microsoft-NanoServer-Guest-Package.cab" "/Image:$MountFolder"
+	& "$DismFolder\Dism.exe" '/Add-Package' "/PackagePath:$($DriveLetter):\NanoServer\packages\Microsoft-NanoServer-Guest-Package.cab" "/Image:$MountFolder"
+	& "$DismFolder\Dism.exe" '/Add-Package' "/PackagePath:$($DriveLetter):\NanoServer\packages\en-US\Microsoft-NanoServer-Guest-Package.cab" "/Image:$MountFolder"
 }
 
 # Apply Unattended File
@@ -361,7 +361,7 @@ Set-Content -Path "$MountFolder\Windows\Setup\Scripts\SetupComplete.cmd" -Value 
 
 # Dismount the image after adding the Packages to it and configuring it
 Write-Verbose 'Dismounting Nano Server Image'
-& "$DismFolder\Dism.exe" "/Unmount-Image" "/MountDir:$MountFolder" "/Commit"
+& "$DismFolder\Dism.exe" '/Unmount-Image' "/MountDir:$MountFolder" '/Commit'
 
 # Dismount the ISO File
 Write-Verbose 'Dismounting Server ISO'
