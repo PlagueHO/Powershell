@@ -71,6 +71,9 @@
 	This is the index name of the edition to install from the NanoServer.WIM. It defaults to CORESYSTEMSERVER_INSTALL and should
 	not usually be changed.
 
+	.PARAMETER Timezone
+	This is the timezone the new NanoServer will be set to. If not provided it will default to Pacific Standard Time.
+
 	As of TP3, there are two editions found inside the NanoServer.WIM:
 	CORESYSTEMSERVER_INSTALL
 	CORESYSTEMSERVER_BOOT
@@ -161,7 +164,7 @@ Param (
 	[ValidateNotNullOrEmpty()]
 	[String]$UnattendedContent,
 
-	[ValidateNotNullOrEmpty()]
+	[ValidateNotNullOrEmpty()],
 	[String]$Edition = 'CORESYSTEMSERVER_INSTALL'
 		
 	[ValidateNotNullOrEmpty()]
