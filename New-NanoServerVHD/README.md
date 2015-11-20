@@ -33,6 +33,7 @@ Github Repo: https://github.com/PlagueHO/Powershell/tree/master/New-NanoServerVH
 Script Center: https://gallery.technet.microsoft.com/scriptcenter/DSC-Tools-c96e2c53
 
 ### Change Log
+2015-11-20: Ability to cache base NanoServer.VHD/VHDx file to speed up creation of multiple VHD files with different packages/settings.
 2015-11-20: Added support for Windows Server 2016 TP4.
 2015-11-13: Added Optional Timezone Parameter. Defaults to 'Pacific Standard Time'.
 2015-09-18: Added support for setting IP Subnet Mask, Default Gateway and DNS Settings on first boot.

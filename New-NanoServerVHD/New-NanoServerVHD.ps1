@@ -6,7 +6,7 @@
 		Creates a bootable VHD/VHDx containing Windows Server Nano 2016 using the publically available Windows Server 2016 Technical Preview 4 ISO.
 
 		This script needs the Convert-WindowsImage.ps1 script to be in the same folder. It can be downloaded from:
-        https://raw.githubusercontent.com/PlagueHO/Powershell/master/New-NanoServerVHD/Convert-WindowsImage.ps1
+        https://github.com/PlagueHO/Powershell/tree/master/New-NanoServerVHD/Convert-WindowsImage.ps1
 
         Note: Due to a bug in the current version of the Convert-WindowsImage.ps1 on Microsoft Script Center, I am
         hosting a modified copy of this script on GitHub. The unfixed version can be downloaded from:
@@ -90,6 +90,11 @@
 
 	.PARAMETER Timezone
 	This is the timezone the new NanoServer will be set to. If not provided it will default to Pacific Standard Time.
+
+    .PARAMETER CacheFolder
+    If this parameter is passed then the base NanoServer.VHD/VHDx file will be cached in this folder so that
+    building new NanoServer images are faster. If the base NanoServer.VHD/VHDx file does not exist in this folder
+    it will be created using Convert-WindowsImage.
 
 	.EXAMPLE
 		.\New-NanoServerVHD.ps1 `
@@ -181,12 +186,22 @@ Param (
 	[String]$Edition = 'CORESYSTEMSERVER_INSTALL',
 		
 	[ValidateNotNullOrEmpty()]
-	[String]$Timezone = 'Pacific Standard Time'
+	[String]$Timezone = 'Pacific Standard Time',
+
+    [ValidateNotNullOrEmpty()]
+    [String]$CacheFolder
 )
 
 If (-not (Test-Path -Path .\Convert-WindowsImage.ps1 -PathType Leaf)) {
 	Write-Error -Message 'The Convert-WindowsImage.ps1 script was not found in the current folder. Please download it from https://raw.githubusercontent.com/PlagueHO/Powershell/master/New-NanoServerVHD/Convert-WindowsImage.ps1'
 	Return
+}
+
+# Check the Cache Folder exists
+if ($CacheFolder) {
+    if (-not (Test-Path -Path $CacheFolder)) {
+        Throw "The CacheFolder $CacheFolder could not be found. Please specify a valid folder."
+    }
 }
 
 # Generate the file content for the Setup Complete script that runs on the VM
@@ -258,17 +273,40 @@ $null = Copy-Item -Path "$($DriveLetter):\Sources\*provider*" -Destination $Dism
 # Use Convert-WindowsImage.ps1 to convert the NanoServer.WIM into a VHD
 Write-Verbose -Message 'Creating base Nano Server Image from WIM file'
 
-# As of 2015-06-16 Convert-WindowsImage contains a function instead of being a standalone script.
-# . source the Convert-WindowsImage.ps1 so it can be called
-. .\Convert-WindowsImage
-Convert-WindowsImage -Sourcepath "$($DriveLetter):\NanoServer\NanoServer.wim" -VHD (Join-Path -Path $WorkFolder -ChildPath $TempVHDName ) –VHDFormat $VHDFormat -Edition $Edition -VHDPartitionStyle $VHDPartitionStyle
+$TempVHD = Join-Path -Path $WorkFolder -ChildPath $TempVHDName
+if ($CacheFolder) {
+    $CachedVHD = Join-Path -Path $CacheFolder -ChildPath $TempVHDName
+    if (-not (Test-Path -Path $CachedVHD)) {
+        # As of 2015-06-16 Convert-WindowsImage contains a function instead of being a standalone script.
+        # . source the Convert-WindowsImage.ps1 so it can be called
+        . .\Convert-WindowsImage
+        Convert-WindowsImage `
+            -Sourcepath "$($DriveLetter):\NanoServer\NanoServer.wim" `
+            -VHD $CachedVHD `
+            –VHDFormat $VHDFormat `
+            -Edition $Edition `
+            -VHDPartitionStyle $VHDPartitionStyle        
+    }
+    $null = Copy-Item -Path $CachedVHD -Destination $TempVHD
+} else {
+    # As of 2015-06-16 Convert-WindowsImage contains a function instead of being a standalone script.
+    # . source the Convert-WindowsImage.ps1 so it can be called
+    . .\Convert-WindowsImage
+    Convert-WindowsImage `
+        -Sourcepath "$($DriveLetter):\NanoServer\NanoServer.wim" `
+        -VHD $TempVHD `
+        –VHDFormat $VHDFormat `
+        -Edition $Edition `
+        -VHDPartitionStyle $VHDPartitionStyle        
+}
+
 
 If (-not (Test-Path -Path $MountFolder -PathType Container)) {
 	$null = New-Item -Path $MountFolder -ItemType Directory
 }
 
 # Mount the VHD to load packages into it
-& "$DismFolder\Dism.exe" '/Mount-Image' "/ImageFile:$WorkFolder\$TempVHDName" '/Index:1' "/MountDir:$MountFolder"
+& "$DismFolder\Dism.exe" '/Mount-Image' "/ImageFile:$TempVHD" '/Index:1' "/MountDir:$MountFolder"
 
 $PackageList = @(
     @{ Name = 'Compute'; Filename = 'Microsoft-NanoServer-Compute-Package.cab' },
@@ -288,9 +326,9 @@ $PackageList = @(
     @{ Name = 'SCVMM-Compute'; Filename = 'Microsoft-NanoServer-SCVMM-Compute-Package.cab' }
 )
 
-# Add the basic packages
-foreach ($Pacakge in $PackageList) {
-    If ($Pacakge.Name -in $Packages) {
+# Add the selected packages
+foreach ($Package in $PackageList) {
+    If ($Package.Name -in $Packages) {
 	    Write-Verbose -Message "Adding Package $($Package.Filename) to Image"
 	    & "$DismFolder\Dism.exe" '/Add-Package' "/PackagePath:$($DriveLetter):\NanoServer\packages\$($Package.Filename)" "/Image:$MountFolder"
 	    & "$DismFolder\Dism.exe" '/Add-Package' "/PackagePath:$($DriveLetter):\NanoServer\packages\en-us\$($Package.Filename)" "/Image:$MountFolder"
@@ -354,7 +392,7 @@ Write-Verbose -Message 'Dismounting Server ISO'
 Dismount-DiskImage -ImagePath $ServerISO
 
 Write-Verbose -Message "Moving Nano Server Image to $DestVHD"
-$null = Copy-Item -Path $WorkFolder\$TempVHDName -Destination $DestVHD -Force
+$null = Copy-Item -Path $TempVHD -Destination $DestVHD -Force
 
 # Cleanup
 Write-Verbose -Message 'Cleaning up Working Folders'
