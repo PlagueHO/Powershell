@@ -6,7 +6,7 @@
 		Creates a bootable VHD/VHDx containing Windows Server Nano 2016 using the publically available Windows Server 2016 Technical Preview 4 ISO.
 
 		This script needs the Convert-WindowsImage.ps1 script to be in the same folder. It can be downloaded from:
-        https://github.com/PlagueHO/Powershell/tree/master/New-NanoServerVHD/Convert-WindowsImage.ps1
+        https://raw.githubusercontent.com/PlagueHO/Powershell/master/New-NanoServerVHD/Convert-WindowsImage.ps1
 
         Note: Due to a bug in the current version of the Convert-WindowsImage.ps1 on Microsoft Script Center, I am
         hosting a modified copy of this script on GitHub. The unfixed version can be downloaded from:
@@ -185,7 +185,7 @@ Param (
 )
 
 If (-not (Test-Path -Path .\Convert-WindowsImage.ps1 -PathType Leaf)) {
-	Write-Error -Message 'The Convert-WindowsImage.ps1 script was not found in the current folder. Please download it from https://gallery.technet.microsoft.com/scriptcenter/Convert-WindowsImageps1-0fe23a8f'
+	Write-Error -Message 'The Convert-WindowsImage.ps1 script was not found in the current folder. Please download it from https://raw.githubusercontent.com/PlagueHO/Powershell/master/New-NanoServerVHD/Convert-WindowsImage.ps1'
 	Return
 }
 

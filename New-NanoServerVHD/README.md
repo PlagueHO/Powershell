@@ -10,7 +10,7 @@ Note: As of Windows Server 2016 Technical Preview 3, the NanoServer folder in th
 Creates a bootable VHD/VHDx containing Windows Server Nano 2016 using the publicly available Windows Server 2016 Technical Preview 3 ISO.
 
 This script needs the Convert-WindowsImage.ps1 script to be in the same folder. It can be downloaded from:
-https://github.com/PlagueHO/Powershell/tree/master/New-NanoServerVHD/Convert-WindowsImage.ps1
+https://raw.githubusercontent.com/PlagueHO/Powershell/master/New-NanoServerVHD/Convert-WindowsImage.ps1
 
 Note: Due to a bug in the current version of the Convert-WindowsImage.ps1 on Microsoft Script Center, I am hosting a modified copy of this script on GitHub. The unfixed version can be downloaded from:
 https://gallery.technet.microsoft.com/scriptcenter/Convert-WindowsImageps1-0fe23a8f
@@ -19,7 +19,7 @@ IT WILL NOT CURRENTLY WORK WITH NANO SERVER TP4.
 If you recieve the error:
 **ERROR  : The variable cannot be validated because the value $null is not a valid value for the Edition variable**
 This indicates you are using an Unfixed version of the Convert-WindowsImage.ps1 script with Nano Server TP4 - please use the copy hosted at:
-https://github.com/PlagueHO/Powershell/tree/master/New-NanoServerVHD/Convert-WindowsImage.ps1
+https://raw.githubusercontent.com/PlagueHO/Powershell/master/New-NanoServerVHD/Convert-WindowsImage.ps1
 
 Please make sure you have the 2015-06-16 version of the Convert-WindowsImage.ps1 script. Earlier versions will no longer work!
 
