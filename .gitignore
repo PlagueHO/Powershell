@@ -5,4 +5,3 @@ Compare-ShareACLs/Baseline-PLAGUE-PDC/Baseline.htm
 ACLReportTools/Package/ACLReportTools.zip
 *.suo
 InstallUsingGPOTools/Package/
-New-NanoServerVHD/Convert-WindowsImage.ps1

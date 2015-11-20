@@ -3,10 +3,15 @@
 		Creates a bootable VHD/VHDx containing Windows Server Nano 2016.
 
 	.DESCRIPTION
-		Creates a bootable VHD/VHDx containing Windows Server Nano 2016 using the publically available Windows Server 2016 Technical Preview 3 ISO.
+		Creates a bootable VHD/VHDx containing Windows Server Nano 2016 using the publically available Windows Server 2016 Technical Preview 4 ISO.
 
 		This script needs the Convert-WindowsImage.ps1 script to be in the same folder. It can be downloaded from:
+        https://github.com/PlagueHO/Powershell/tree/master/New-NanoServerVHD/Convert-WindowsImage.ps1
+
+        Note: Due to a bug in the current version of the Convert-WindowsImage.ps1 on Microsoft Script Center, I am
+        hosting a modified copy of this script on GitHub. The unfixed version can be downloaded from:
 		https://gallery.technet.microsoft.com/scriptcenter/Convert-WindowsImageps1-0fe23a8f
+        IT WILL NOT CURRENTLY WORK WITH NANO SERVER TP4.
 
 		This function turns the instructions on the following link into a repeatable script:
 		https://technet.microsoft.com/en-us/library/mt126167.aspx
@@ -17,7 +22,7 @@
 		Github Repo: https://github.com/PlagueHO/Powershell/tree/master/New-NanoServerVHD
 
 	.PARAMETER ServerISO
-	This is the path to the Windows Server 2016 Technical Preview 3 ISO downloaded from:
+	This is the path to the Windows Server 2016 Technical Preview 4 ISO downloaded from:
 	https://www.microsoft.com/en-us/evalcenter/evaluate-windows-server-technical-preview
 
 	.PARAMETER DestVHD
@@ -34,6 +39,15 @@
 	FailoverCluster = FailOver Cluster Server
 	ReverseForwarders = ReverseForwarders to allow some older App Servers to run
 	Guest = Hyper-V Guest Tools
+    Containers = Support for Hyper-V and Windows containers
+    Defender = Windows Defender
+    DCB = DCB
+    DNS = DNS Server
+    DSC = PowerShell Desired State Configuration Support
+    IIS = Internet Information Server (Web Server)
+    NPDS = NPDS
+    SCVMM = System Center VMM
+    SCVMM-Compute = Sysmte Center VMM Compute
 
 	If not specified then packages OEM-Drivers, Storage and Guest packages are installed.
 
@@ -71,16 +85,15 @@
 	This is the index name of the edition to install from the NanoServer.WIM. It defaults to CORESYSTEMSERVER_INSTALL and should
 	not usually be changed.
 
+	As of TP4, there is only a single version in the NanoServer.WIM:
+	CORESYSTEMSERVER_INSTALL
+
 	.PARAMETER Timezone
 	This is the timezone the new NanoServer will be set to. If not provided it will default to Pacific Standard Time.
 
-	As of TP3, there are two editions found inside the NanoServer.WIM:
-	CORESYSTEMSERVER_INSTALL
-	CORESYSTEMSERVER_BOOT
-
 	.EXAMPLE
 		.\New-NanoServerVHD.ps1 `
-			-ServerISO 'D:\ISOs\Windows Server 2016 TP3\10514.0.150808-1529.TH2_RELEASE_SERVER_OEMRET_X64FRE_EN-US.ISO' `
+			-ServerISO 'D:\ISOs\Windows Server 2016 TP4\10586.0.151029-1700.TH2_RELEASE_SERVER_OEMRET_X64FRE_EN-US.ISO' `
 			-DestVHD D:\Temp\NanoServer01.vhd `
 			-ComputerName NANOTEST01 `
 			-AdministratorPassword 'P@ssword!1' `
@@ -97,7 +110,7 @@
 
 	.EXAMPLE
 		.\New-NanoServerVHD.ps1 `
-			-ServerISO 'D:\ISOs\Windows Server 2016 TP3\10514.0.150808-1529.TH2_RELEASE_SERVER_OEMRET_X64FRE_EN-US' `
+			-ServerISO 'D:\ISOs\Windows Server 2016 TP4\10586.0.151029-1700.TH2_RELEASE_SERVER_OEMRET_X64FRE_EN-US.ISO' `
 			-DestVHD D:\Temp\NanoServer02.vhdx `
 			-VHDFormat VHDX `
 			-ComputerName NANOTEST02 `
@@ -131,7 +144,7 @@ Param (
 	[ValidateSet('VHD', 'VHDX')]
 	[String]$VHDFormat  = 'VHD',
 
-	[ValidateSet('Compute','OEM-Drivers','Storage','FailoverCluster','ReverseForwarders','Guest','Containers','Defender')]
+	[ValidateSet('Compute','OEM-Drivers','Storage','FailoverCluster','ReverseForwarders','Guest','Containers','Defender','DCB','DNS','DSC','IIS','NPDS','SCVMM','SCVMM-Compute')]
 	[String[]]$Packages = @('OEM-Drivers','Storage','Guest'),
 
 	[ValidateNotNullOrEmpty()]
@@ -141,7 +154,7 @@ Param (
 		Mandatory = $true,
 		HelpMessage='Enter the Administrator password of the new Nano Server.'
 		)]
-		[String]$AdministratorPassword,
+	[String]$AdministratorPassword,
 
 	[ValidateNotNullOrEmpty()]
 	[String]$IPAddress,
@@ -172,7 +185,7 @@ Param (
 )
 
 If (-not (Test-Path -Path .\Convert-WindowsImage.ps1 -PathType Leaf)) {
-	Write-Error 'The Convert-WindowsImage.ps1 script was not found in the current folder. Please download it from https://gallery.technet.microsoft.com/scriptcenter/Convert-WindowsImageps1-0fe23a8f'
+	Write-Error -Message 'The Convert-WindowsImage.ps1 script was not found in the current folder. Please download it from https://gallery.technet.microsoft.com/scriptcenter/Convert-WindowsImageps1-0fe23a8f'
 	Return
 }
 
@@ -223,27 +236,27 @@ Switch ($VHDFormat) {
 }
 
 # Create working folder
-Write-Verbose 'Creating Working Folders'
+Write-Verbose -Message 'Creating Working Folders'
 If (-not (Test-Path -Path $WorkFolder -PathType Container)) {
-	New-Item -Path $WorkFolder -ItemType Directory
+	$null = New-Item -Path $WorkFolder -ItemType Directory
 }
 
 # Mount the Windows Server 2016 ISO and get the drive letter
-Write-Verbose 'Mounting Server ISO'
-Mount-DiskImage -ImagePath $ServerISO
+Write-Verbose -Message 'Mounting Server ISO'
+$null = Mount-DiskImage -ImagePath $ServerISO
 [String]$DriveLetter = (Get-Diskimage -ImagePath $ServerISO | Get-Volume).DriveLetter
 
 # Copy DISM off the Windows ISO and put it into the working folder.
 Write-Verbose 'Copying DISM from Server ISO to Working Folders'
 If (-not (Test-Path -Path $DismFolder -PathType Container)) {
-	New-Item -Path $DismFolder -ItemType Directory
+	$null = New-Item -Path $DismFolder -ItemType Directory
 }
-Copy-Item -Path "$($DriveLetter):\Sources\api*downlevel*.dll" -Destination $DismFolder -Force
-Copy-Item -Path "$($DriveLetter):\Sources\*dism*" -Destination $DismFolder -Force
-Copy-Item -Path "$($DriveLetter):\Sources\*provider*" -Destination $DismFolder -Force
+$null = Copy-Item -Path "$($DriveLetter):\Sources\api*downlevel*.dll" -Destination $DismFolder -Force
+$null = Copy-Item -Path "$($DriveLetter):\Sources\*dism*" -Destination $DismFolder -Force
+$null = Copy-Item -Path "$($DriveLetter):\Sources\*provider*" -Destination $DismFolder -Force
 
 # Use Convert-WindowsImage.ps1 to convert the NanoServer.WIM into a VHD
-Write-Verbose 'Creating base Nano Server Image from WIM file'
+Write-Verbose -Message 'Creating base Nano Server Image from WIM file'
 
 # As of 2015-06-16 Convert-WindowsImage contains a function instead of being a standalone script.
 # . source the Convert-WindowsImage.ps1 so it can be called
@@ -251,64 +264,37 @@ Write-Verbose 'Creating base Nano Server Image from WIM file'
 Convert-WindowsImage -Sourcepath "$($DriveLetter):\NanoServer\NanoServer.wim" -VHD (Join-Path -Path $WorkFolder -ChildPath $TempVHDName ) –VHDFormat $VHDFormat -Edition $Edition -VHDPartitionStyle $VHDPartitionStyle
 
 If (-not (Test-Path -Path $MountFolder -PathType Container)) {
-	New-Item -Path $MountFolder -ItemType Directory
+	$null = New-Item -Path $MountFolder -ItemType Directory
 }
 
 # Mount the VHD to load packages into it
 & "$DismFolder\Dism.exe" '/Mount-Image' "/ImageFile:$WorkFolder\$TempVHDName" '/Index:1' "/MountDir:$MountFolder"
 
+$PackageList = @(
+    @{ Name = 'Compute'; Filename = 'Microsoft-NanoServer-Compute-Package.cab' },
+    @{ Name = 'OEM-Drivers'; Filename = 'Microsoft-NanoServer-OEM-Drivers-Package.cab' },
+    @{ Name = 'Storage'; Filename = 'Microsoft-NanoServer-Storage-Package.cab' },
+    @{ Name = 'FailoverCluster'; Filename = 'Microsoft-NanoServer-FailoverCluster-Package.cab' },
+    @{ Name = 'ReverseForwarders'; Filename = 'Microsoft-OneCore-ReverseForwarders-Package.cab' },
+    @{ Name = 'Guest'; Filename = 'Microsoft-NanoServer-Guest-Package.cab' },
+    @{ Name = 'Containers'; Filename = 'Microsoft-NanoServer-Containers-Package.cab' },
+    @{ Name = 'Defender'; Filename = 'Microsoft-NanoServer-Defender-Package.cab' },
+    @{ Name = 'DCB'; Filename = 'Microsoft-NanoServer-DCB-Package.cab' },
+    @{ Name = 'DNS'; Filename = 'Microsoft-NanoServer-DNS-Package.cab' },
+    @{ Name = 'DSC'; Filename = 'Microsoft-NanoServer-DSC-Package.cab' },
+    @{ Name = 'IIS'; Filename = 'Microsoft-NanoServer-IIS-Package.cab' },
+    @{ Name = 'NPDS'; Filename = 'Microsoft-NanoServer-NPDS-Package.cab' },
+    @{ Name = 'SCVMM'; Filename = 'Microsoft-NanoServer-SCVMM-Package.cab' },
+    @{ Name = 'SCVMM-Compute'; Filename = 'Microsoft-NanoServer-SCVMM-Compute-Package.cab' }
+)
+
 # Add the basic packages
-If ('Compute' -in $Packages) {
-	Write-Verbose 'Adding Package Microsoft-NanoServer-Compute-Package.cab to Image'
-	& "$DismFolder\Dism.exe" '/Add-Package' "/PackagePath:$($DriveLetter):\NanoServer\packages\Microsoft-NanoServer-Compute-Package.cab" "/Image:$MountFolder"
-	& "$DismFolder\Dism.exe" '/Add-Package' "/PackagePath:$($DriveLetter):\NanoServer\packages\en-us\Microsoft-NanoServer-Compute-Package.cab" "/Image:$MountFolder"
-}
-If ('OEM-Drivers' -in $Packages) {
-	Write-Verbose 'Adding Package Microsoft-NanoServer-OEM-Drivers-Package.cab to Image'
-	& "$DismFolder\Dism.exe" '/Add-Package' "/PackagePath:$($DriveLetter):\NanoServer\packages\Microsoft-NanoServer-OEM-Drivers-Package.cab" "/Image:$MountFolder"
-	& "$DismFolder\Dism.exe" '/Add-Package' "/PackagePath:$($DriveLetter):\NanoServer\packages\en-US\Microsoft-NanoServer-OEM-Drivers-Package.cab" "/Image:$MountFolder"
-}
-
-# Packages for Containers
-If ('Containers' -in $Packages) {
-	Write-Verbose 'Adding Package Microsoft-NanoServer-Containers-Package.cab to Image'
-	& "$DismFolder\Dism.exe" '/Add-Package' "/PackagePath:$($DriveLetter):\NanoServer\packages\Microsoft-NanoServer-Containers-Package.cab" "/Image:$MountFolder"
-	& "$DismFolder\Dism.exe" '/Add-Package' "/PackagePath:$($DriveLetter):\NanoServer\packages\en-us\Microsoft-NanoServer-Containers-Package.cab" "/Image:$MountFolder"
-}
-
-# Packages for Defender
-If ('Defender' -in $Packages) {
-	Write-Verbose 'Adding Package Microsoft-NanoServer-Defender-Package.cab to Image'
-	& "$DismFolder\Dism.exe" '/Add-Package' "/PackagePath:$($DriveLetter):\NanoServer\packages\Microsoft-NanoServer-Defender-Package.cab" "/Image:$MountFolder"
-	& "$DismFolder\Dism.exe" '/Add-Package' "/PackagePath:$($DriveLetter):\NanoServer\packages\en-us\Microsoft-NanoServer-Defender-Package.cab" "/Image:$MountFolder"
-}
-
-# Packages for Failover Cluster
-If ('FailoverCluster' -in $Packages) {
-	Write-Verbose 'Adding Package Microsoft-NanoServer-FailoverCluster-Package.cab to Image'
-	& "$DismFolder\Dism.exe" '/Add-Package' "/PackagePath:$($DriveLetter):\NanoServer\packages\Microsoft-NanoServer-FailoverCluster-Package.cab" "/Image:$MountFolder"
-	& "$DismFolder\Dism.exe" '/Add-Package' "/PackagePath:$($DriveLetter):\NanoServer\packages\en-US\Microsoft-NanoServer-FailoverCluster-Package.cab" "/Image:$MountFolder"
-}
-
-# Packages for Storage Server
-If ('Storage' -in $Packages) {
-	Write-Verbose 'Adding Package Microsoft-NanoServer-Storage-Package.cab to Image'
-	& "$DismFolder\Dism.exe" '/Add-Package' "/PackagePath:$($DriveLetter):\NanoServer\packages\Microsoft-NanoServer-Storage-Package.cab" "/Image:$MountFolder"
-	& "$DismFolder\Dism.exe" '/Add-Package' "/PackagePath:$($DriveLetter):\NanoServer\packages\en-US\Microsoft-NanoServer-Storage-Package.cab" "/Image:$MountFolder"
-}
-
-# Packages required to support some products not yet compiled with Nano Support built in.
-If ('ReverseForwarders' -in $Packages) {
-	Write-Verbose 'Adding Package Microsoft-OneCore-ReverseForwarders-Package.cab to Image'
-	& "$DismFolder\Dism.exe" '/Add-Package' "/PackagePath:$($DriveLetter):\NanoServer\packages\Microsoft-OneCore-ReverseForwarders-Package.cab" "/Image:$MountFolder"
-	& "$DismFolder\Dism.exe" '/Add-Package' "/PackagePath:$($DriveLetter):\NanoServer\packages\en-US\Microsoft-OneCore-ReverseForwarders-Package.cab" "/Image:$MountFolder"
-}
-
-# These are the packages to run the Nano server in a Hyper-V VM.
-If ('Guest' -in $Packages) {
-	Write-Verbose 'Adding Package Microsoft-NanoServer-Guest-Package.cab to Image'
-	& "$DismFolder\Dism.exe" '/Add-Package' "/PackagePath:$($DriveLetter):\NanoServer\packages\Microsoft-NanoServer-Guest-Package.cab" "/Image:$MountFolder"
-	& "$DismFolder\Dism.exe" '/Add-Package' "/PackagePath:$($DriveLetter):\NanoServer\packages\en-US\Microsoft-NanoServer-Guest-Package.cab" "/Image:$MountFolder"
+foreach ($Pacakge in $PackageList) {
+    If ($Pacakge.Name -in $Packages) {
+	    Write-Verbose -Message "Adding Package $($Package.Filename) to Image"
+	    & "$DismFolder\Dism.exe" '/Add-Package' "/PackagePath:$($DriveLetter):\NanoServer\packages\$($Package.Filename)" "/Image:$MountFolder"
+	    & "$DismFolder\Dism.exe" '/Add-Package' "/PackagePath:$($DriveLetter):\NanoServer\packages\en-us\$($Package.Filename)" "/Image:$MountFolder"
+    }
 }
 
 # Apply Unattended File
@@ -348,30 +334,30 @@ $UnattendedContent = [String] @"
 "@
 }
 
-Write-Verbose 'Assigning Unattended.XML file to Nano Server'
+Write-Verbose -Message 'Assigning Unattended.XML file to Nano Server'
 $UnattendFile = Join-Path -Path $WorkFolder -ChildPath 'Unattend.xml'
 Set-Content -Path $UnattendFile -Value $UnattendedContent
 & "$DismFolder\Dism.exe" "/Image:$MountFolder" "/Apply-Unattend:$UnattendFile"
-New-Item -Path "$MountFolder\windows\panther" -ItemType Directory
-Copy-Item -Path $UnattendFile -Destination "$MountFolder\windows\panther"
+$null = New-Item -Path "$MountFolder\windows\panther" -ItemType Directory
+$null = Copy-Item -Path $UnattendFile -Destination "$MountFolder\windows\panther"
 
 # Write the Setup Complete script to the image
-New-Item "$MountFolder\Windows\Setup\Scripts" -ItemType Directory
+$null = New-Item "$MountFolder\Windows\Setup\Scripts" -ItemType Directory
 Set-Content -Path "$MountFolder\Windows\Setup\Scripts\SetupComplete.cmd" -Value $SetupComplete
 
 # Dismount the image after adding the Packages to it and configuring it
-Write-Verbose 'Dismounting Nano Server Image'
+Write-Verbose -Message 'Dismounting Nano Server Image'
 & "$DismFolder\Dism.exe" '/Unmount-Image' "/MountDir:$MountFolder" '/Commit'
 
 # Dismount the ISO File
-Write-Verbose 'Dismounting Server ISO'
+Write-Verbose -Message 'Dismounting Server ISO'
 Dismount-DiskImage -ImagePath $ServerISO
 
-Write-Verbose "Moving Nano Server Image to $DestVHD"
-Copy-Item -Path $WorkFolder\$TempVHDName -Destination $DestVHD -Force
+Write-Verbose -Message "Moving Nano Server Image to $DestVHD"
+$null = Copy-Item -Path $WorkFolder\$TempVHDName -Destination $DestVHD -Force
 
 # Cleanup
-Write-Verbose 'Cleaning up Working Folders'
-Remove-Item -Path $MountFolder -Recurse -Force
-Remove-Item -Path $DismFolder -Recurse -Force
-Remove-Item -Path $WorkFolder -Recurse -Force
+Write-Verbose -Message 'Cleaning up Working Folders'
+$null = Remove-Item -Path $MountFolder -Recurse -Force
+$null = Remove-Item -Path $DismFolder -Recurse -Force
+$null = Remove-Item -Path $WorkFolder -Recurse -Force

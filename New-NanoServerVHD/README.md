@@ -10,7 +10,16 @@ Note: As of Windows Server 2016 Technical Preview 3, the NanoServer folder in th
 Creates a bootable VHD/VHDx containing Windows Server Nano 2016 using the publicly available Windows Server 2016 Technical Preview 3 ISO.
 
 This script needs the Convert-WindowsImage.ps1 script to be in the same folder. It can be downloaded from:
+https://github.com/PlagueHO/Powershell/tree/master/New-NanoServerVHD/Convert-WindowsImage.ps1
+
+Note: Due to a bug in the current version of the Convert-WindowsImage.ps1 on Microsoft Script Center, I am hosting a modified copy of this script on GitHub. The unfixed version can be downloaded from:
 https://gallery.technet.microsoft.com/scriptcenter/Convert-WindowsImageps1-0fe23a8f
+IT WILL NOT CURRENTLY WORK WITH NANO SERVER TP4.
+
+If you recieve the error:
+**ERROR  : The variable cannot be validated because the value $null is not a valid value for the Edition variable**
+This indicates you are using an Unfixed version of the Convert-WindowsImage.ps1 script with Nano Server TP4 - please use the copy hosted at:
+https://github.com/PlagueHO/Powershell/tree/master/New-NanoServerVHD/Convert-WindowsImage.ps1
 
 Please make sure you have the 2015-06-16 version of the Convert-WindowsImage.ps1 script. Earlier versions will no longer work!
 
@@ -24,6 +33,7 @@ Github Repo: https://github.com/PlagueHO/Powershell/tree/master/New-NanoServerVH
 Script Center: https://gallery.technet.microsoft.com/scriptcenter/DSC-Tools-c96e2c53
 
 ### Change Log
+2015-11-20: Added support for Windows Server 2016 TP4.
 2015-11-13: Added Optional Timezone Parameter. Defaults to 'Pacific Standard Time'.
 2015-09-18: Added support for setting IP Subnet Mask, Default Gateway and DNS Settings on first boot.
 2015-08-20: Updated to support packages available in Windows Server 2016 TP3.
@@ -59,7 +69,7 @@ limitations under the License.
 ### Example Usage
 ```powershell
 .\New-NanoServerVHD.ps1 `
-    -ServerISO 'D:\ISOs\Windows Server 2016 TP3\10514.0.150808-1529.TH2_RELEASE_SERVER_OEMRET_X64FRE_EN-US.ISO' `
+    -ServerISO 'D:\ISOs\Windows Server 2016 TP4\10586.0.151029-1700.TH2_RELEASE_SERVER_OEMRET_X64FRE_EN-US.ISO' `
     -DestVHD D:\Temp\NanoServer01.vhd `
     -ComputerName NANOTEST01 `
     -AdministratorPassword 'P@ssword!1' `
@@ -70,7 +80,7 @@ This command will create a new VHD containing a Nano Server machine with the nam
 
 ```powershell
 .\New-NanoServerVHD.ps1 `
-	-ServerISO 'D:\ISOs\Windows Server 2016 TP3\10514.0.150808-1529.TH2_RELEASE_SERVER_OEMRET_X64FRE_EN-US.ISO' `
+	-ServerISO 'D:\ISOs\Windows Server 2016 TP4\10586.0.151029-1700.TH2_RELEASE_SERVER_OEMRET_X64FRE_EN-US.ISO' `
 	-DestVHD D:\Temp\NanoServer01.vhd `
 	-ComputerName NANOTEST01 `
 	-AdministratorPassword 'P@ssword!1' `
@@ -86,7 +96,7 @@ This command will create a new VHD containing a Nano Server machine with the nam
 
 ```powershell
 .\New-NanoServerVHD.ps1 `
-	-ServerISO 'D:\ISOs\Windows Server 2016 TP3\10514.0.150808-1529.TH2_RELEASE_SERVER_OEMRET_X64FRE_EN-US' `
+	-ServerISO 'D:\ISOs\Windows Server 2016 TP4\10586.0.151029-1700.TH2_RELEASE_SERVER_OEMRET_X64FRE_EN-US.ISO' `
 	-DestVHD D:\Temp\NanoServer02.vhdx `
 	-VHDFormat VHDX `
 	-ComputerName NANOTEST02 `
