@@ -47,7 +47,7 @@
     IIS = Internet Information Server (Web Server)
     NPDS = NPDS
     SCVMM = System Center VMM
-    SCVMM-Compute = Sysmte Center VMM Compute
+    SCVMM-Compute = System Center VMM Compute
 
 	If not specified then packages OEM-Drivers, Storage and Guest packages are installed.
 
