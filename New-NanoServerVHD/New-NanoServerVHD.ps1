@@ -354,8 +354,8 @@ $PackageList = @(
     @{ Name = 'DSC'; Filename = 'Microsoft-NanoServer-DSC-Package.cab' },
     @{ Name = 'IIS'; Filename = 'Microsoft-NanoServer-IIS-Package.cab' },
     @{ Name = 'NPDS'; Filename = 'Microsoft-NanoServer-NPDS-Package.cab' },
-    @{ Name = 'SCVMM'; Filename = 'Microsoft-NanoServer-SCVMM-Package.cab' },
-    @{ Name = 'SCVMM-Compute'; Filename = 'Microsoft-NanoServer-SCVMM-Compute-Package.cab' }
+    @{ Name = 'SCVMM'; Filename = 'Microsoft-Windows-Server-SCVMM-Package.cab' },
+    @{ Name = 'SCVMM-Compute'; Filename = 'Microsoft-Windows-Server-SCVMM-Compute-Package.cab' }
 )
 
 # Add the selected packages
@@ -422,7 +422,8 @@ if ($DJoinFile)
     {
         Throw "The specified Domain Join File '$DJoinFile' could not be found"
     }
-    Invoke-ExternalCommand "djoin /RequestODJ /LoadFile '$DJoinFile' /WindowsPath '$MountFolder\Windows'"      
+    Write-Verbose -Message "Applying DJoin File '$DJoinFile' to '$MountFolder\Windows'"
+    & djoin /RequestODJ /LoadFile '$DJoinFile' /WindowsPath '$MountFolder\Windows'
 }
 
 # Dismount the image after adding the Packages to it and configuring it
