@@ -33,6 +33,7 @@ Github Repo: https://github.com/PlagueHO/Powershell/tree/master/New-NanoServerVH
 Script Center: https://gallery.technet.microsoft.com/scriptcenter/DSC-Tools-c96e2c53
 
 ### Change Log
+2015-11-21: Offline Domain Join support added.
 2015-11-20: Ability to cache base NanoServer.VHD/VHDx file to speed up creation of multiple VHD files with different packages/settings.
 2015-11-20: Added support for Windows Server 2016 TP4.
 2015-11-13: Added Optional Timezone Parameter. Defaults to 'Pacific Standard Time'.
@@ -109,3 +110,18 @@ This command will create a new VHD containing a Nano Server machine with the nam
 ```
 
 This command will create a new VHDx (for Generation 2 VMs) containing a Nano Server machine with the name NANOTEST02. It will contain only the Storage, OEM-Drivers and Guest packages. It will set the Administrator password to P@ssword!1 and set the IP address of the first ethernet NIC to 192.168.1.66/255.255.255.0 with no Gateway or DNS.
+
+```powershell
+.\New-NanoServerVHD.ps1 `
+	-ServerISO 'D:\ISOs\Windows Server 2016 TP4\10586.0.151029-1700.TH2_RELEASE_SERVER_OEMRET_X64FRE_EN-US.ISO' `
+	-DestVHD D:\Temp\NanoServer03.vhdx `
+	-VHDFormat VHDX `
+	-ComputerName NANOTEST03 `
+	-AdministratorPassword 'P@ssword!1' `
+	-Packages 'Compute','OEM-Drivers','Guest','Containers','ReverseForwarders' `
+	-IPAddress '192.168.1.66' `
+	-DJoinFile 'D:\Temp\DJOIN_NANOTEST03.TXT' `
+	-Verbose
+```
+
+This command will create a new VHDx (for Generation 2 VMs) containing a Nano Server machine with the name NANOTEST03. It will contain be configured to be a container host. It will set the Administrator password to P@ssword!1 and set the IP address of the first ethernet NIC to 192.168.1.66/255.255.255.0 with no Gateway or DNS. It will also be joined to a domain using the Offline Domain Join file D:\Temp\DJOIN_NANOTEST03.TXT.

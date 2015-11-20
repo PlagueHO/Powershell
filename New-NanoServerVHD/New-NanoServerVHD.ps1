@@ -47,7 +47,7 @@
     IIS = Internet Information Server (Web Server)
     NPDS = NPDS
     SCVMM = System Center VMM
-    SCVMM-Compute = System Center VMM Compute
+    SCVMM-Compute = Sysmte Center VMM Compute
 
 	If not specified then packages OEM-Drivers, Storage and Guest packages are installed.
 
@@ -96,6 +96,11 @@
     building new NanoServer images are faster. If the base NanoServer.VHD/VHDx file does not exist in this folder
     it will be created using Convert-WindowsImage.
 
+    .PARAMETER DJoinFile
+    This is the full path to the offline domain join blob file to use to join this server to the domain. The domain join
+    File can be created manually by executing:
+    DJOIN /provision /domain CONTOSO.COM /machine NANO01 /savefile c:\DJOIN_NANO01.TXT
+
 	.EXAMPLE
 		.\New-NanoServerVHD.ps1 `
 			-ServerISO 'D:\ISOs\Windows Server 2016 TP4\10586.0.151029-1700.TH2_RELEASE_SERVER_OEMRET_X64FRE_EN-US.ISO' `
@@ -126,6 +131,22 @@
 
 		This command will create a new VHDx (for Generation 2 VMs) containing a Nano Server machine with the name NANOTEST02. It will contain only the Storage, OEM-Drivers and Guest packages.
 		It will set the Administrator password to P@ssword!1 and set the IP address of the first ethernet NIC to 192.168.1.66/255.255.255.0 with no Gateway or DNS.
+
+	.EXAMPLE
+		.\New-NanoServerVHD.ps1 `
+			-ServerISO 'D:\ISOs\Windows Server 2016 TP4\10586.0.151029-1700.TH2_RELEASE_SERVER_OEMRET_X64FRE_EN-US.ISO' `
+			-DestVHD D:\Temp\NanoServer03.vhdx `
+			-VHDFormat VHDX `
+			-ComputerName NANOTEST03 `
+			-AdministratorPassword 'P@ssword!1' `
+			-Packages 'Compute','OEM-Drivers','Guest','Containers','ReverseForwarders' `
+			-IPAddress '192.168.1.66' `
+            -DJoinFile 'D:\Temp\DJOIN_NANOTEST03.TXT' `
+			-Verbose
+
+		This command will create a new VHDx (for Generation 2 VMs) containing a Nano Server machine with the name NANOTEST03. It will contain be configured to be a container host.
+		It will set the Administrator password to P@ssword!1 and set the IP address of the first ethernet NIC to 192.168.1.66/255.255.255.0 with no Gateway or DNS. It will also be joined to
+        a domain using the Offline Domain Join file D:\Temp\DJOIN_NANOTEST03.TXT.
 
 	.LINK
 	https://www.microsoft.com/en-us/evalcenter/evaluate-windows-server-technical-preview
@@ -189,7 +210,10 @@ Param (
 	[String]$Timezone = 'Pacific Standard Time',
 
     [ValidateNotNullOrEmpty()]
-    [String]$CacheFolder
+    [String]$CacheFolder,
+
+    [ValidateNotNullOrEmpty()]
+    [String]$DJoinFile
 )
 
 If (-not (Test-Path -Path .\Convert-WindowsImage.ps1 -PathType Leaf)) {
@@ -207,29 +231,37 @@ if ($CacheFolder) {
 # Generate the file content for the Setup Complete script that runs on the VM
 # Do this first because we can do address validation at the same time.
 [String]$SetupComplete = "@ECHO OFF`n"
-If ($IPaddress) {
-    if(!([System.Net.Ipaddress]::TryParse($IPaddress, [ref]0))) {
+If ($IPaddress)
+{
+    if(!([System.Net.Ipaddress]::TryParse($IPaddress, [ref]0)))
+    {
         Throw "The IP Address '$IPaddress' is not in a valid format"
     }
     # Defining these as variables in case at some point need to allow them to be overridden.
     $InterfaceAlias = 'Ethernet'
     $AddressFamiyly = 'IPv4'
     # For some reason setting this stuff via powershell doesn't work - so use NETSH.    
-    If ($GatewayAddress) {
-        if(!([System.Net.Ipaddress]::TryParse($GatewayAddress, [ref]0))) {
+    If ($GatewayAddress)
+    {
+        if(!([System.Net.Ipaddress]::TryParse($GatewayAddress, [ref]0)))
+        {
             Throw "The Gateway Address '$GatewayAddress' is not in a valid format"
         }
         $IPAddressConfigString += "netsh interface ip set address $InterfaceAlias static addr=$IPaddress mask=$SubnetMask gateway=$GatewayAddress`n"
     } else {
         $IPAddressConfigString += "netsh interface ip set address $InterfaceAlias static addr=$IPaddress mask=$SubnetMask`n"
     }
-    If ($DNSAddresses) {
+    If ($DNSAddresses)
+    {
         $Count = 1
-        foreach ($DNSAddress in $DNSAddresses) {
-            if(!([System.Net.Ipaddress]::TryParse($DNSAddress, [ref]0))) {
+        foreach ($DNSAddress in $DNSAddresses)
+        {
+            if(!([System.Net.Ipaddress]::TryParse($DNSAddress, [ref]0)))
+            {
                 Throw "The DNS Server Address '$DNSAddress' is not in a valid format"
             }
-            If ($Count -eq 1) {
+            If ($Count -eq 1)
+            {
                 $IPAddressConfigString += "netsh interface ip set dns $InterfaceAlias static addr=$DNSAddress`n"
             } Else {
                 $IPAddressConfigString += "netsh interface ip add dns $InterfaceAlias addr=$DNSAddress index=$Count`n"
@@ -382,6 +414,16 @@ $null = Copy-Item -Path $UnattendFile -Destination "$MountFolder\windows\panther
 # Write the Setup Complete script to the image
 $null = New-Item "$MountFolder\Windows\Setup\Scripts" -ItemType Directory
 Set-Content -Path "$MountFolder\Windows\Setup\Scripts\SetupComplete.cmd" -Value $SetupComplete
+
+# Join a domain using offline Domain Join (DJOIN)?
+if ($DJoinFile)
+{
+    if (-not (Test-Path -Path $DJoinFile))
+    {
+        Throw "The specified Domain Join File '$DJoinFile' could not be found"
+    }
+    Invoke-ExternalCommand "djoin /RequestODJ /LoadFile '$DJoinFile' /WindowsPath '$MountFolder\Windows'"      
+}
 
 # Dismount the image after adding the Packages to it and configuring it
 Write-Verbose -Message 'Dismounting Nano Server Image'
