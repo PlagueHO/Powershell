@@ -423,7 +423,7 @@ if ($DJoinFile)
         Throw "The specified Domain Join File '$DJoinFile' could not be found"
     }
     Write-Verbose -Message "Applying DJoin File '$DJoinFile' to '$MountFolder\Windows'"
-    & djoin /RequestODJ /LoadFile '$DJoinFile' /WindowsPath '$MountFolder\Windows'
+    & djoin @('/RequestODJ','/LoadFile',$DJoinFile,'/WindowsPath',"$MountFolder\Windows")
 }
 
 # Dismount the image after adding the Packages to it and configuring it
