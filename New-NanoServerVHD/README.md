@@ -33,6 +33,7 @@ Github Repo: https://github.com/PlagueHO/Powershell/tree/master/New-NanoServerVH
 Script Center: https://gallery.technet.microsoft.com/scriptcenter/DSC-Tools-c96e2c53
 
 ### Change Log
+2015-12-01: Added WorkFolder parameter to override default work folder path.
 2015-11-21: Offline Domain Join support added. Fix to adding SCVMM packages.
 2015-11-20: Ability to cache base NanoServer.VHD/VHDx file to speed up creation of multiple VHD files with different packages/settings.
 2015-11-20: Added support for Windows Server 2016 TP4.

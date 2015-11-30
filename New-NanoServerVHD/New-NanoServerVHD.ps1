@@ -100,6 +100,11 @@
     This is the full path to the offline domain join blob file to use to join this server to the domain. The domain join
     File can be created manually by executing:
     DJOIN /provision /domain CONTOSO.COM /machine NANO01 /savefile c:\DJOIN_NANO01.TXT
+	
+	.PARMATER WorkFolder
+	This is the path that this script will use to store temporary work files while creating the Nano Server VHD/VHDx.
+	It defaults to %TEMP%\NanoSever if this parameter is not passed. If there is not enough space in your %TEMP% folder
+	this can be used to specify a different working location.
 
 	.EXAMPLE
 		.\New-NanoServerVHD.ps1 `
@@ -213,7 +218,10 @@ Param (
     [String]$CacheFolder,
 
     [ValidateNotNullOrEmpty()]
-    [String]$DJoinFile
+    [String]$DJoinFile,
+	
+	[ValidateNotNullOrEmpty()]
+	[String]$WorkFolder = $ENV:Temp 
 )
 
 If (-not (Test-Path -Path .\Convert-WindowsImage.ps1 -PathType Leaf)) {
@@ -227,6 +235,13 @@ if ($CacheFolder) {
         Throw "The CacheFolder $CacheFolder could not be found. Please specify a valid folder."
     }
 }
+
+# Check the Work Folder
+If (-not (Test-Path -Path $WorkFolder)) {
+	Write-Error -Message "The WorkFolder path '$WorkFolder' does not exist. Please specify a valid folder."
+	Return
+}
+
 
 # Generate the file content for the Setup Complete script that runs on the VM
 # Do this first because we can do address validation at the same time.
@@ -273,7 +288,8 @@ If ($IPaddress)
 	$SetupComplete += $IPAddressConfigString
 } # If
 
-[String]$WorkFolder = Join-Path -Path $ENV:Temp -ChildPath 'NanoServer' 
+# Adjust the Work folder to create a subfolder
+[String]$WorkFolder = Join-Path -Path $WorkFolder -ChildPath 'NanoServer'
 [String]$DismFolder = Join-Path -Path $WorkFolder -ChildPath 'DISM'
 [String]$MountFolder = Join-Path -Path $WorkFolder -ChildPath 'Mount'
 [String]$TempVHDName = "NanoServer.$VHDFormat"
