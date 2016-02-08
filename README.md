@@ -11,7 +11,8 @@ Additional documentation can be found Readme.md files in the individual project 
 This module provides miscellaneous helper functions for setting up and using Powershell DSC.
 
 ## ACLReportTools
-This module contains functions for generating reports of file, folder and share ACL's, storing the reports and comparing them with earlier reports.
+This module has been moved to a separate repository:
+[https://github.com/PlagueHO/ACLReportTools](https://github.com/PlagueHO/ACLReportTools)
 
 ## Compare-ShareACLs - DEPRECATED!
 This script is able record all the ACLs on specified SMB shares on computer and then report
